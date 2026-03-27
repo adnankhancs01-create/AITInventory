@@ -1,0 +1,6 @@
+@AIT_Inventory_HostAddress = http://localhost:5109
+
+GET {{AIT_Inventory_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

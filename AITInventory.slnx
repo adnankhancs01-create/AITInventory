@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/01 Common/">
+    <Project Path="Common/Common.csproj" Id="b0a22f6e-e808-4f1a-be19-1ce2b43b56e7" />
+  </Folder>
+  <Folder Name="/02 Business/">
+    <Project Path="Service/Service.csproj" Id="246e8819-d93c-4f8f-9c91-127868c224bb" />
+  </Folder>
+  <Folder Name="/03 Data/">
+    <Project Path="Data/Data.csproj" Id="a5415821-dcaf-4891-b88c-1af3f078c07e" />
+  </Folder>
+  <Folder Name="/04 Domain/">
+    <Project Path="Domain/Domain.csproj" Id="43c7a120-b3e1-465c-8220-8d20793faf27" />
+  </Folder>
+  <Folder Name="/09 PresentationLayer/">
+    <Project Path="AIT_Inventory/AIT_Inventory.csproj" />
+  </Folder>
+</Solution>
