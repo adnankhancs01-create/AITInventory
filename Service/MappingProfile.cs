@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Common.Models;
+using Common.Models.RequestModel;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,7 +12,15 @@ namespace Service
         public MappingProfile()
         {
             // Domain entity → DTO
-            CreateMap<Product, ProductModel>();
+            CreateMap<Product, ProductModel>(); 
+            CreateMap<Product, ProductRequesModel>()
+            .ForMember(dest => dest.UserId,
+               opt => opt.MapFrom(src => src.CreatedBy))
+            .ReverseMap(); 
+            CreateMap<ProductCategory, ProductCategoryRequesModel>()
+            .ForMember(dest => dest.UserId,
+               opt => opt.MapFrom(src => src.CreatedBy))
+            .ReverseMap();
             CreateMap<ProductCategory, ProductCategoryModel>();
         }
     }
