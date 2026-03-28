@@ -12,6 +12,6 @@
     <Project Path="Domain/Domain.csproj" Id="43c7a120-b3e1-465c-8220-8d20793faf27" />
   </Folder>
   <Folder Name="/09 PresentationLayer/">
-    <Project Path="AIT_Inventory/AIT_Inventory.csproj" />
+    <Project Path="AIT_Inventory/AIT_Inventory_Api.csproj" />
   </Folder>
 </Solution>
