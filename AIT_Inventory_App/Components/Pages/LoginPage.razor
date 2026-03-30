@@ -1,0 +1,35 @@
+﻿@page "/"
+@using System.ComponentModel.DataAnnotations
+@layout LoginLayout
+@inject NavigationManager Navigation
+
+<h1>Login</h1>
+
+<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+    <InputText @bind-Value="loginModel.Email" placeholder="Email" />
+    <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
+    <button type="submit">Login</button>
+</EditForm>
+
+@code {
+    private LoginModel loginModel = new();
+
+    private async Task HandleLogin()
+    {
+        // TODO: Replace with real authentication
+        if (loginModel.Email == "admin" && loginModel.Password == "123")
+        {
+            Navigation.NavigateTo("/home");
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email required")]
+        public string Email { get; set; }
+
+        [Required(ErrorMessage = "Password required")]
+        public string Password { get; set; }
+        
+    }
+}

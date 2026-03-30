@@ -1,5 +1,7 @@
-using Service;
 using Data;
+using Data.SupportiveEntities;
+using Microsoft.AspNetCore.Identity;
+using Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+// Register Identity
+builder.Services.AddIdentity<ApplicationUserIdentity, IdentityRole>(options =>
+{
+    //options.User.AllowedUserNameCharacters =
+    //    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; // only letters/digits
+    options.User.AllowedUserNameCharacters =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+"; // only letters/digits
+    options.Password.RequireDigit = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 6;
+})
+.AddEntityFrameworkStores<InventoryDbContext>()
+.AddDefaultTokenProviders();
+
 builder.Services.AddRepositoryResolution(cs);
 builder.Services.AddServiceResolution();
 builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));

@@ -1,4 +1,5 @@
 ﻿using Data.Repositories;
+using Data.SupportiveEntities;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,7 @@ namespace Data
 
             services.AddScoped<IProductRepo, ProductRepo>();
             services.AddTransient<ILogRepository, LogRepository>();
+            services.AddTransient<IUserRepo, UserRepo>();
 
             return services;
         }

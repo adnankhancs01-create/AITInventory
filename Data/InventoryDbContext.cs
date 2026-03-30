@@ -1,4 +1,7 @@
-﻿using Domain.Entities;
+﻿using Data.SupportiveEntities;
+using Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -6,10 +9,9 @@ using System.Text;
 
 namespace Data
 {
-    public class InventoryDbContext:DbContext
+    public class InventoryDbContext  : IdentityDbContext<ApplicationUserIdentity>
     {
-        public InventoryDbContext(DbContextOptions<InventoryDbContext> options)
-        : base(options)
+        public InventoryDbContext(DbContextOptions<InventoryDbContext> options) : base(options)
         {
         }
 

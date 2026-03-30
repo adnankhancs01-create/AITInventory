@@ -13,5 +13,6 @@
   </Folder>
   <Folder Name="/09 PresentationLayer/">
     <Project Path="AIT_Inventory/AIT_Inventory_Api.csproj" />
+    <Project Path="AIT_Inventory_App/AIT_Inventory_App.csproj" Id="474cc05f-d85f-47ad-848e-9792d5db40de" />
   </Folder>
 </Solution>
