@@ -27,7 +27,7 @@ namespace AIT_Inventory_Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] LoginDto dto)
         {
-            var result = await _userService.RegisterAsync(dto.UserName, dto.Email, dto.Password);
+            var result = await _userService.RegisterAsync(dto.UserName, dto.Email, dto.Password,null);
             if (!result.Success) return BadRequest(result);
             return Ok(result);
         }

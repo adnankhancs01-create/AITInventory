@@ -10,7 +10,6 @@
     <InputText @bind-Value="loginModel.Email" placeholder="Email" />
     <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
     <button type="submit">Login</button>
-  @*   <button onclick="HandleSignUp()">SignUp</button> *@
 </EditForm>
 
 <button @onclick="HandleSignUp">SignUp</button>
@@ -46,7 +45,7 @@
 
     private async Task HandleSignUp()
     {
-        Navigation.NavigateTo("/home");
+        Navigation.NavigateTo("/signup");
     }
 
     public class LoginModel

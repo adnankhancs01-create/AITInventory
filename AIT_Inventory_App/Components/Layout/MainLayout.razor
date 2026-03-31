@@ -1,4 +1,7 @@
-﻿@inherits LayoutComponentBase
+﻿@using Service.IService
+@inject NavigationManager Navigation
+@inject IUserService _userService
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -7,6 +10,9 @@
 
     <main>
         <div class="top-row px-4">
+           
+            <button @onclick="HandleLogout">Logout</button>
+
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -15,3 +21,19 @@
         </article>
     </main>
 </div>
+
+@code{
+    private async Task HandleLogout()
+    {
+        try
+        {
+            // await _userService.LogoutAsync();
+            
+            Navigation.NavigateTo("/", true);
+        }
+        catch
+        {
+            Navigation.NavigateTo("/", true);
+        }
+    }
+}
