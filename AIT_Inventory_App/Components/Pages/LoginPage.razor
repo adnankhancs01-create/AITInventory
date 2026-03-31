@@ -1,26 +1,52 @@
 ﻿@page "/"
 @using System.ComponentModel.DataAnnotations
+@using Service.IService
 @layout LoginLayout
 @inject NavigationManager Navigation
-
+@inject IUserService _userService
 <h1>Login</h1>
 
 <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
     <InputText @bind-Value="loginModel.Email" placeholder="Email" />
     <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
     <button type="submit">Login</button>
+  @*   <button onclick="HandleSignUp()">SignUp</button> *@
 </EditForm>
+
+<button @onclick="HandleSignUp">SignUp</button>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red">@errorMessage</p>
+}
 
 @code {
     private LoginModel loginModel = new();
+    private string? errorMessage;
 
     private async Task HandleLogin()
     {
-        // TODO: Replace with real authentication
-        if (loginModel.Email == "admin" && loginModel.Password == "123")
+        if ((string.IsNullOrWhiteSpace(loginModel.Email) || string.IsNullOrWhiteSpace(loginModel.Password))
+        || (string.IsNullOrEmpty(loginModel.Email) || string.IsNullOrEmpty(loginModel.Password)))
+        {
+            errorMessage = "Not supported";
+            return;
+        }
+
+        var result=await _userService.LoginAsync(loginModel.Email, loginModel.Password,false);
+        if (result.Success)
         {
             Navigation.NavigateTo("/home");
         }
+        else
+        {
+            errorMessage = result.Message ?? "Login failed. Please check your credentials.";
+        }
+    }
+
+    private async Task HandleSignUp()
+    {
+        Navigation.NavigateTo("/home");
     }
 
     public class LoginModel

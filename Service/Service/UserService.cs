@@ -1,4 +1,5 @@
 ﻿using Common;
+using Data.SupportiveEntities;
 using Domain.Entities;
 using Domain.IRepositories;
 using Service.IService;
@@ -17,15 +18,17 @@ namespace Service.Services
             _userRepo = userRepo;
         }
 
-        public async Task<BaseResponse<object>> LoginAsync(string email, string password)
+        public async Task<BaseResponse<object>> LoginAsync(string email, string password, bool isApiUser = true)
         {
-            var result = await _userRepo.LoginAsync(email, password);
-
-            if (result is null)
+            var result = await _userRepo.LoginAsync(email, password, isApiUser);
+            var response = (AuthResponse)result;
+            if (result is null || !response.Success)
+            {
                 return BaseResponse<object>.FailureResponse(
                     new List<string> { "Login failed" },
                     "User not found or invalid credentials"
                 );
+            }
 
             // Assuming UserRepo returns ApplicationUserIdentity on success
             return BaseResponse<object>.SuccessResponse(

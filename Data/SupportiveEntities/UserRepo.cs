@@ -19,19 +19,31 @@ namespace Data.SupportiveEntities
             _signInManager = signInManager;
         }
 
-        public async Task<object> LoginAsync(string email, string password)
+        public async Task<object> LoginAsync(string email, string password, bool isApiUser = true)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null)
                 return new AuthResponse { Success = false, Message = "User not found" };
+            if (isApiUser)
+            {
+                var result = await _signInManager.PasswordSignInAsync(user.UserName, password, false, false);
 
-            var result = await _signInManager.PasswordSignInAsync(user.UserName, password, false, false);
+                if (!result.Succeeded)
+                    return new AuthResponse { Success = false, Message = "Invalid credentials" };
 
-            if (!result.Succeeded)
-                return new AuthResponse { Success = false, Message = "Invalid credentials" };
-
-            return new AuthResponse { Success = true, Message = "Login success" };
+                return new AuthResponse { Success = true, Message = "Login success" };
+            }
+            else
+            {
+                // Desktop mode → manual password check
+                var valid = await _userManager.CheckPasswordAsync(user, password);
+                return new AuthResponse
+                {
+                    Success = valid,
+                    Message = valid ? "Login successful" : "Invalid credentials"
+                };
+            }
         }
 
         public async Task<object> RegisterAsync(string userName, string email, string password)
