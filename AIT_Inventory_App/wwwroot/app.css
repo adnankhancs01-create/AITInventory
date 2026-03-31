@@ -100,7 +100,21 @@ h1:focus {
     }
 
 }
+.logout-btn {
+    background: linear-gradient(135deg, #ff4d4d, #cc0000);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.3s ease;
+}
 
+    .logout-btn:hover {
+        opacity: 0.85;
+        transform: scale(1.05);
+    }
 .login-container {
     /* Center the form on screen */
     display: flex;

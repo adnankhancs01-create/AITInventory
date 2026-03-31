@@ -1,0 +1,76 @@
+﻿@page "/signup"
+@using System.ComponentModel.DataAnnotations
+@using Common.Models.RequestModel
+@using Service.IService
+@layout LoginLayout
+@inject NavigationManager Navigation
+@inject IUserService _userService
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-heading">
+        @errorMessage
+    </div>
+}
+@if (showError)
+{
+    <div class="alert-heading">
+        @errorMessage
+    </div>
+}
+<h1>SignUp</h1>
+
+<EditForm Model="@signUpModel" OnValidSubmit="HandleSignUp">
+    <DataAnnotationsValidator />
+    @* <ValidationSummary /> *@
+
+    <div>
+        <InputText @bind-Value="signUpModel.UserName" placeholder="UserName" />
+    </div>
+
+    <div>
+        <InputText @bind-Value="signUpModel.Email" placeholder="Email" />
+        <ValidationMessage For="@(() => signUpModel.Email)" />
+    </div>
+
+    <div>
+        <InputText @bind-Value="signUpModel.Password" type="password" placeholder="Password" />
+        <ValidationMessage For="@(() => signUpModel.Password)" />
+    </div>
+
+    <div>
+        <InputText @bind-Value="signUpModel.MobileNo" type="tel" placeholder="MobileNo" />
+    </div>
+
+    <button type="submit">Sign Up</button>
+</EditForm>
+
+@code {
+    private SignUpModel signUpModel = new();
+    private string? errorMessage;
+    private bool showError = false;
+
+    private async Task ShowError(string message)
+    {
+        errorMessage = message;
+        showError = true;
+
+        await Task.Delay(3000); // auto hide after 3 sec
+        showError = false;
+    }
+
+    private async Task HandleSignUp()
+    {
+        var result = await _userService.RegisterAsync(signUpModel.UserName, signUpModel.Email, signUpModel.Password, signUpModel.MobileNo);
+        if (result.Success)
+        {
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = string.Join(",", result.Errors);// result.Message ?? "SignUp failed";
+            await ShowError(errorMessage);
+            return;
+        }
+    }
+}

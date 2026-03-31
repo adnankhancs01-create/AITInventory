@@ -1,5 +1,5 @@
 ﻿using Common;
-using Data.SupportiveEntities;
+using Data.Repositories;
 using Domain.Entities;
 using Domain.IRepositories;
 using Service.IService;
@@ -36,14 +36,19 @@ namespace Service.Services
                 "Login successful"
             );
         }
-
-        public async Task<BaseResponse<object>> RegisterAsync(string userName, string email, string password)
+        public async Task<BaseResponse<object>> RegisterAsync(string userName, string email, string password,string mobileNo=null)
         {
-            var result = await _userRepo.RegisterAsync(userName,email, password);
-
-            if (result is null)
+            if(!IsValidEmail(email))
                 return BaseResponse<object>.FailureResponse(
-                    new List<string> { "Registration failed" },
+                    new List<string> { "Invalid email"},
+                    "Unable to register user"
+                );
+
+            var result = await _userRepo.RegisterAsync(userName,email, password, mobileNo);
+            var response = (AuthResponse)result;
+            if (response is null || !response.Success)
+                return BaseResponse<object>.FailureResponse(
+                    new List<string> {response.Message },
                     "Unable to register user"
                 );
 
@@ -51,6 +56,26 @@ namespace Service.Services
                 (object)result,
                 "User registered successfully"
             );
+        }
+
+        public async Task LogoutAsync()
+        {
+            await _userRepo.LogoutAsync();
+        }
+        private bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

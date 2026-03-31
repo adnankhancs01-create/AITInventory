@@ -1,7 +1,4 @@
-﻿using Data.SupportiveEntities;
-using Domain.Entities;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,7 +6,7 @@ using System.Text;
 
 namespace Data
 {
-    public class InventoryDbContext  : IdentityDbContext<ApplicationUserIdentity>
+    public class InventoryDbContext  : DbContext
     {
         public InventoryDbContext(DbContextOptions<InventoryDbContext> options) : base(options)
         {
@@ -23,5 +20,6 @@ namespace Data
         public DbSet<VendorStock> VendorStock { get; set; }
         public DbSet<VendorTransaction> VendorTransaction { get; set; }
         public DbSet<ExceptionLog> ExceptionLogs { get; set; }
+        public DbSet<UserMst> UserMst { get; set; }
     }
 }
