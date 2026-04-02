@@ -1,0 +1,121 @@
+﻿@page "/"
+@using Common.Models
+@using Common.Models.RequestModel
+@using Service.IService
+@inject IClientService _clientService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.Pupups
+
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <h3 style="margin:0;">Client Management</h3>
+    <RadzenButton Text="Add Client" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
+                  Click="@AddClient" />
+</div>
+
+
+<RadzenDataGrid Data="@clients" TItem="ClientModel"
+                Count="@count"
+                LoadData="@LoadData"
+                AllowPaging="true" PageSize="20"
+                AllowSorting="true" AllowFiltering="true">
+
+    <Columns>
+        <RadzenDataGridColumn TItem="ClientModel" Property="FirstName" Title="First Name" />
+        <RadzenDataGridColumn TItem="ClientModel" Property="LastName" Title="Last Name" />
+        <RadzenDataGridColumn TItem="ClientModel" Property="Email" Title="Email" />
+        <RadzenDataGridColumn TItem="ClientModel" Property="Phone" Title="Phone" />
+        <RadzenDataGridColumn TItem="ClientModel" Property="Address" Title="Address" />
+
+        <RadzenDataGridColumn TItem="ClientModel" Title="Actions">
+            <Template Context="client">
+                <RadzenButton Text="Edit" Icon="edit" Size="ButtonSize.Small"
+                              Click="@(() => EditClient(client.Id))" Style="margin-right:5px" />
+                <RadzenButton Text="View" Icon="visibility" Size="ButtonSize.Small"
+                              Click="@(() => ViewClient(client))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private IEnumerable<ClientModel>? clients;
+    private int count;
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        // args.Skip = starting record index
+        // args.Top = page size
+        // args.SortOrder = sorting info
+        // args.Filter = filter expression
+        int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
+        int pageSize = args.Top ?? 10;
+
+        var result = await _clientService.GetAllClientsAsync(0, pageIndex, pageSize, args.Filter);
+        if (result.Success)
+        {
+            clients = result.Data.Item1.ToList();
+            count = result.Data.Item2;
+        }
+        else
+        {
+            // Handle error (e.g., show message)
+            clients = new List<ClientModel>();
+            count = 0;
+        }
+    }
+
+    private async Task EditClient(int clientId)
+    {
+        var result = await _clientService.GetAllClientsAsync(clientId,1,1,string.Empty);
+        if (result.Success)
+        {
+            var data = new AddEditClientDetailRequestModel();
+            data.FirstName = result.Data.Item1.FirstOrDefault()?.FirstName;
+            data.LastName = result.Data.Item1.FirstOrDefault()?.LastName;
+            data.Email = result.Data.Item1.FirstOrDefault()?.Email;
+            data.Country = result.Data.Item1.FirstOrDefault()?.Country;
+            data.City = result.Data.Item1.FirstOrDefault()?.City;
+            data.Address = result.Data.Item1.FirstOrDefault()?.Address;
+            data.IsActive = result.Data.Item1.FirstOrDefault()?.IsActive;
+            data.Phone = result.Data.Item1.FirstOrDefault()?.Phone;
+            data.PostalCode = result.Data.Item1.FirstOrDefault()?.PostalCode;
+            data.State = result.Data.Item1.FirstOrDefault()?.State;
+            data.Id = clientId;
+
+            await DialogService.OpenAsync<AddClientPopup>(
+                "Edit Client",
+                new Dictionary<string, object>() { { "Client", data } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task ViewClient(ClientModel client)
+    {
+        try
+        {
+            await DialogService.OpenAsync<ClientDetailPopup>(
+                "Client Details",
+                new Dictionary<string, object>() { { "Client", client } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+    private async Task AddClient()
+    {
+        await DialogService.OpenAsync<AddClientPopup>(
+        "Add Client",
+        new Dictionary<string, object>() { { "Client", new AddEditClientDetailRequestModel() } },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+
+}
