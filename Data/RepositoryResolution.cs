@@ -13,11 +13,11 @@ namespace Data
                 options.UseSqlServer(connectionString));
 
             services.AddScoped<IProductRepo, ProductRepo>();
-            services.AddTransient<ILogRepository, LogRepository>();
-            services.AddTransient<IUserRepo, UserRepo>();
+            services.AddScoped<ILogRepository, LogRepository>();
+            services.AddScoped<IUserRepo, UserRepo>();
+            services.AddScoped<IClientRepository, ClientRepository>();
 
             return services;
         }
-
     }
 }

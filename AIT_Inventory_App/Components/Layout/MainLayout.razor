@@ -2,7 +2,7 @@
 @inject NavigationManager Navigation
 @inject IUserService _userService
 @inherits LayoutComponentBase
-
+<RadzenDialog />
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -22,7 +22,7 @@
     </main>
 </div>
 
-@code{
+@code {
     private async Task HandleLogout()
     {
         try

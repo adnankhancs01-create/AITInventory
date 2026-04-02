@@ -165,3 +165,13 @@ h1:focus {
         .login-container button:hover {
             background-color: #005a9e;
         }
+
+.partition table{
+    border:thick;
+    border-color: aqua;
+}
+
+.partition EditForm{
+    border: thick;
+    border-color: blueviolet;
+}

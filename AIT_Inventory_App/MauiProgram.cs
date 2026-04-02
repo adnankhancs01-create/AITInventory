@@ -1,7 +1,9 @@
-﻿using Data;
+﻿//using Android.Renderscripts;
+using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Radzen;
 using Service;
 namespace AIT_Inventory_App
 {
@@ -18,7 +20,7 @@ namespace AIT_Inventory_App
                 });
 
             builder.Services.AddMauiBlazorWebView();
-
+            builder.Services.AddSingleton<NotificationServiceMessage>();
 #if DEBUG
     		builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
@@ -35,6 +37,9 @@ namespace AIT_Inventory_App
             builder.Services.AddRepositoryResolution(cs);
             // Service layer
             builder.Services.AddServiceResolution();
+            builder.Services.AddRadzenComponents();
+            builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
+
             return builder.Build();
         }
     }

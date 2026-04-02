@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Common.Models;
 using Common.Models.RequestModel;
+using Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -22,6 +23,7 @@ namespace Service
                opt => opt.MapFrom(src => src.CreatedBy))
             .ReverseMap();
             CreateMap<ProductCategory, ProductCategoryModel>();
+            CreateMap<VendorClientDetail, ClientModel>();
         }
     }
 }

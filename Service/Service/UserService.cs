@@ -1,4 +1,5 @@
 ﻿using Common;
+using Common.Helpers;
 using Data.Repositories;
 using Domain.Entities;
 using Domain.IRepositories;
@@ -38,7 +39,7 @@ namespace Service.Services
         }
         public async Task<BaseResponse<object>> RegisterAsync(string userName, string email, string password,string mobileNo=null)
         {
-            if(!IsValidEmail(email))
+            if(!email.IsValidEmail())
                 return BaseResponse<object>.FailureResponse(
                     new List<string> { "Invalid email"},
                     "Unable to register user"
@@ -61,21 +62,6 @@ namespace Service.Services
         public async Task LogoutAsync()
         {
             await _userRepo.LogoutAsync();
-        }
-        private bool IsValidEmail(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return false;
-
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }
