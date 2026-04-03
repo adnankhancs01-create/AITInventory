@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/Client"
 @using Common.Models
 @using Common.Models.RequestModel
 @using Service.IService
@@ -19,13 +19,14 @@
                 Count="@count"
                 LoadData="@LoadData"
                 AllowPaging="true" PageSize="20"
-                AllowSorting="true" AllowFiltering="true">
+                AllowSorting="false" AllowFiltering="true">
 
     <Columns>
         <RadzenDataGridColumn TItem="ClientModel" Property="FirstName" Title="First Name" />
         <RadzenDataGridColumn TItem="ClientModel" Property="LastName" Title="Last Name" />
         <RadzenDataGridColumn TItem="ClientModel" Property="Email" Title="Email" />
         <RadzenDataGridColumn TItem="ClientModel" Property="Phone" Title="Phone" />
+        <RadzenDataGridColumn TItem="ClientModel" Property="ClientCode" Title="Client Code" />
         <RadzenDataGridColumn TItem="ClientModel" Property="Address" Title="Address" />
 
         <RadzenDataGridColumn TItem="ClientModel" Title="Actions">
@@ -84,7 +85,7 @@
             data.State = result.Data.Item1.FirstOrDefault()?.State;
             data.Id = clientId;
 
-            await DialogService.OpenAsync<AddClientPopup>(
+            await DialogService.OpenAsync<AddEditClientPopup>(
                 "Edit Client",
                 new Dictionary<string, object>() { { "Client", data } },
                 new DialogOptions() { Width = "600px", Height = "auto" }
@@ -109,7 +110,7 @@
     }
     private async Task AddClient()
     {
-        await DialogService.OpenAsync<AddClientPopup>(
+        await DialogService.OpenAsync<AddEditClientPopup>(
         "Add Client",
         new Dictionary<string, object>() { { "Client", new AddEditClientDetailRequestModel() } },
         new DialogOptions() { Width = "600px", Height = "auto" }

@@ -1,0 +1,65 @@
+﻿@using Common.Models.RequestModel
+@using Service.IService
+@inject IClientService _clientService
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="AddEditClientDetailRequestModel" Data="@Client" Submit="@OnSubmit">
+    <ChildContent>
+        <RadzenFieldset Text="Client Information">
+
+            <RadzenLabel Text="First Name" />
+            <RadzenTextBox @bind-Value="Client.FirstName" Name="FirstName" Style="width:100%" />
+            <RadzenRequiredValidator Component="FirstName" Text="First name is required" />
+            <br />
+            <RadzenLabel Text="Last Name" />
+            <RadzenTextBox @bind-Value="Client.LastName" Name="LastName" Style="width:100%" />
+            <RadzenRequiredValidator Component="LastName" Text="Last name is required" />
+            <br />
+
+            <RadzenLabel Text="Email" />
+            <RadzenTextBox @bind-Value="Client.Email" Name="Email" Style="width:100%" />
+            <RadzenEmailValidator Component="Email" Text="Enter a valid email" />
+            <br />
+
+            <RadzenLabel Text="Phone" />
+            <RadzenTextBox @bind-Value="Client.Phone" Name="Phone" Style="width:100%" />
+            <br />
+
+            <RadzenLabel Text="Address" />
+            <RadzenTextBox @bind-Value="Client.Address" Name="Address" Style="width:100%" />
+            <br />
+
+            <RadzenCheckBox @bind-Value="Client.IsActive" Name="IsActive" />
+            <RadzenLabel Text="Active" />
+
+            <div style="margin-top:15px;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
+                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            </div>
+        </RadzenFieldset>
+    </ChildContent>
+</RadzenTemplateForm>
+
+
+
+@code {
+    [Parameter] public AddEditClientDetailRequestModel Client { get; set; }
+
+    private async Task OnSubmit(AddEditClientDetailRequestModel model)
+    {
+        var result = await _clientService.AddEditClientAsync(model);
+        if (result.Success)
+        {
+            DialogService.Close(true); // close popup
+        }
+        else
+        {
+            await DialogService.Alert($"{result.Message} : {string.Join(",", result.Errors)}", "Error");
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+}

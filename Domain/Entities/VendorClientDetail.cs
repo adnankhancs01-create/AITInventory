@@ -38,6 +38,9 @@ namespace Domain.Entities
 
         [MaxLength(50)]
         public string? Country { get; set; }
+
+        [MaxLength(250)]
+        public string ClientCode { get; set; }
         public DateTime? CreatedOn { get; set; }
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
