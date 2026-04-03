@@ -57,7 +57,8 @@ namespace Data.Repositories
                     PostalCode = model.PostalCode,
                     Country = model.Country,
                     CreatedOn = DateTime.UtcNow,
-                    IsActive = true
+                    IsActive = true,
+                    ClientCode= await GetClientCodeAsync()
                 };
 
                 await _dbContext.VendorClientDetail.AddAsync(entity);
@@ -66,6 +67,16 @@ namespace Data.Repositories
             await _dbContext.SaveChangesAsync();
 
             return BaseResponse<int>.SuccessResponse(entity.Id, model.Id > 0 ? "Client updated successfully" : "Client added successfully");
+        }
+
+        private async Task<string> GetClientCodeAsync()
+        {
+            var getClient=await _dbContext.VendorClientDetail.OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+            if(getClient == null || string.IsNullOrEmpty(getClient.ClientCode))
+                return "CLT-0001";
+
+            return $"CLT-{(int.Parse(getClient.ClientCode.Split('-')[1]) + 1).ToString("D4")}";
+
         }
 
         public async Task<(List<VendorClientDetail>,int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize,string? Filter)

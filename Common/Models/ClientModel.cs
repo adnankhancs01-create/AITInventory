@@ -16,6 +16,7 @@ namespace Common.Models
         public string? City { get; set; }
         public string? State { get; set; }
         public string? PostalCode { get; set; }
+        public string? ClientCode { get; set; }
         public string? Country { get; set; }
         public DateTime? CreatedAt { get; set; }
         public bool? IsActive { get; set; }
