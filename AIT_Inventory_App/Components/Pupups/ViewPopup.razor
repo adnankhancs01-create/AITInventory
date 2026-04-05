@@ -1,0 +1,23 @@
+﻿@using Common.Models
+@code {
+    [Parameter] public Dictionary<string, string> Obj { get; set; } = new();
+
+}
+
+<div class="p-4">
+    <table style="width:100%; border-collapse:collapse; font-family:Arial, sans-serif; font-size:14px; border:medium">
+
+        @foreach (var property in Obj)
+        {
+                <tr>
+                    <td style="width:30%; font-weight:bold; padding:10px; text-align:right; background-color:#f7f7f7; border-bottom:1px solid #ddd;">
+                    @property.Key
+                    </td>
+                    <td style="width:70%; padding:10px; text-align:left; border-bottom:1px solid #ddd;">
+                    @(property.Value?? "")
+                    </td>
+                </tr>
+        }
+
+    </table>
+</div>

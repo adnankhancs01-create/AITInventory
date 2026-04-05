@@ -9,7 +9,8 @@ namespace Service.IService
 {
     public interface IProductService
     {
-        Task<BaseResponse<List<ProductModel>>> GetProductsAsync(int? productId);
+        Task<BaseResponse<(List<ProductModel>, int)>> GetProductsAsync(int productId, int pageIndex, int pageSize, string? Filter);
+        Task<BaseResponse<(List<ProductCategoryModel>, int)>> GetProductCategoriesAsync(int id, int pageIndex, int pageSize, string? Filter);
         Task<BaseResponse<ProductModel>> AddEditProductAsync(ProductRequesModel product);
         Task<BaseResponse<ProductCategory>> AddEditProductCategoryAsync(ProductCategoryRequesModel requestModel);
     }

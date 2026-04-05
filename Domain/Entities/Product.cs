@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 public class Product
@@ -10,7 +11,7 @@ public class Product
     [MaxLength(100)]
     public string Name { get; set; }
 
-    public string Description { get; set; }
+    public string? Description { get; set; }
     public string ProductCode { get; set; }
 
     // Foreign Key
@@ -22,4 +23,5 @@ public class Product
     public int? CreatedBy { get; set; }
     public DateTime? ModifiedOn { get; set; }
     public int? ModifiedBy { get; set; }
+    public VendorStock Stock{ get; set; }
 }

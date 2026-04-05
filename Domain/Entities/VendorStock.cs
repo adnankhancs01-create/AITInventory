@@ -9,7 +9,7 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
 
-        public int VendorId { get; set; }
+        public int? VendorId { get; set; }
         [ForeignKey("VendorId")]
         public Vendor Vendor { get; set; }
 
@@ -17,9 +17,10 @@ namespace Domain.Entities
         [ForeignKey("ProductId")]
         public Product Product { get; set; }
 
-        public int Quantity { get; set; } = 0;
+        public int? Quantity { get; set; } = 0;
 
         [Column(TypeName = "decimal(10,2)")]
-        public decimal UnitPrice { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public decimal? SellPrice { get; set; }
     }
 }

@@ -24,6 +24,7 @@ namespace Service
             .ReverseMap();
             CreateMap<ProductCategory, ProductCategoryModel>();
             CreateMap<VendorClientDetail, ClientModel>();
+            CreateMap<VendorStock, VendorStockModel>();
         }
     }
 }

@@ -1,13 +1,16 @@
 ﻿using Common;
 using Common.Models;
+using Domain.Entities;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq.Dynamic.Core;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Data.Repositories
@@ -23,26 +26,63 @@ namespace Data.Repositories
             _dbContext = dbContext;
             _logRepo = logRepo;
         }
-        public async Task<List<Product>> GetProductsAsync(int? id)
+        public async Task<(List<Product>, int)> GetProductsAsync(int id, int pageIndex, int pageSize, string? Filter)
         {
-            return await _dbContext.Products
-                .Where(x => id.HasValue ? id == x.Id : 1 == 1)
-                .Include(x => x.Category)
+            var query = _dbContext.Products
+                .Where(x => x.Id == id || id == 0);
+
+            if (!string.IsNullOrEmpty(Filter))
+                query = query.Where(Filter);
+
+            var totalCount = await query.CountAsync();
+
+            var data = await query.Include(x=> x.Category).Include(x=> x.Stock)
+                .OrderByDescending(x => x.Id)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (data, totalCount);
+
+
         }
-        public async Task<List<ProductCategory>> GetProductCategoriesAsync(int? id)
+        public async Task<(List<ProductCategory>, int)> GetProductCategoriesAsync(int id, int pageIndex, int pageSize, string? Filter)
         {
-            return await _dbContext.ProductCategories
-                .Where(x => id.HasValue ? id == x.Id : 1 == 1)
+            var query = _dbContext.ProductCategories
+                .Where(x => x.Id == id || id == 0);
+
+            if (!string.IsNullOrEmpty(Filter))
+                query = query.Where(Filter);
+
+            var totalCount = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.Id)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (data, totalCount);
+
+
         }
+        //public async Task<List<ProductCategory>> GetProductCategoriesAsync(int? id)
+        //{
+        //    return await _dbContext.ProductCategories
+        //        .Where(x => id.HasValue ? id == x.Id : 1 == 1)
+        //        .ToListAsync();
+        //}
         public async Task<BaseResponse<Product>> AddEditProductAsync(Product product)
         {
             try
             {
                 if (product.Id > 0)
                 {
-                    _dbContext.Products.Update(product);
+                    var getProduct = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == product.Id);
+                    getProduct.Name=product.Name;
+                    getProduct.Description=product.Description;
+                    getProduct.CategoryId=product.CategoryId;
+                    getProduct.ModifiedOn=product.ModifiedOn;
                 }
                 else
                 {
@@ -138,5 +178,45 @@ namespace Data.Repositories
 
             return $"{prefix}-{nextNumber:D3}";
         }
+        public async Task<BaseResponse<VendorStock>> AddEditVendorStockAsync(VendorStock vendorStock)
+        {
+            try
+            {
+                var stock = await _dbContext.VendorStock
+                    .FirstOrDefaultAsync(x => x.ProductId == vendorStock.ProductId);
+
+                if (stock == null)
+                {
+                    stock = vendorStock;
+                    await _dbContext.VendorStock.AddAsync(stock);
+                }
+                else
+                {
+                    stock.Quantity = vendorStock.Quantity;
+                    stock.UnitPrice = vendorStock.UnitPrice;
+                    stock.SellPrice = vendorStock.SellPrice;
+                    stock.VendorId = vendorStock.VendorId;
+                }
+
+                await _dbContext.SaveChangesAsync();
+                return BaseResponse<VendorStock>.SuccessResponse(stock, "Request executed successfully");
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(
+                    ex,
+                    userId: 1,
+                    additionalData: JsonSerializer.Serialize(new { message = "Error while adding or updating product" }),
+                    request: JsonSerializer.Serialize(vendorStock)
+                );
+
+                return BaseResponse<VendorStock>.FailureResponse(
+                    new() { ex.Message },
+                    "Error occurred while processing request"
+                );
+            }
+        }
+
+
     }
 }

@@ -56,7 +56,7 @@ namespace Data.Repositories
                     State = model.State,
                     PostalCode = model.PostalCode,
                     Country = model.Country,
-                    CreatedOn = DateTime.UtcNow,
+                    CreatedOn = DateTime.Now,
                     IsActive = true,
                     ClientCode= await GetClientCodeAsync()
                 };
