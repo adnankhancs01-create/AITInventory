@@ -15,14 +15,14 @@ namespace AIT_Inventory.Controllers
         {
             _productService = productService;
         }
-        [HttpGet]
-        [Route("Get")]
-        public async Task<IActionResult> Get(int? productId)
-        {
-            var getProduct = await _productService.GetProductsAsync(productId);
+        //[HttpGet]
+        //[Route("Get")]
+        //public async Task<IActionResult> Get(int? productId)
+        //{
+        //    var getProduct = await _productService.GetProductsAsync(productId);
 
-            return Ok(getProduct);
-        }
+        //    return Ok(getProduct);
+        //}
         [HttpPost]
         [Route("AddEditProduct")]
         public async Task<IActionResult> AddEditProduct(ProductRequesModel request)

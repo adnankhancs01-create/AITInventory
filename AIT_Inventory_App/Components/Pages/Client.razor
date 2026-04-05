@@ -98,9 +98,21 @@
     {
         try
         {
-            await DialogService.OpenAsync<ClientDetailPopup>(
+            var result = new Dictionary<string, string>();
+            result.Add("First Name", client.FirstName);
+            result.Add("Last Name", client.LastName);
+            result.Add("Email", client.Email);
+            result.Add("Phone", client.Phone);
+            result.Add("Postal Code", client.PostalCode);
+            result.Add("Address", client.Address);
+            result.Add("City", client.City);
+            result.Add("State", client.State);
+            result.Add("Client Code", client.ClientCode);
+            result.Add("Added on", client.CreatedAt?.ToShortDateString());
+
+            await DialogService.OpenAsync<ViewPopup>(
                 "Client Details",
-                new Dictionary<string, object>() { { "Client", client } },
+                new Dictionary<string, object>() { { "Obj", result } },
                 new DialogOptions() { Width = "600px", Height = "auto" }
             );
         }

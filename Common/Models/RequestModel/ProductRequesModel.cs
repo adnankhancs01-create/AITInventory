@@ -11,6 +11,9 @@ namespace Common.Models.RequestModel
         public string? Name { get; set; }
         public string? Description { get; set; }
         public int CategoryId { get; set; }
+        public int? Quantity { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public decimal? SellPrice { get; set; }
     }
     public class ProductCategoryRequesModel
     {

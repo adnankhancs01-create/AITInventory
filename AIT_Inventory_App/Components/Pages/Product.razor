@@ -1,0 +1,130 @@
+﻿@page "/"
+@using Common.Models
+@using Common.Models.RequestModel
+@using Service.IService
+@inject IProductService _ProductService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.Pupups
+
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <h3 style="margin:0;">Product Management</h3>
+    <RadzenButton Text="Add Product" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
+                  Click="@AddProduct" />
+</div>
+
+
+<RadzenDataGrid Data="@Products" TItem="ProductModel"
+                Count="@count"
+                LoadData="@LoadData"
+                AllowPaging="true" PageSize="20"
+                AllowSorting="false" AllowFiltering="true">
+
+    <Columns>
+        <RadzenDataGridColumn TItem="ProductModel" Property="Name" Title="Name" />
+        <RadzenDataGridColumn TItem="ProductModel" Property="Description" Title="Description" />
+        @* <RadzenDataGridColumn TItem="ProductModel" Property="CreatedOn" Title="Added On" /> *@
+
+        <RadzenDataGridColumn TItem="ProductModel" Title="Actions">
+            <Template Context="Product">
+                <RadzenButton Text="Edit" Icon="edit" Size="ButtonSize.Small"
+                              Click="@(() => EditProduct(Product.Id.Value))" Style="margin-right:5px" />
+                <RadzenButton Text="View" Icon="visibility" Size="ButtonSize.Small"
+                              Click="@(() => ViewProduct(Product))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private IEnumerable<ProductModel>? Products;
+    private int count;
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        // args.Skip = starting record index
+        // args.Top = page size
+        // args.SortOrder = sorting info
+        // args.Filter = filter expression
+        int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
+        int pageSize = args.Top ?? 10;
+
+        var result = await _ProductService.GetProductsAsync(0, pageIndex, pageSize, args.Filter);
+        if (result.Success)
+        {
+            Products = result.Data.Item1.ToList();
+            count = result.Data.Item2;
+        }
+        else
+        {
+            // Handle error (e.g., show message)
+            Products = new List<ProductModel>();
+            count = 0;
+        }
+    }
+
+    private async Task EditProduct(int ProductId)
+    {
+        var result = await _ProductService.GetProductsAsync(ProductId, 1, 1, string.Empty);
+        if (result.Success)
+        {
+            var data = new ProductRequesModel();
+            data.Name = result.Data.Item1.FirstOrDefault()?.Name;
+            data.Description = result.Data.Item1.FirstOrDefault()?.Description;
+            data.Quantity = result.Data.Item1.FirstOrDefault()?.Stock.Quantity;
+            data.SellPrice = result.Data.Item1.FirstOrDefault()?.Stock.SellPrice;
+            data.UnitPrice = result.Data.Item1.FirstOrDefault()?.Stock.UnitPrice;
+            // work on category required
+            data.Id = ProductId;
+
+            var categories = await _ProductService.GetProductCategoriesAsync(0,1,int.MaxValue,string.Empty);
+
+            await DialogService.OpenAsync<AddEditProductPopup>(
+                "Edit Product",
+                new Dictionary<string, object>() { { "Product", data }, { "categories", categories.Data.Item1 } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task ViewProduct(ProductModel Product)
+    {
+        try
+        {
+            var result = new Dictionary<string, string>();
+            result.Add("Product Name", Product.Name);
+            result.Add("Description", Product.Description);
+            result.Add("Product Code", Product.ProductCode);
+            result.Add("Added On", Product.CreatedOn?.ToShortDateString());
+            result.Add("Modified On", Product.ModifiedOn?.ToShortDateString());
+            result.Add("Category", Product.Category?.Name);
+            result.Add("Quantity", Product.Stock?.Quantity?.ToString());
+            result.Add("Sell Price", Product.Stock?.SellPrice.ToString());
+            result.Add("Unit Price", Product.Stock?.UnitPrice.ToString());
+
+            await DialogService.OpenAsync<ViewPopup>(
+                "Product Details",
+                new Dictionary<string, object>() { { "Obj", result } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+    private async Task AddProduct()
+    {
+        var categories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
+
+        await DialogService.OpenAsync<AddEditProductPopup>(
+        "Add Product",
+        new Dictionary<string, object>() { { "Product", new ProductRequesModel() }, { "categories", categories.Data.Item1 } },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+
+}

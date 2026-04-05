@@ -2,6 +2,7 @@
 using Common;
 using Common.Models;
 using Common.Models.RequestModel;
+using Domain.Entities;
 using Domain.IRepositories;
 using Service.IService;
 using System.Text.Json;
@@ -23,23 +24,44 @@ namespace Service.Service
             _logRepo = logRepo;
         }
 
-        public async Task<BaseResponse<List<ProductModel>>> GetProductsAsync(int? productId)
+        public async Task<BaseResponse<(List<ProductModel>, int)>> GetProductsAsync(int productId, int pageIndex, int pageSize, string? Filter)
         {
             try
             {
-                var getProduct = await _productRepo.GetProductsAsync(productId);
-                if (getProduct == null)
-                    return new BaseResponse<List<ProductModel>>(
+                var getProduct = await _productRepo.GetProductsAsync(productId, pageIndex, pageSize, Filter);
+                if (getProduct.Item1 == null)
+                    return new BaseResponse<(List<ProductModel>, int)>(
                         new List<string> { "Product not found" }, "Error fetching product");
 
-                var data = _mapper.Map<List<Product>, List<ProductModel>>(getProduct);
-                return new BaseResponse<List<ProductModel>>(data, string.Empty);
+                var data = _mapper.Map<List<Product>, List<ProductModel>>(getProduct.Item1);
+                return new BaseResponse<(List<ProductModel>, int)>((data, getProduct.Item2), string.Empty);
             }
             catch (Exception ex)
             {
                 await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
 
-                return new BaseResponse<List<ProductModel>>(
+                return new BaseResponse<(List<ProductModel>, int)>(
+                        new List<string> { ex.Message }, "Error fetching product");
+            }
+        }
+
+        public async Task<BaseResponse<(List<ProductCategoryModel>, int)>> GetProductCategoriesAsync(int id, int pageIndex, int pageSize, string? Filter)
+        {
+            try
+            {
+                var getProduct = await _productRepo.GetProductCategoriesAsync(id, pageIndex, pageSize, Filter);
+                if (getProduct.Item1==null)
+                    return new BaseResponse<(List<ProductCategoryModel>, int)>(
+                        new List<string> { "Product not found" }, "Error fetching product");
+
+                var data = _mapper.Map<List<ProductCategory>, List<ProductCategoryModel>>(getProduct.Item1);
+                return new BaseResponse<(List<ProductCategoryModel>, int)>((data, getProduct.Item2), string.Empty);
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
+
+                return new BaseResponse<(List<ProductCategoryModel>, int)>(
                         new List<string> { ex.Message }, "Error fetching product");
             }
         }
@@ -59,6 +81,18 @@ namespace Service.Service
                     request.CreatedOn = DateTime.Now;
                 
                 var result= await _productRepo.AddEditProductAsync(request);
+                if (result.Success && 
+                    (requestModel.Quantity.HasValue ||requestModel.UnitPrice.HasValue ||requestModel.SellPrice.HasValue ))
+                {
+                    await _productRepo.AddEditVendorStockAsync(new VendorStock { 
+                        ProductId=result.Data.Id,
+                        Quantity=requestModel.Quantity,
+                        SellPrice=requestModel.SellPrice,
+                        UnitPrice=requestModel.UnitPrice
+                        //,
+                        //VendorId=requestModel.ve
+                    });
+                }
                 return BaseResponse<ProductModel>.SuccessResponse(_mapper.Map<Product, ProductModel>(result.Data));
             }
             catch (Exception ex)

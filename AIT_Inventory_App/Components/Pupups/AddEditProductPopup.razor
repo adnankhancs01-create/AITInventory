@@ -1,0 +1,71 @@
+﻿@using Common.Models
+@using Common.Models.RequestModel
+@using Service.IService
+@inject IProductService _ProductService
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="ProductRequesModel" Data="@Product" Submit="@OnSubmit">
+    <ChildContent>
+        <RadzenFieldset Text="Product Information">
+
+            <RadzenLabel Text="Name" />
+            <RadzenTextBox @bind-Value="Product.Name" Name="Name" Style="width:100%" />
+            <RadzenRequiredValidator Component="Name" Text="Name is required" />
+            <br />
+            <RadzenLabel Text="Category" />
+            <RadzenDropDown Data="@categories"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            @bind-Value="Product.CategoryId"
+                            Style="width:100%"
+                            Name="ClientId"
+                            Placeholder="Choose a category" />
+
+            <br />
+            <RadzenLabel Text="Quatity" />
+            <RadzenNumeric @bind-Value="Product.Quantity" Name="Quatity" Style="width:100%" />
+            
+            <br />
+            <RadzenLabel Text="Unit Price" />
+            <RadzenNumeric @bind-Value="Product.UnitPrice" Name="UnitPrice" Style="width:100%" />
+            
+            <br />
+            <RadzenLabel Text="Sell Price" />
+            <RadzenNumeric @bind-Value="Product.SellPrice" Name="SellPrice" Style="width:100%" />
+            <br />
+            <RadzenLabel Text="Description" />
+            <RadzenTextArea @bind-Value="Product.Description" Name="Description" Style="width:100%" />
+           
+            <div style="margin-top:15px;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
+                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            </div>
+        </RadzenFieldset>
+    </ChildContent>
+</RadzenTemplateForm>
+
+
+
+@code {
+    [Parameter] public ProductRequesModel Product { get; set; }
+    [Parameter] public List<ProductCategoryModel> categories { get; set; }
+
+    
+    private async Task OnSubmit(ProductRequesModel model)
+    {
+        var result = await _ProductService.AddEditProductAsync(model);
+        if (result.Success)
+        {
+            DialogService.Close(true); // close popup
+        }
+        else
+        {
+            await DialogService.Alert($"{result.Message} : {string.Join(",", result.Errors)}", "Error");
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+}
