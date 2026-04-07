@@ -1,6 +1,7 @@
-﻿@page "/"
+﻿@page "/Product"
 @using Common.Models
 @using Common.Models.RequestModel
+@using Common.Models.ResponseModel
 @using Service.IService
 @inject IProductService _ProductService
 @inject NavigationManager Navigation
@@ -15,18 +16,20 @@
 </div>
 
 
-<RadzenDataGrid Data="@Products" TItem="ProductModel"
+<RadzenDataGrid Data="@Products" TItem="GetProductResponseModel"
                 Count="@count"
                 LoadData="@LoadData"
                 AllowPaging="true" PageSize="20"
                 AllowSorting="false" AllowFiltering="true">
 
     <Columns>
-        <RadzenDataGridColumn TItem="ProductModel" Property="Name" Title="Name" />
-        <RadzenDataGridColumn TItem="ProductModel" Property="Description" Title="Description" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="Name" Title="Name" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="ProductCode" Title="ProductCode" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="Stock.Quantity" Title="Quantity" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="PricingModel.UnitPrice" Title="Unit Price" />
         @* <RadzenDataGridColumn TItem="ProductModel" Property="CreatedOn" Title="Added On" /> *@
 
-        <RadzenDataGridColumn TItem="ProductModel" Title="Actions">
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Title="Actions">
             <Template Context="Product">
                 <RadzenButton Text="Edit" Icon="edit" Size="ButtonSize.Small"
                               Click="@(() => EditProduct(Product.Id.Value))" Style="margin-right:5px" />
@@ -38,7 +41,7 @@
 </RadzenDataGrid>
 
 @code {
-    private IEnumerable<ProductModel>? Products;
+    private IEnumerable<GetProductResponseModel>? Products;
     private int count;
 
     private async Task LoadData(LoadDataArgs args)
@@ -50,7 +53,7 @@
         int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
         int pageSize = args.Top ?? 10;
 
-        var result = await _ProductService.GetProductsAsync(0, pageIndex, pageSize, args.Filter);
+        var result = await _ProductService.GetProductsReportAsync(0, pageIndex, pageSize, args.Filter);
         if (result.Success)
         {
             Products = result.Data.Item1.ToList();
@@ -59,22 +62,24 @@
         else
         {
             // Handle error (e.g., show message)
-            Products = new List<ProductModel>();
+            Products = new List<GetProductResponseModel>();
             count = 0;
         }
     }
 
     private async Task EditProduct(int ProductId)
     {
-        var result = await _ProductService.GetProductsAsync(ProductId, 1, 1, string.Empty);
+        var result = await _ProductService.GetProductsReportAsync(ProductId, 1, 1, string.Empty);
         if (result.Success)
         {
             var data = new ProductRequesModel();
             data.Name = result.Data.Item1.FirstOrDefault()?.Name;
             data.Description = result.Data.Item1.FirstOrDefault()?.Description;
             data.Quantity = result.Data.Item1.FirstOrDefault()?.Stock.Quantity;
-            data.SellPrice = result.Data.Item1.FirstOrDefault()?.Stock.SellPrice;
-            data.UnitPrice = result.Data.Item1.FirstOrDefault()?.Stock.UnitPrice;
+            data.TotalPurchasePrice = result.Data.Item1.FirstOrDefault()?.Stock.TotalPurchasePrice;
+            data.UnitPrice = result.Data.Item1.FirstOrDefault()?.PricingModel?.UnitPrice;
+            data.ProductCode = result.Data.Item1.FirstOrDefault()?.PricingModel?.ProductCode;
+            data.StockNumber = result.Data.Item1.FirstOrDefault()?.Stock?.StockNumber;
             // work on category required
             data.Id = ProductId;
 
@@ -89,7 +94,7 @@
         // After closing, refresh grid
         await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
     }
-    private async Task ViewProduct(ProductModel Product)
+    private async Task ViewProduct(GetProductResponseModel Product)
     {
         try
         {
@@ -101,8 +106,8 @@
             result.Add("Modified On", Product.ModifiedOn?.ToShortDateString());
             result.Add("Category", Product.Category?.Name);
             result.Add("Quantity", Product.Stock?.Quantity?.ToString());
-            result.Add("Sell Price", Product.Stock?.SellPrice.ToString());
-            result.Add("Unit Price", Product.Stock?.UnitPrice.ToString());
+            result.Add("Sell Price", Product.PricingModel?.UnitPrice.ToString());
+            result.Add("Total Purchase Price", Product.Stock?.TotalPurchasePrice.ToString());
 
             await DialogService.OpenAsync<ViewPopup>(
                 "Product Details",

@@ -41,10 +41,19 @@ namespace Common.Models
 
         public int? VendorId { get; set; }
         public int ProductId { get; set; }
-
         public int? Quantity { get; set; } = 0;
+        public decimal? TotalPurchasePrice { get; set; }
+        public long? StockNumber { get; set; }
 
-        public decimal? UnitPrice { get; set; }
-        public decimal? SellPrice { get; set; }
+    }
+    public class PricingModel
+    {
+        public int Id { get; set; }
+        public decimal? UnitPrice { get; set; }// Sell Price
+        public string? ProductCode { get; set; }
+        public long? StockNumber { get; set; }
+        public DateTime? CreatedOn { get; set; } = DateTime.Now;
+        public int? CreatedBy { get; set; }
+
     }
 }

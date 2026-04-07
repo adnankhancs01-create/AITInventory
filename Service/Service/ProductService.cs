@@ -2,6 +2,7 @@
 using Common;
 using Common.Models;
 using Common.Models.RequestModel;
+using Common.Models.ResponseModel;
 using Domain.Entities;
 using Domain.IRepositories;
 using Service.IService;
@@ -70,6 +71,7 @@ namespace Service.Service
         {
             try
             {
+                long? stockNumber = null;
                 var request = _mapper.Map<Product>(requestModel);
                 if (request == null)
                     return new BaseResponse<ProductModel>(
@@ -82,17 +84,24 @@ namespace Service.Service
                 
                 var result= await _productRepo.AddEditProductAsync(request);
                 if (result.Success && 
-                    (requestModel.Quantity.HasValue ||requestModel.UnitPrice.HasValue ||requestModel.SellPrice.HasValue ))
+                    (requestModel.Quantity.HasValue || requestModel.TotalPurchasePrice.HasValue))
                 {
-                    await _productRepo.AddEditVendorStockAsync(new VendorStock { 
+                    var stockResult=await _productRepo.AddEditVendorStockAsync(new VendorStock { 
                         ProductId=result.Data.Id,
                         Quantity=requestModel.Quantity,
-                        SellPrice=requestModel.SellPrice,
-                        UnitPrice=requestModel.UnitPrice
-                        //,
-                        //VendorId=requestModel.ve
+                        StockNumber=requestModel.StockNumber,
+                        TotalPurchasePrice=requestModel.TotalPurchasePrice
                     });
+                    stockNumber = stockResult?.Data?.StockNumber;
                 }
+
+                if (result.Success && (requestModel.UnitPrice.HasValue))
+                    await _productRepo.AddPricingAsync(new Pricing
+                    {
+                        ProductCode = result.Data.ProductCode,
+                        UnitPrice = requestModel.UnitPrice
+                    });
+
                 return BaseResponse<ProductModel>.SuccessResponse(_mapper.Map<Product, ProductModel>(result.Data));
             }
             catch (Exception ex)
@@ -140,6 +149,49 @@ namespace Service.Service
                     new() { ex.Message },
                     "Error occurred while processing request"
                 );
+            }
+        }
+        public async Task<BaseResponse<(List<GetProductResponseModel>, int)>> GetProductsReportAsync(int productId, int pageIndex, int pageSize, string? Filter)
+        {
+            try
+            {
+                var getProduct = await GetProductsAsync(productId, pageIndex, pageSize, Filter);
+                var productCodes = getProduct.Data.Item1.Select(p => p.ProductCode).ToList();
+                var getPricing = await _productRepo.GetPricingByProductCodeAsync(productCodes);
+
+                var result = (
+                    from p in getProduct.Data.Item1
+                    join pr in getPricing
+                        on p.ProductCode equals pr.ProductCode into prj
+                    from pr in prj.DefaultIfEmpty() // left join
+                    select new GetProductResponseModel
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = p.Description,
+                        ProductCode = p.ProductCode,
+                        CategoryId = p.CategoryId,
+                        CreatedOn = p.CreatedOn,
+                        CreatedBy = p.CreatedBy,
+                        ModifiedOn = p.ModifiedOn,
+                        ModifiedBy = p.ModifiedBy,
+                        Stock = p.Stock,
+                        Category = p.Category,
+                        PricingModel = _mapper.Map<Pricing, PricingModel>(pr) // safe access
+                    }).ToList();
+
+                if (result == null || result.Count == 0)
+                    return new BaseResponse<(List<GetProductResponseModel>, int)>(
+                        new List<string> { "Product not found" }, "Error fetching product");
+
+                return new BaseResponse<(List<GetProductResponseModel>, int)>((result, getProduct.Data.Item2), string.Empty);
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
+
+                return new BaseResponse<(List<GetProductResponseModel>, int)>(
+                        new List<string> { ex.Message }, "Error fetching product");
             }
         }
     }

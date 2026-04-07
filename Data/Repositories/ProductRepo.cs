@@ -183,19 +183,19 @@ namespace Data.Repositories
             try
             {
                 var stock = await _dbContext.VendorStock
-                    .FirstOrDefaultAsync(x => x.ProductId == vendorStock.ProductId);
+                    .FirstOrDefaultAsync(x => x.StockNumber == vendorStock.StockNumber);
 
                 if (stock == null)
                 {
                     stock = vendorStock;
+                    stock.StockNumber =Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
                     await _dbContext.VendorStock.AddAsync(stock);
                 }
                 else
                 {
                     stock.Quantity = vendorStock.Quantity;
-                    stock.UnitPrice = vendorStock.UnitPrice;
-                    stock.SellPrice = vendorStock.SellPrice;
                     stock.VendorId = vendorStock.VendorId;
+                    stock.TotalPurchasePrice = vendorStock.TotalPurchasePrice;
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -214,6 +214,63 @@ namespace Data.Repositories
                     new() { ex.Message },
                     "Error occurred while processing request"
                 );
+            }
+        }
+        
+        public async Task<BaseResponse<Pricing>> AddPricingAsync(Pricing pricing)
+        {
+            try
+            {
+                var existingPricing = await _dbContext.Pricing
+                    .OrderByDescending(x => x.Id)
+                    .FirstOrDefaultAsync(x => x.ProductCode == pricing.ProductCode);
+                if (existingPricing ==null || existingPricing.UnitPrice!=pricing.UnitPrice)
+                {
+                    await _dbContext.Pricing.AddAsync(pricing);
+                    await _dbContext.SaveChangesAsync();
+                }
+                return BaseResponse<Pricing>.SuccessResponse(pricing, "Request executed successfully");
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(
+                    ex,
+                    userId: 1,
+                    additionalData: JsonSerializer.Serialize(new { message = "Error while adding product Pricing" }),
+                    request: JsonSerializer.Serialize(pricing)
+                );
+
+                return BaseResponse<Pricing>.FailureResponse(
+                    new() { ex.Message },
+                    "Error occurred while processing request"
+                );
+            }
+        }
+
+        public async Task<List<Pricing>> GetPricingByProductCodeAsync(List<string>? productCodes)
+        {
+            try
+            {
+                var query = _dbContext.Pricing.AsQueryable();
+                if (productCodes != null && productCodes.Any())
+                {
+                    query = query.Where(x => productCodes.Contains(x.ProductCode));
+                }
+                query = query.GroupBy(x => x.ProductCode)
+                    .Select(g => g.OrderByDescending(x => x.CreatedOn).FirstOrDefault());
+
+                var pricingList = await query.ToListAsync();
+                return pricingList;
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(
+                    ex,
+                    userId: 1,
+                    additionalData: JsonSerializer.Serialize(new { message = "Error while fetching product Pricing" }),
+                    request: JsonSerializer.Serialize(productCodes)
+                );
+                return new List<Pricing>();
             }
         }
 
