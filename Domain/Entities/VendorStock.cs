@@ -18,9 +18,7 @@ namespace Domain.Entities
         public Product Product { get; set; }
 
         public int? Quantity { get; set; } = 0;
-
-        [Column(TypeName = "decimal(10,2)")]
-        public decimal? UnitPrice { get; set; }
-        public decimal? SellPrice { get; set; }
+        public decimal? TotalPurchasePrice { get; set; }
+        public long? StockNumber { get; set; }
     }
 }

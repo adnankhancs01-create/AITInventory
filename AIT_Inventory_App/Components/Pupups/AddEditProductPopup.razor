@@ -29,9 +29,12 @@
             <RadzenLabel Text="Unit Price" />
             <RadzenNumeric @bind-Value="Product.UnitPrice" Name="UnitPrice" Style="width:100%" />
             
+            
             <br />
-            <RadzenLabel Text="Sell Price" />
-            <RadzenNumeric @bind-Value="Product.SellPrice" Name="SellPrice" Style="width:100%" />
+            <RadzenLabel Text="Total Purchase Price" />
+            <RadzenNumeric @bind-Value="Product.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%" />
+            <RadzenNumeric @bind-Value="Product.StockNumber" Name="StockNumber" hidden/>
+            
             <br />
             <RadzenLabel Text="Description" />
             <RadzenTextArea @bind-Value="Product.Description" Name="Description" Style="width:100%" />
