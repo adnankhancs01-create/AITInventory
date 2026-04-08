@@ -19,23 +19,28 @@
                             @bind-Value="Product.CategoryId"
                             Style="width:100%"
                             Name="ClientId"
-                            Placeholder="Choose a category" />
+                            Placeholder="Choose a category"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"                           />
 
             <br />
-            <RadzenLabel Text="Quatity" />
-            <RadzenNumeric @bind-Value="Product.Quantity" Name="Quatity" Style="width:100%" />
-            
-            <br />
+           
             <RadzenLabel Text="Unit Price" />
             <RadzenNumeric @bind-Value="Product.UnitPrice" Name="UnitPrice" Style="width:100%" />
             
             
             <br />
-            <RadzenLabel Text="Total Purchase Price" />
-            <RadzenNumeric @bind-Value="Product.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%" />
-            <RadzenNumeric @bind-Value="Product.StockNumber" Name="StockNumber" hidden/>
+            @if (!Product.Id.HasValue || Product.Id == 0)
+            {
+                <RadzenLabel Text="Quatity" />
+                <RadzenNumeric @bind-Value="Product.Quantity" Name="Quatity" Style="width:100%" />
             
-            <br />
+                <br />
+                <RadzenLabel Text="Total Purchase Price" />
+                <RadzenNumeric @bind-Value="Product.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%" />
+            
+                <br />
+            }
             <RadzenLabel Text="Description" />
             <RadzenTextArea @bind-Value="Product.Description" Name="Description" Style="width:100%" />
            

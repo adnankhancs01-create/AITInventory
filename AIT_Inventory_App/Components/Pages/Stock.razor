@@ -1,0 +1,162 @@
+﻿@page "/Stock"
+@using Common.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Service.IService
+@inject IProductService _ProductService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.Pupups
+
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <h3 style="margin:0;">Stock Management</h3>
+    <RadzenButton Text="Add Stock" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
+                  Click="@AddStock" />
+</div>
+
+
+<RadzenDataGrid Data="@Stocks" TItem="GetStockResponseModel"
+                Count="@count"
+                LoadData="@LoadData"
+                AllowPaging="true" PageSize="20"
+                AllowSorting="false"
+                AllowFiltering="true">
+
+    <Columns>
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="ProductName" Title="Product Name" Filterable="true" />
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="StockNumber" Title="Stock Number" Filterable="true" />
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="Quantity" Title="Quantity" Filterable="true" />
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="TotalPurchasePrice" Title="Total Purchase Price" Filterable="true" />
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="CreatedOn" Title="Added On" Filterable="true" />
+
+        <RadzenDataGridColumn TItem="GetStockResponseModel" Title="Actions" Filterable="false">
+            <Template Context="Stock">
+                <RadzenButton Text="" Icon="edit" Size="ButtonSize.Small"
+                              Click="@(() => EditStock(Stock))" Style="margin-right:5px" />
+                <RadzenButton Text="" Icon="visibility" Size="ButtonSize.Small"
+                              Click="@(() => ViewStock(Stock))" />
+                <RadzenButton Text="Add Stock" Icon="add_circle" Size="ButtonSize.Small" IconColor="green"
+                              Click="@(() => AddStock(Stock.ProductId))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private IEnumerable<GetStockResponseModel>? Stocks;
+    private int count;
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        // args.Skip = starting record index
+        // args.Top = page size
+        // args.SortOrder = sorting info
+        // args.Filter = filter expression
+        int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
+        int pageSize = args.Top ?? 10;
+
+        var result = await _ProductService.GetStocksReportAsync(0, pageIndex, pageSize, args.Filter);
+        if (result.Success)
+        {
+            Stocks = result.Data.Item1.ToList();
+            count = result.Data.Item2;
+        }
+        else
+        {
+            // Handle error (e.g., show message)
+            Stocks = new List<GetStockResponseModel>();
+            count = 0;
+        }
+    }
+
+    private async Task EditStock(GetStockResponseModel stock)
+    {
+        var data = new AddEditVendorStockRequestModel();
+        data.StockNumber = stock.StockNumber;
+        data.Id = stock.Id;
+        data.ProductId = stock.ProductId;
+        data.Quantity = stock.Quantity;
+        data.TotalPurchasePrice = stock.TotalPurchasePrice;
+
+        await DialogService.OpenAsync<AddEditStockPopup>(
+            "Edit Stock",
+            new Dictionary<string, object>() { { "Stock", data } },
+            new DialogOptions() { Width = "600px", Height = "auto" }
+        );
+        // if (result.Success)
+        // {
+        //     var data = new AddEditVendorStockRequestModel();
+        //     // data.StockNumber = result.Data.Item1.FirstOrDefault()?.StockNumber;
+        //     data.StockNumber = stock.StockNumber;
+        //     data.Id = stock.Id;
+        //     data.ProductId = stock.ProductId;
+        //     data.Quantity = stock.Quantity;
+        //     data.TotalPurchasePrice = stock.TotalPurchasePrice;
+        //     // data.StockNumber = result.Data.Item1.FirstOrDefault()?.Stock?.StockNumber;
+        //     // work on category required
+        //     // data.Id = StockId;
+        //     // data.ProductId = result.Data.Item1.FirstOrDefault().ProductId;
+
+        //     await DialogService.OpenAsync<AddEditStockPopup>(
+        //         "Edit Stock",
+        //         new Dictionary<string, object>() { { "Stock", data } },
+        //         new DialogOptions() { Width = "600px", Height = "auto" }
+        //     );
+        // }
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task ViewStock(GetStockResponseModel Stock)
+    {
+        try
+        {
+            var result = new Dictionary<string, string>();
+            result.Add("Product Name", Stock.ProductName);
+            result.Add("ProductCode", Stock.ProductCode);
+            result.Add("Category", Stock.Category);
+            result.Add("Stock Number", Stock.StockNumber.ToString());
+            result.Add("Added On", Stock.CreatedOn?.ToShortDateString());
+            result.Add("Modified On", Stock.ModifiedOn?.ToShortDateString());
+            result.Add("Quantity", Stock.Quantity.ToString());
+            result.Add("Total Purchase Price", Stock.TotalPurchasePrice.ToString());
+
+            await DialogService.OpenAsync<ViewPopup>(
+                "Stock Details",
+                new Dictionary<string, object>() { { "Obj", result } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+    private async Task AddStock(int productId)
+    {
+        await DialogService.OpenAsync<AddEditStockPopup>(
+        "Add Stock",
+        new Dictionary<string, object>() { { "Stock", new AddEditVendorStockRequestModel { ProductId=productId} } },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task AddStock()
+    {
+        var getProducts = await _ProductService.GetProductsAsync(0, 1, int.MaxValue,string.Empty);
+        if (getProducts == null || (getProducts.Data.Item1 == null || getProducts.Data.Item1.Count==0))
+            await DialogService.Alert("No products found. Please add a product before adding stock.", "Error");
+        
+            await DialogService.OpenAsync<AddEditStockPopup>(
+        "Add Stock",
+        new Dictionary<string, object>() { 
+            { "Stock", new AddEditVendorStockRequestModel() },
+            { "Products",getProducts?.Data.Item1}
+        },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+
+}

@@ -20,21 +20,24 @@
                 Count="@count"
                 LoadData="@LoadData"
                 AllowPaging="true" PageSize="20"
-                AllowSorting="false" AllowFiltering="true">
+                AllowSorting="false"
+                AllowFiltering="true">
 
     <Columns>
-        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="Name" Title="Name" />
-        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="ProductCode" Title="ProductCode" />
-        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="Stock.Quantity" Title="Quantity" />
-        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="PricingModel.UnitPrice" Title="Unit Price" />
-        @* <RadzenDataGridColumn TItem="ProductModel" Property="CreatedOn" Title="Added On" /> *@
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="Name" Title="Name" Filterable="true"/>
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="ProductCode" Title="ProductCode" Filterable="true" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="TotalStock" Title="Quantity" Filterable="false" />
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Property="PricingModel.UnitPrice" Title="Unit Price" Filterable="false" />
+        <RadzenDataGridColumn TItem="ProductModel" Property="CreatedOn" Title="Added On" Filterable="true" />
 
-        <RadzenDataGridColumn TItem="GetProductResponseModel" Title="Actions">
+        <RadzenDataGridColumn TItem="GetProductResponseModel" Title="Actions" Filterable="false">
             <Template Context="Product">
-                <RadzenButton Text="Edit" Icon="edit" Size="ButtonSize.Small"
+                <RadzenButton Text="" Icon="edit" Size="ButtonSize.Small" 
                               Click="@(() => EditProduct(Product.Id.Value))" Style="margin-right:5px" />
-                <RadzenButton Text="View" Icon="visibility" Size="ButtonSize.Small"
+                <RadzenButton Text="" Icon="visibility" Size="ButtonSize.Small" 
                               Click="@(() => ViewProduct(Product))" />
+                <RadzenButton Text="Add Stock" Icon="add_circle" Size="ButtonSize.Small" IconColor="green"
+                              Click="@(() => AddStock(Product.Id.Value))" />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
@@ -75,13 +78,14 @@
             var data = new ProductRequesModel();
             data.Name = result.Data.Item1.FirstOrDefault()?.Name;
             data.Description = result.Data.Item1.FirstOrDefault()?.Description;
-            data.Quantity = result.Data.Item1.FirstOrDefault()?.Stock.Quantity;
-            data.TotalPurchasePrice = result.Data.Item1.FirstOrDefault()?.Stock.TotalPurchasePrice;
+            // data.Quantity = result.Data.Item1.FirstOrDefault()?.Stocks.Sum(s=> s.Quantity);
+            // data.TotalPurchasePrice = result.Data.Item1.FirstOrDefault()?.Stocks.Sum(x=>x.TotalPurchasePrice);
             data.UnitPrice = result.Data.Item1.FirstOrDefault()?.PricingModel?.UnitPrice;
-            data.ProductCode = result.Data.Item1.FirstOrDefault()?.PricingModel?.ProductCode;
-            data.StockNumber = result.Data.Item1.FirstOrDefault()?.Stock?.StockNumber;
+            data.ProductCode = result.Data.Item1.FirstOrDefault()?.ProductCode;
+            // data.StockNumber = result.Data.Item1.FirstOrDefault()?.Stock?.StockNumber;
             // work on category required
             data.Id = ProductId;
+            data.CategoryId = result.Data.Item1.FirstOrDefault().CategoryId;
 
             var categories = await _ProductService.GetProductCategoriesAsync(0,1,int.MaxValue,string.Empty);
 
@@ -105,9 +109,9 @@
             result.Add("Added On", Product.CreatedOn?.ToShortDateString());
             result.Add("Modified On", Product.ModifiedOn?.ToShortDateString());
             result.Add("Category", Product.Category?.Name);
-            result.Add("Quantity", Product.Stock?.Quantity?.ToString());
+            result.Add("Quantity", Product.TotalStock.ToString());
             result.Add("Sell Price", Product.PricingModel?.UnitPrice.ToString());
-            result.Add("Total Purchase Price", Product.Stock?.TotalPurchasePrice.ToString());
+            result.Add("Total Purchase Price", Product.TotalPurchasePrice.ToString());
 
             await DialogService.OpenAsync<ViewPopup>(
                 "Product Details",
@@ -126,6 +130,20 @@
         await DialogService.OpenAsync<AddEditProductPopup>(
         "Add Product",
         new Dictionary<string, object>() { { "Product", new ProductRequesModel() }, { "categories", categories.Data.Item1 } },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task AddStock(int productId)
+    {
+        var request = new AddEditVendorStockRequestModel
+        {
+            ProductId = productId
+        };
+        await DialogService.OpenAsync<AddEditStockPopup>(
+        "Add Stock",
+        new Dictionary<string, object>() { { "Stock", request } },
         new DialogOptions() { Width = "600px", Height = "auto" }
     );
         // After closing, refresh grid

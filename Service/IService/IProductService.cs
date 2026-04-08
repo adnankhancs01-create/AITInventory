@@ -15,5 +15,7 @@ namespace Service.IService
         Task<BaseResponse<ProductModel>> AddEditProductAsync(ProductRequesModel product);
         Task<BaseResponse<ProductCategory>> AddEditProductCategoryAsync(ProductCategoryRequesModel requestModel);
         Task<BaseResponse<(List<GetProductResponseModel>, int)>> GetProductsReportAsync(int productId, int pageIndex, int pageSize, string? Filter);
+        Task<BaseResponse<VendorStockModel>> AddEditVendorStockAsync(AddEditVendorStockRequestModel requestModel);
+        Task<BaseResponse<(List<GetStockResponseModel>, int)>> GetStocksReportAsync(int? productId, int pageIndex, int pageSize, string? Filter);
     }
 }

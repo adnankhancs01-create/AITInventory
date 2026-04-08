@@ -1,0 +1,66 @@
+﻿@using Common.Models
+@using Common.Models.RequestModel
+@using Service.IService
+@inject IProductService _productService
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="AddEditVendorStockRequestModel" Data="@Stock" Submit="@OnSubmit">
+    <ChildContent>
+        <RadzenFieldset Text="Stock Information">
+            @if (Products != null && Products.Count > 0)
+            {
+                 <RadzenLabel Text="Products" />
+                <RadzenDropDown Data="@Products"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            @bind-Value="Stock.ProductId"
+                            Style="width:100%"
+                                Name="ProductId"
+                                Placeholder="Choose a Product"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+
+            <br />   
+            }
+            <RadzenLabel Text="Quatity" />
+            <RadzenNumeric @bind-Value="Stock.Quantity" Name="Quatity" Style="width:100%" />
+            
+            <br />
+            <RadzenLabel Text="Total Purchase Price" />
+            <RadzenNumeric @bind-Value="Stock.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%" />
+            <RadzenNumeric @bind-Value="Stock.StockNumber" Name="StockNumber" hidden/>
+            <br />
+
+            <div style="margin-top:15px;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
+                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            </div>
+        </RadzenFieldset>
+    </ChildContent>
+</RadzenTemplateForm>
+
+
+
+@code {
+    [Parameter] public AddEditVendorStockRequestModel Stock { get; set; }
+    [Parameter] public List<ProductModel> Products { get; set; }
+
+    
+    private async Task OnSubmit(AddEditVendorStockRequestModel model)
+    {
+        var result = await _productService.AddEditVendorStockAsync(model);
+        if (result.Success)
+        {
+            DialogService.Close(true); // close popup
+        }
+        else
+        {
+            await DialogService.Alert($"{result.Message} : {string.Join(",", result.Errors)}", "Error");
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+}
