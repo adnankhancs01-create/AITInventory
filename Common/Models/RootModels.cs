@@ -22,7 +22,7 @@ namespace Common.Models
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public int? ModifiedBy { get; set; }
-        public VendorStockModel Stock { get; set; }
+        public List<VendorStockModel> Stocks { get; set; }
     }
     public class ProductCategoryModel
     {
