@@ -10,24 +10,24 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
 
-        public int ClientId { get; set; }   // refers to VendorClient
+        public int? ClientId { get; set; }   // refers to VendorClient
         public VendorClient Client { get; set; }
 
-        public int ProductId { get; set; }
+        public int? ProductId { get; set; }
         public Product Product { get; set; }
 
-        public string TransactionType { get; set; }  // BUY / SELL
+        public string? TransactionType { get; set; }  // BUY / SELL
 
-        public int Quantity { get; set; }
+        public int? Quantity { get; set; }
 
-        public decimal UnitPrice { get; set; }
+        public decimal? UnitPrice { get; set; }
 
-        public decimal TotalAmount => UnitPrice * Quantity;
+        public decimal? TotalAmount => UnitPrice * Quantity;
 
-        public decimal ClientAmount { get; set; }
+        public decimal? ClientAmount { get; set; }
 
-        public DateTime TransactionDate { get; set; } = DateTime.Now;
+        public DateTime? TransactionDate { get; set; } = DateTime.Now;
 
-        public string Remarks { get; set; }
+        public string? Remarks { get; set; }
     }
 }

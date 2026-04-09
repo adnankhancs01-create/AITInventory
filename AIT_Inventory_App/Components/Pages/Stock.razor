@@ -131,7 +131,7 @@
         {
         }
     }
-    private async Task AddStock(int productId)
+    private async Task AddStock(int? productId)
     {
         await DialogService.OpenAsync<AddEditStockPopup>(
         "Add Stock",

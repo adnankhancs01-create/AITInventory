@@ -11,6 +11,8 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <h3 style="margin:0;">Product Management</h3>
+    <RadzenButton Text="Add Category" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
+                  Click="@AddCategory" />
     <RadzenButton Text="Add Product" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
                   Click="@AddProduct" />
 </div>
@@ -148,6 +150,17 @@
     );
         // After closing, refresh grid
         await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    
+    private async Task AddCategory()
+    {
+        await DialogService.OpenAsync<AddEditCategoryPopup>(
+        "Add Category",
+        new Dictionary<string, object>() { { "category", new ProductCategoryRequesModel() } },
+        new DialogOptions() { Width = "600px", Height = "auto" }
+    );
+        // After closing, refresh grid
+        //await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
     }
 
 }

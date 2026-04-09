@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260405173405_descripasnullinproduct")]
-    partial class descripasnullinproduct
+    [Migration("20260409181715_allownull")]
+    partial class allownull
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -68,6 +68,34 @@ namespace Data.Migrations
                     b.ToTable("ExceptionLogs");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Pricing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProductCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("StockNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pricing");
+                });
+
             modelBuilder.Entity("Domain.Entities.UserMst", b =>
                 {
                     b.Property<int>("UserId")
@@ -106,24 +134,21 @@ namespace Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("City")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Country")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -132,12 +157,10 @@ namespace Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PostalCode")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("State")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -157,13 +180,13 @@ namespace Data.Migrations
                     b.Property<int>("ClientDetailId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ClientId")
+                    b.Property<int?>("ClientId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<int>("VendorId")
+                    b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -211,7 +234,6 @@ namespace Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FirstName")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -219,7 +241,6 @@ namespace Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("LastName")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -254,17 +275,29 @@ namespace Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("SellPrice")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<long?>("StockNumber")
+                        .HasColumnType("bigint");
 
-                    b.Property<decimal?>("UnitPrice")
-                        .HasColumnType("decimal(10,2)");
+                    b.Property<decimal?>("TotalPurchasePrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
@@ -286,30 +319,28 @@ namespace Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("ClientAmount")
+                    b.Property<decimal?>("ClientAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ClientId")
+                    b.Property<int?>("ClientId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Quantity")
+                    b.Property<int?>("Quantity")
                         .HasColumnType("int");
 
                     b.Property<string>("Remarks")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("TransactionDate")
+                    b.Property<DateTime?>("TransactionDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TransactionType")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("UnitPrice")
+                    b.Property<decimal?>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("VendorId")
@@ -371,7 +402,10 @@ namespace Data.Migrations
             modelBuilder.Entity("ProductCategory", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -380,7 +414,6 @@ namespace Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ModifiedBy")
@@ -409,9 +442,7 @@ namespace Data.Migrations
 
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorClients")
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("VendorId");
 
                     b.Navigation("ClientDetail");
 
@@ -421,10 +452,8 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.VendorStock", b =>
                 {
                     b.HasOne("Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .WithMany("Stocks")
+                        .HasForeignKey("ProductId");
 
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorStocks")
@@ -439,15 +468,11 @@ namespace Data.Migrations
                 {
                     b.HasOne("Domain.Entities.VendorClient", "Client")
                         .WithMany("VendorTransactions")
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ClientId");
 
                     b.HasOne("Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ProductId");
 
                     b.HasOne("Domain.Entities.Vendor", null)
                         .WithMany("VendorTransactions")
@@ -481,6 +506,11 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.VendorClient", b =>
                 {
                     b.Navigation("VendorTransactions");
+                });
+
+            modelBuilder.Entity("Product", b =>
+                {
+                    b.Navigation("Stocks");
                 });
 #pragma warning restore 612, 618
         }

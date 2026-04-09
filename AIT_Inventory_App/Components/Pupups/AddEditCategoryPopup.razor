@@ -1,0 +1,48 @@
+﻿@using Common.Models
+@using Common.Models.RequestModel
+@using Service.IService
+@inject IProductService _productService
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="ProductCategoryRequesModel" Data="@category" Submit="@OnSubmit">
+    <ChildContent>
+        <RadzenFieldset Text="Category Information">
+            <RadzenLabel Text="Name" />
+            <RadzenTextBox @bind-Value="category.Name" Name="Name" Style="width:100%" />
+            
+            <br />
+            <RadzenLabel Text="Description" />
+            <RadzenTextBox @bind-Value="category.Description" Name="Description" Style="width:100%" />
+            <br />
+
+            <div style="margin-top:15px;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
+                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            </div>
+        </RadzenFieldset>
+    </ChildContent>
+</RadzenTemplateForm>
+
+
+
+@code {
+    [Parameter] public ProductCategoryRequesModel category { get; set; }
+
+    private async Task OnSubmit(ProductCategoryRequesModel model)
+    {
+        var result = await _productService.AddEditProductCategoryAsync(model);
+        if (result.Success)
+        {
+            DialogService.Close(true); // close popup
+        }
+        else
+        {
+            await DialogService.Alert($"{result.Message} : {string.Join(",", result.Errors)}", "Error");
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+}

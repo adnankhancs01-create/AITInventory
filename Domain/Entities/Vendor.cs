@@ -14,22 +14,22 @@ namespace Domain.Entities
         public string Name { get; set; }
 
         [MaxLength(250)]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         [MaxLength(50)]
-        public string City { get; set; }
+        public string? City { get; set; }
 
         [MaxLength(50)]
-        public string State { get; set; }
+        public string? State { get; set; }
 
         [MaxLength(20)]
-        public string PostalCode { get; set; }
+        public string? PostalCode { get; set; }
 
         [MaxLength(50)]
-        public string Country { get; set; }
+        public string? Country { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public bool IsActive { get; set; } = true;
+        public DateTime? CreatedAt { get; set; } = DateTime.Now;
+        public bool? IsActive { get; set; } 
 
         // Navigation properties
         public ICollection<VendorStock> VendorStocks { get; set; }

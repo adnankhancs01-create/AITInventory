@@ -1,0 +1,112 @@
+﻿@page "/Category"
+@using Common.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Service.IService
+@inject IProductService _ProductService
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.Pupups
+
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <h3 style="margin:0;">Category Management</h3>
+    <RadzenButton Text="Add Category" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
+                  Click="@AddCategory" />
+</div>
+
+
+<RadzenDataGrid Data="@Categories" TItem="ProductCategoryModel"
+                Count="@count"
+                LoadData="@LoadData"
+                AllowPaging="true" PageSize="20"
+                AllowSorting="false"
+                AllowFiltering="true">
+
+    <Columns>
+        <RadzenDataGridColumn TItem="ProductCategoryModel" Property="Name" Title="Name" Filterable="true" />
+        <RadzenDataGridColumn TItem="ProductCategoryModel" Property="Description" Title="Description" Filterable="true" />
+        <RadzenDataGridColumn TItem="ProductCategoryModel" Property="CreatedOn" Title="Added On" Filterable="true" />
+
+        <RadzenDataGridColumn TItem="ProductCategoryModel" Title="Actions" Filterable="false">
+            <Template Context="Category">
+                <RadzenButton Text="" Icon="edit" Size="ButtonSize.Small"
+                              Click="@(() => Edit(Category.Id))" Style="margin-right:5px" />
+                <RadzenButton Text="" Icon="visibility" Size="ButtonSize.Small"
+                              Click="@(() => ViewCategory(Category))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private IEnumerable<ProductCategoryModel>? Categories;
+    private int count;
+    private async Task LoadData(LoadDataArgs args)
+    {
+        int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
+        int pageSize = args.Top ?? 10;
+
+        var result = await _ProductService.GetProductCategoriesAsync(0, pageIndex, pageSize, args.Filter);
+        if (result.Success)
+        {
+            Categories = result.Data.Item1.ToList();
+            count = result.Data.Item2;
+        }
+        else
+        {
+            Categories = new List<ProductCategoryModel>();
+            count = 0;
+        }
+    }
+
+    private async Task Edit(int categoryId)
+    {
+        var result = await _ProductService.GetProductCategoriesAsync(categoryId, 1, 1, string.Empty);
+        if (result.Success)
+        {
+            var data = new ProductCategoryRequesModel();
+            data.Name = result.Data.Item1.FirstOrDefault()?.Name;
+            data.Description = result.Data.Item1.FirstOrDefault()?.Description;
+            data.Id = categoryId;
+            await DialogService.OpenAsync<AddEditCategoryPopup>(
+                "Edit Category",
+                new Dictionary<string, object>() { { "Category", data } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+    private async Task ViewCategory(ProductCategoryModel categoryModel)
+    {
+        try
+        {
+            var result = new Dictionary<string, string>();
+            result.Add("Name", categoryModel.Name);
+            result.Add("Description", categoryModel.Description);
+            result.Add("Added On", categoryModel.CreatedOn?.ToShortDateString());
+            result.Add("Modified On", categoryModel.ModifiedOn?.ToShortDateString());
+
+            await DialogService.OpenAsync<ViewPopup>(
+                "Category Details",
+                new Dictionary<string, object>() { { "Obj", result } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+    private async Task AddCategory()
+    {
+        await DialogService.OpenAsync<AddEditCategoryPopup>(
+            "Add Category",
+            new Dictionary<string, object>() { { "category", new ProductCategoryRequesModel() } },
+            new DialogOptions() { Width = "600px", Height = "auto" }
+        );
+        // After closing, refresh grid
+        await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
+    }
+
+}

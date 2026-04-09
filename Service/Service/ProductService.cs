@@ -121,21 +121,19 @@ namespace Service.Service
             }
         }
 
-        public async Task<BaseResponse<ProductCategory>> AddEditProductCategoryAsync(ProductCategoryRequesModel requestModel)
+        public async Task<BaseResponse<ProductCategoryModel>> AddEditProductCategoryAsync
+            (ProductCategoryRequesModel requestModel)
         {
             try
             {
                 var request = _mapper.Map<ProductCategoryRequesModel, ProductCategory>(requestModel);
                 if (request == null)
-                    return new BaseResponse<ProductCategory>(
+                    return new BaseResponse<ProductCategoryModel>(
                         new List<string> { "Error" }, "Something went wrong");
 
-                if (requestModel.Id.HasValue)
-                    request.ModifiedOn = DateTime.Now;
-                else
-                    request.CreatedOn = DateTime.Now;
-
-                return await _productRepo.AddEditProductCategoryAsync(request);
+                var result= await _productRepo.AddEditProductCategoryAsync(request);
+                return BaseResponse<ProductCategoryModel>.SuccessResponse(_mapper.Map<ProductCategory, ProductCategoryModel>(result.Data)
+                    ,"Request executed successfully");
             }
             catch (Exception ex)
             {
@@ -146,7 +144,7 @@ namespace Service.Service
                     request: JsonSerializer.Serialize(requestModel)
                 );
 
-                return BaseResponse<ProductCategory>.FailureResponse(
+                return BaseResponse<ProductCategoryModel>.FailureResponse(
                     new() { ex.Message },
                     "Error occurred while processing request"
                 );
