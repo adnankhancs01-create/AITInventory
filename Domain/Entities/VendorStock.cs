@@ -13,7 +13,7 @@ namespace Domain.Entities
         [ForeignKey("VendorId")]
         public Vendor Vendor { get; set; }
 
-        public int ProductId { get; set; }
+        public int? ProductId { get; set; }
         [ForeignKey("ProductId")]
         public Product Product { get; set; }
 

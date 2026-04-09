@@ -40,7 +40,7 @@ namespace Common.Models
         public int Id { get; set; }
 
         public int? VendorId { get; set; }
-        public int ProductId { get; set; }
+        public int? ProductId { get; set; }
         public int? Quantity { get; set; } = 0;
         public decimal? TotalPurchasePrice { get; set; }
         public long? StockNumber { get; set; }

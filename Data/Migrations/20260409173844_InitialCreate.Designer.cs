@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260405174100_addsellpriceinstock")]
-    partial class addsellpriceinstock
+    [Migration("20260409173844_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,6 +66,34 @@ namespace Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ExceptionLogs");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Pricing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProductCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("StockNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pricing");
                 });
 
             modelBuilder.Entity("Domain.Entities.UserMst", b =>
@@ -254,17 +282,29 @@ namespace Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("SellPrice")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<long?>("StockNumber")
+                        .HasColumnType("bigint");
 
-                    b.Property<decimal?>("UnitPrice")
-                        .HasColumnType("decimal(10,2)");
+                    b.Property<decimal?>("TotalPurchasePrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
@@ -371,7 +411,10 @@ namespace Data.Migrations
             modelBuilder.Entity("ProductCategory", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -421,7 +464,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.VendorStock", b =>
                 {
                     b.HasOne("Product", "Product")
-                        .WithMany()
+                        .WithMany("Stocks")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -481,6 +524,11 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.VendorClient", b =>
                 {
                     b.Navigation("VendorTransactions");
+                });
+
+            modelBuilder.Entity("Product", b =>
+                {
+                    b.Navigation("Stocks");
                 });
 #pragma warning restore 612, 618
         }

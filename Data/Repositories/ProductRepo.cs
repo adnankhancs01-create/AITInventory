@@ -15,7 +15,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Data.Repositories
 {
-    public class ProductRepo: IProductRepo
+    public class ProductRepo : IProductRepo
     {
         private readonly InventoryDbContext _dbContext;
         private readonly ILogRepository _logRepo;
@@ -29,6 +29,7 @@ namespace Data.Repositories
         public async Task<(List<Product>, int)> GetProductsAsync(int id, int pageIndex, int pageSize, string? Filter)
         {
             var query = _dbContext.Products
+    .AsNoTracking()
                 .Where(x => x.Id == id || id == 0);
 
             if (!string.IsNullOrEmpty(Filter))
@@ -36,7 +37,7 @@ namespace Data.Repositories
 
             var totalCount = await query.CountAsync();
 
-            var data = await query.Include(x=> x.Category).Include(x=> x.Stocks)
+            var data = await query.Include(x => x.Category).Include(x => x.Stocks)
                 .OrderByDescending(x => x.Id)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -46,10 +47,11 @@ namespace Data.Repositories
 
 
         }
-        
+
         public async Task<(List<ProductCategory>, int)> GetProductCategoriesAsync(int id, int pageIndex, int pageSize, string? Filter)
         {
             var query = _dbContext.ProductCategories
+    .AsNoTracking()
                 .Where(x => x.Id == id || id == 0);
 
             if (!string.IsNullOrEmpty(Filter))
@@ -80,10 +82,10 @@ namespace Data.Repositories
                 if (product.Id > 0)
                 {
                     var getProduct = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == product.Id);
-                    getProduct.Name=product.Name;
-                    getProduct.Description=product.Description;
-                    getProduct.CategoryId=product.CategoryId;
-                    getProduct.ModifiedOn=product.ModifiedOn;
+                    getProduct.Name = product.Name;
+                    getProduct.Description = product.Description;
+                    getProduct.CategoryId = product.CategoryId;
+                    getProduct.ModifiedOn = product.ModifiedOn;
                 }
                 else
                 {
@@ -118,14 +120,23 @@ namespace Data.Repositories
             {
                 if (productCategory.Id > 0)
                 {
-                    _dbContext.ProductCategories.Update(productCategory);
+                    var getcategory = await _dbContext.ProductCategories.FirstOrDefaultAsync(x => x.Id == productCategory.Id);
+                    if (getcategory == null)
+                        return new BaseResponse<ProductCategory>(
+                            new List<string> { "Error" }, "Something went wrong");
+
+                    getcategory.Name = productCategory.Name;
+                    getcategory.Description = productCategory.Description;
+                    getcategory.ModifiedOn = DateTime.Now;
+
                 }
                 else
                 {
-                    int recentId=await _dbContext.ProductCategories.OrderByDescending(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync();
-                    int incrementalId= recentId + 1;
-                    productCategory.Id = incrementalId;
-                    await _dbContext.ProductCategories.AddAsync(productCategory);
+                    await _dbContext.ProductCategories.AddAsync(new ProductCategory { 
+                        Name= productCategory.Name,
+                        Description =  productCategory.Description,
+                        CreatedOn   =   DateTime.Now,
+                    });
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -151,6 +162,7 @@ namespace Data.Repositories
         private async Task<string> GenerateProductCodeAsync(int categoryId)
         {
             var category = await _dbContext.ProductCategories
+    .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == categoryId);
 
             if (category == null)
@@ -183,25 +195,26 @@ namespace Data.Repositories
         {
             try
             {
-                if (!vendorStock.StockNumber.HasValue || vendorStock.StockNumber==0)
+                if (!vendorStock.StockNumber.HasValue || vendorStock.StockNumber == 0)
                 {
-                    await _dbContext.VendorStock.AddAsync(new VendorStock { 
-                            ProductId=vendorStock.ProductId,
-                            Quantity=vendorStock.Quantity,
-                            StockNumber= Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
-                            TotalPurchasePrice=vendorStock.TotalPurchasePrice,
-                            VendorId= vendorStock.VendorId,
-                            CreatedOn= DateTime.Now
+                    await _dbContext.VendorStock.AddAsync(new VendorStock
+                    {
+                        ProductId = vendorStock.ProductId,
+                        Quantity = vendorStock.Quantity,
+                        StockNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
+                        TotalPurchasePrice = vendorStock.TotalPurchasePrice,
+                        VendorId = vendorStock.VendorId,
+                        CreatedOn = DateTime.Now
                     });
                 }
                 else
                 {
                     var stock = await _dbContext.VendorStock
                         .FirstOrDefaultAsync(x => x.StockNumber == vendorStock.StockNumber);
-                    
-                    if(stock == null)
-                        return BaseResponse<VendorStock>.FailureResponse(new List<string>() { "Something went wrong"}, "Stock not found");
-                   
+
+                    if (stock == null)
+                        return BaseResponse<VendorStock>.FailureResponse(new List<string>() { "Something went wrong" }, "Stock not found");
+
                     stock.Quantity = vendorStock.Quantity;
                     stock.VendorId = vendorStock.VendorId;
                     stock.TotalPurchasePrice = vendorStock.TotalPurchasePrice;
@@ -226,7 +239,7 @@ namespace Data.Repositories
                 );
             }
         }
-        
+
         public async Task<BaseResponse<Pricing>> AddPricingAsync(Pricing pricing)
         {
             try
@@ -234,7 +247,7 @@ namespace Data.Repositories
                 var existingPricing = await _dbContext.Pricing
                     .OrderByDescending(x => x.Id)
                     .FirstOrDefaultAsync(x => x.ProductCode == pricing.ProductCode);
-                if (existingPricing ==null || existingPricing.UnitPrice!=pricing.UnitPrice)
+                if (existingPricing == null || existingPricing.UnitPrice != pricing.UnitPrice)
                 {
                     await _dbContext.Pricing.AddAsync(pricing);
                     await _dbContext.SaveChangesAsync();
@@ -285,8 +298,9 @@ namespace Data.Repositories
         }
         public async Task<(List<VendorStock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter)
         {
-            var query = _dbContext.VendorStock.Include(x => x.Product).ThenInclude(x => x.Category)
-                .Where(x => (productId.HasValue || productId==0) || x.ProductId==productId);
+            var query = _dbContext.VendorStock
+    .AsNoTracking().Include(x => x.Product).ThenInclude(x => x.Category)
+                .Where(x => (productId.HasValue || productId == 0) || x.ProductId == productId);
 
             if (!string.IsNullOrEmpty(filter))
             {

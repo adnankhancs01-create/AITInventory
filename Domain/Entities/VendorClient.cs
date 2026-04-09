@@ -8,14 +8,14 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
 
-        public int VendorId { get; set; }
+        public int? VendorId { get; set; }
         public Vendor Vendor { get; set; }
 
         // One-to-One with details
-        public int ClientId { get; set; }
+        public int? ClientId { get; set; }
         public VendorClientDetail ClientDetail { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        public bool? IsActive { get; set; } 
 
         // Navigation
         public ICollection<VendorTransaction> VendorTransactions { get; set; }
