@@ -1,0 +1,166 @@
+﻿@using Common.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Service.IService
+@inject ITransactionService _transactionService
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="AddEditTransactionRequestModel" Data="@Transaction" Submit="@OnSubmit">
+    <ChildContent>
+        <RadzenFieldset Text="Transaction Information">
+
+            @if (Products != null && Products.Count > 0)
+            {
+                <RadzenLabel Text="Products" />
+                <RadzenDropDown Data="@Products"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                @bind-Value="Transaction.ProductId"
+                                Style="width:100%"
+                                Name="ProductId"
+                                Placeholder="Choose a Product"
+                                AllowFiltering="true"
+                                Change="OnProductChanged"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                <RadzenRequiredValidator Component="ProductId" Text="Product is required" />
+
+                <br />
+            }
+
+            <RadzenLabel Text="Quantity" />
+            <RadzenNumeric @bind-Value="Transaction.Quantity" onchange="OnQuantityChanged"  Name="Quantity" Style="width:100%" />
+            <RadzenRequiredValidator Component="Quantity" Text="Quantity is required" />
+            <br />
+
+            <RadzenLabel Text="Unit Price" />
+            <RadzenNumeric @bind-Value="Transaction.UnitPrice" Name="UnitPrice" Style="width:100%" />
+            <RadzenRequiredValidator Component="UnitPrice" Text="Unit Price is required" />
+            <br />
+           
+            @*  <RadzenLabel Text="Transaction Type" />
+            <RadzenTextBox @bind-Value="Transaction.TransactionType" Name="TransactionType" Style="width:100%" />
+            <RadzenRequiredValidator Component="TransactionType" Text="Transaction type is required" />
+            <br />
+           *@
+
+            <RadzenLabel Text="Client Amount" />
+            <RadzenNumeric @bind-Value="Transaction.ClientAmount" Name="ClientAmount" Style="width:100%" />
+            <RadzenRequiredValidator Component="ClientAmount" Text="Client amount is required" />
+            <br />
+
+            <RadzenLabel Text="Remarks" />
+            <RadzenTextBox @bind-Value="Transaction.Remarks" Name="Remarks" Style="width:100%" />
+            <br />  
+            
+            <RadzenLabel Text="Client Name" />
+            <RadzenTextBox @bind-Value="Transaction.ClientName" Name="ClientName" Style="width:100%" />
+            <br />
+            
+            @if (Clients != null && Clients.Count > 0)
+            {
+                <RadzenLabel Text="Clients" />
+                <RadzenDropDown Data="@Clients"
+                                TextProperty="Id"
+                                ValueProperty="Id"
+                                @bind-Value="Transaction.ClientId"
+                                Change="OnClientChanged"
+                                Style="width:100%"
+                                Name="ClientId"
+                                Placeholder="Choose a client"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+
+                <br />
+            }
+
+            <RadzenLabel Text="Client Phone" />
+            <RadzenTextBox @bind-Value="Transaction.ClientPhone" Name="ClientPhone" Style="width:100%" />
+            <br />
+
+            <RadzenLabel Text="Client Address" />
+            <RadzenTextBox @bind-Value="Transaction.ClientAddress" Name="ClientAddress" Style="width:100%" />
+            <br />
+            <div style="margin-top:15px;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
+                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            </div>
+        </RadzenFieldset>
+    </ChildContent>
+</RadzenTemplateForm>
+
+
+
+@code {
+    DateTime? value = DateTime.Now;
+    [Parameter] public AddEditTransactionRequestModel Transaction { get; set; }
+    [Parameter] public List<GetProductResponseModel> Products { get; set; }
+    [Parameter] public List<ClientModel> Clients { get; set; }
+    private List<dynamic> transactionTypes = new List<dynamic>
+    {
+        new { Text = "Sell", Value = "Sell" },
+        new { Text = "Return", Value = "Return" }
+    };
+
+    protected override void OnInitialized()
+    {
+        Transaction.TransactionType = "Sell";
+        if (Transaction == null)
+        {
+            Transaction = new AddEditTransactionRequestModel();
+        }
+    }
+    private async Task OnSubmit(AddEditTransactionRequestModel model)
+    {
+        var result = await _transactionService.AddEditTransactionAsync(model);
+        if (result.Success)
+        {
+            DialogService.Close(true); // close popup
+        }
+        else
+        {
+            await DialogService.Alert($"{result.Message} : {string.Join(",", result.Errors)}", "Error");
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+    private void OnClientChanged(object value)
+    {
+        var selectedId = (int)value;
+        var selectedClient = Clients.FirstOrDefault(c => c.Id == selectedId);
+
+        if (selectedClient != null)
+        {
+            Transaction.ClientName = $"{selectedClient.FirstName} {selectedClient.LastName}";
+            Transaction.ClientPhone = selectedClient.Phone;
+            Transaction.ClientAddress = selectedClient.Address;
+        }
+    }
+    private void OnProductChanged(object value)
+    {
+        var selectedId = (int)value;
+        var selectedProduct = Products.FirstOrDefault(p => p.Id == selectedId);
+
+        if (selectedProduct != null)
+        {
+            Transaction.Quantity = selectedProduct.TotalStock;
+            Transaction.UnitPrice = selectedProduct.PricingModel.UnitPrice ?? 0;
+        }
+    }
+    private void OnQuantityChanged(int? value)
+    {
+        Transaction.Quantity = Convert.ToInt32(value);
+
+        if (Transaction.UnitPrice.HasValue && Transaction.Quantity.HasValue)
+        {
+            Transaction.ClientAmount = Transaction.Quantity.Value * Transaction.UnitPrice.Value;
+        }
+        else
+        {
+            Transaction.ClientAmount = null;
+        }
+    }
+
+}

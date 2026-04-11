@@ -22,5 +22,6 @@ namespace Data
         public DbSet<ExceptionLog> ExceptionLogs { get; set; }
         public DbSet<UserMst> UserMst { get; set; }
         public DbSet<Pricing> Pricing { get; set; }
+        public DbSet<TransactionSlip> TransactionSlip { get; set; }
     }
 }

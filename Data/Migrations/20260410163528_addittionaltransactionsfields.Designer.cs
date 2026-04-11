@@ -4,6 +4,7 @@ using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    partial class InventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410163528_addittionaltransactionsfields")]
+    partial class addittionaltransactionsfields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -379,9 +382,6 @@ namespace Data.Migrations
                     b.Property<decimal?>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("VendorClientId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
@@ -390,8 +390,6 @@ namespace Data.Migrations
                     b.HasIndex("ClientId");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("VendorClientId");
 
                     b.HasIndex("VendorId");
 
@@ -516,17 +514,13 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
                 {
-                    b.HasOne("Domain.Entities.VendorClientDetail", "Client")
-                        .WithMany()
+                    b.HasOne("Domain.Entities.VendorClient", "Client")
+                        .WithMany("VendorTransactions")
                         .HasForeignKey("ClientId");
 
                     b.HasOne("Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId");
-
-                    b.HasOne("Domain.Entities.VendorClient", null)
-                        .WithMany("VendorTransactions")
-                        .HasForeignKey("VendorClientId");
 
                     b.HasOne("Domain.Entities.Vendor", null)
                         .WithMany("VendorTransactions")

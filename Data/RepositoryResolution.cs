@@ -16,6 +16,8 @@ namespace Data
             services.AddScoped<ILogRepository, LogRepository>();
             services.AddScoped<IUserRepo, UserRepo>();
             services.AddScoped<IClientRepository, ClientRepository>();
+            services.AddScoped<ITransactionRepo, TransactionRepo>();
+            services.AddScoped<IStockRepo, StockRepo>();
 
             return services;
         }

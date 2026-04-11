@@ -13,9 +13,7 @@ namespace Domain.IRepositories
         Task<(List<ProductCategory>, int)> GetProductCategoriesAsync(int id, int pageIndex, int pageSize, string? Filter);
         Task<BaseResponse<Product>> AddEditProductAsync(Product product);
         Task<BaseResponse<ProductCategory>> AddEditProductCategoryAsync(ProductCategory productCategory);
-        Task<BaseResponse<VendorStock>> AddEditVendorStockAsync(VendorStock vendorStock);
         Task<BaseResponse<Pricing>> AddPricingAsync(Pricing pricing);
         Task<List<Pricing>> GetPricingByProductCodeAsync(List<string>? productCodes);
-        Task<(List<VendorStock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter);
     }
 }

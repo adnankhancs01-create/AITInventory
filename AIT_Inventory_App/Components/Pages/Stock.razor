@@ -4,6 +4,7 @@
 @using Common.Models.ResponseModel
 @using Service.IService
 @inject IProductService _ProductService
+@inject IStockService  _stockService
 @inject NavigationManager Navigation
 @inject DialogService DialogService
 @using AIT_Inventory_App.Components.Pupups
@@ -56,7 +57,7 @@
         int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
         int pageSize = args.Top ?? 10;
 
-        var result = await _ProductService.GetStocksReportAsync(0, pageIndex, pageSize, args.Filter);
+        var result = await _stockService.GetStocksReportAsync(0, pageIndex, pageSize, args.Filter);
         if (result.Success)
         {
             Stocks = result.Data.Item1.ToList();

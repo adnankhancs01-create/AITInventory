@@ -1,3 +1,4 @@
+using Common.Helpers;
 using Data;
 using Service;
 
@@ -14,6 +15,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddScoped<ISlipPrinter, SlipPrinter>();
 builder.Services.AddRepositoryResolution(cs);
 builder.Services.AddServiceResolution();
 builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
