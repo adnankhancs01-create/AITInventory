@@ -1,4 +1,5 @@
 ﻿//using Android.Renderscripts;
+using Common.Helpers;
 using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -39,6 +40,7 @@ namespace AIT_Inventory_App
             builder.Services.AddServiceResolution();
             builder.Services.AddRadzenComponents();
             builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
+            builder.Services.AddScoped<ISlipPrinter, SlipPrinter>();
 
             return builder.Build();
         }

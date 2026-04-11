@@ -1,25 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
+using Common.Models;
 
-namespace Domain.Entities
+namespace Common.Models.RequestModel
 {
-    public class VendorTransaction
+    public class VendorTransactionModel
     {
         public int Id { get; set; }
 
-        [ForeignKey("Id")]
         public int? ClientId { get; set; }   // refers to VendorClient
-        public VendorClientDetail Client { get; set; }
+        public ClientModel Client { get; set; }
 
-        [ForeignKey("Id")]
         public int? ProductId { get; set; }
-        public Product Product { get; set; }
+        public ProductModel Product { get; set; }
 
-        public string? ClientName { get; set; }
-        public string? ClientAddress { get; set; }
         public string? TransactionType { get; set; }  // BUY / SELL
 
         public int? Quantity { get; set; }
@@ -29,11 +24,15 @@ namespace Domain.Entities
         public decimal? TotalAmount => UnitPrice * Quantity;
 
         public decimal? ClientAmount { get; set; }
-        public long? TransactionNumber { get; set; }
 
         public DateTime? TransactionDate { get; set; } = DateTime.Now;
 
         public string? Remarks { get; set; }
-        public virtual TransactionSlip TransactionSlip { get; set; }
+    }
+    public class AddEditTransactionRequestModel: VendorTransactionModel
+    {
+        public string? ClientName { get; set; }
+        public string? ClientPhone { get; set; }
+        public string? ClientAddress { get; set; }
     }
 }

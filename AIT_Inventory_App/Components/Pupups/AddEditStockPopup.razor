@@ -1,7 +1,7 @@
 ﻿@using Common.Models
 @using Common.Models.RequestModel
 @using Service.IService
-@inject IProductService _productService
+@inject IStockService _stockService
 @inject DialogService DialogService
 
 <RadzenTemplateForm TItem="AddEditVendorStockRequestModel" Data="@Stock" Submit="@OnSubmit">
@@ -48,7 +48,7 @@
     
     private async Task OnSubmit(AddEditVendorStockRequestModel model)
     {
-        var result = await _productService.AddEditVendorStockAsync(model);
+        var result = await _stockService.AddEditVendorStockAsync(model);
         if (result.Success)
         {
             DialogService.Close(true); // close popup

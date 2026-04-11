@@ -13,6 +13,8 @@ namespace Service
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IClientService, ClientService>();
+            services.AddScoped<ITransactionService, TransactionService>();
+            services.AddScoped<IStockService, StockService>();
 
             return services;
         }
