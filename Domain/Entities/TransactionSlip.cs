@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
 namespace Domain.Entities
@@ -8,10 +9,12 @@ namespace Domain.Entities
     public class TransactionSlip
     {
         [Key]
-        public int Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
 
+        public int Id { get; set; }
         public int? TransactionId { get; set; }
-        public VendorTransaction Transaction { get; set; }
+        [ForeignKey("TransactionId")]
+        public TransactionMst Transaction { get; set; }
 
         // Slip content (the formatted string you generate)
         [Required]

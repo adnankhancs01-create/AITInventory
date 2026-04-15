@@ -1,5 +1,183 @@
-﻿@page "/home"
+﻿@page "/"
+@using Common.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Service.IService
+@using Service.Service
+@inject IProductService _ProductService
+@inject DialogService DialogService
+@inject ITransactionService _transactionService
 
-<h1>Hello, world!</h1>
+<h1 style="font-family:'Segoe UI',sans-serif;">Inventory Dashboard</h1>
 
-Welcome to your new app.
+<RadzenStack Orientation="Orientation.Horizontal" Style="height:100%; gap:1rem;">
+    <!-- Left side: product form -->
+    <RadzenStack Orientation="Orientation.Vertical"
+                 Style="width:25%; min-width:250px; max-width:300px; border:1px solid #ccc; padding:1rem; border-radius:8px; background:#fafafa;">
+        <RadzenLabel Text="Product Details" Style="font-weight:bold" />
+        
+        @foreach (var product in CurrentTransaction.Products)
+        {
+            <div>@product.Name x @product.Quantity = $ @(product.Quantity* product.UnitPrice)</div>
+        }
+        <div style="font-weight:bold; margin-top:0.5rem;">
+            Total = $ @CurrentTransaction.TotalAmount
+            <br />
+            Discount = $ @CurrentTransaction.Discount
+            <br />
+            Final Amount = $ @(CurrentTransaction.TotalAmount - CurrentTransaction.Discount)
+        </div>
+
+        <RadzenLabel Text="Discount" />
+        <RadzenNumeric @bind-Value="CurrentTransaction.Discount" Min="0" Style="width:100%" />
+
+        <RadzenLabel Text="Remarks" />
+        <RadzenTextArea @bind-Value="CurrentTransaction.Remarks" Style="width:100%; height:80px" />
+
+        <RadzenButton Text="Save" Click="() => OnSave(CurrentTransaction)" Style="margin-top:1rem; width:100%" />
+    </RadzenStack>
+
+    <!-- Right side: product cards + cart -->
+    <RadzenStack Orientation="Orientation.Vertical" Style="flex:1; padding:1rem;">
+        <RadzenLabel Text="Product Catalog" Style="font-weight:bold; font-size:18px;" />
+
+        <RadzenDataList Data="@Products" Style="width:100%" WrapItems="true" GridColumns="3">
+            <Template Context="product">
+                <div class="product-card" style="text-align:center; margin:0.5rem; border:1px solid #ccc; padding:0.5rem; border-radius:8px; transition:box-shadow 0.3s;">
+                    <img src="@product.ImageUrl" alt="@product.Name"
+                         style="width:100px; height:100px; object-fit:cover; cursor:pointer"
+                         @onclick="() => OnProductClicked(product)" />
+
+                    <div style="margin-top:0.5rem; font-weight:bold;">@product.Name</div>
+                    <div>Price: $@product.UnitPrice</div>
+
+                    <!-- Quantity Controls -->
+                    <div style="display:flex; align-items:center; justify-content:center; margin-top:0.5rem;">
+                        <RadzenButton Text="-" Disabled="@(@product.Quantity == 0)"
+                                      Click="() => DecreaseQuantity(product)" />
+                        <span style="margin:0 8px;">@product.Quantity</span>
+                        <RadzenButton Text="+" Click="() => AddToTransaction(product)" />
+                    </div>
+
+                    <!-- Upload button -->
+                    <RadzenButton Icon="upload"
+                                  Click="async () => await OnAddImage(product)"
+                                  Style="width:100%; margin-top:0.5rem" />
+                </div>
+            </Template>
+        </RadzenDataList>
+
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+
+
+    private List<ProductWidgetModel> Products = new();
+    private ProductWidgetModel SelectedProduct { get; set; } = new ProductWidgetModel();
+    private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
+    private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await _ProductService.GetProductsReportAsync(0, 1, int.MaxValue, string.Empty);
+        if (result.Success)
+        {
+            Products = result.Data.Item1.Select(p => new ProductWidgetModel
+            {
+                Id = p.Id.Value,
+                Name = p.Name,
+                UnitPrice = p?.PricingModel?.UnitPrice??0,
+                Description = p.Description,
+                ProductId = p.Id.Value,
+            }).ToList();
+
+            existingProducts = result.Data.Item1.ToList();
+        }
+        else
+        {
+            // Fallback to hardcoded products if API call fails
+
+        }
+
+        foreach (var product in Products)
+        {
+            var path = Path.Combine("wwwroot", "productimages", $"{product.Id}.png");
+            product.ImageUrl = File.Exists(path) ? $"productimages/{product.Id}.png" : "images/placeholder.png";
+        }
+
+        Products = Products.OrderBy(p => p.Name).ToList();
+    }
+
+    private void OnProductClicked(ProductWidgetModel product) => SelectedProduct = product;
+
+    private async Task OnAddImage(ProductWidgetModel product)
+    {
+        var result = await FilePicker.PickAsync(new PickOptions
+        {
+            PickerTitle = "Select product image",
+            FileTypes = FilePickerFileType.Images
+        });
+
+        if (result != null)
+        {
+            var wwwrootDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "productimages");
+            if (!Directory.Exists(wwwrootDir))
+                Directory.CreateDirectory(wwwrootDir);
+
+            var savePath = Path.Combine(wwwrootDir, $"{product.Id}.png");
+            using var stream = await result.OpenReadAsync();
+            using var fileStream = File.Create(savePath);
+            await stream.CopyToAsync(fileStream);
+
+            product.ImageUrl = $"productimages/{product.Id}.png";
+        }
+    }
+
+    private async Task OnSave(ProcessTransactionsModel ProcessTransactionsModel )
+    {
+        var response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
+        if(response.Success)
+        {
+            await DialogService.Alert("Transaction saved successfully!", "Success");
+            CurrentTransaction = new ProcessTransactionsModel(); // Reset form
+        }
+        else
+        {
+            await DialogService.Alert(response.Message, "Error");
+        }
+    }
+
+    private void AddToTransaction(ProductWidgetModel product)
+    {
+        product.Quantity++;
+        var existing = existingProducts.FirstOrDefault(p => p.Id == product.Id);
+        if (existing != null)
+        {
+            if (existing.TotalStock < product.Quantity)
+            {
+                product.Quantity--;
+                // Show error message
+                DialogService.Alert("Insufficient stock available.", "Error");
+                return;
+            }
+        }
+        if (!CurrentTransaction.Products.Any(p => p.Id == product.Id))
+            CurrentTransaction.Products.Add(product); 
+           
+    }
+
+    private void DecreaseQuantity(ProductWidgetModel product)
+    {
+        if (product.Quantity > 0)
+        {
+            product.Quantity--;
+            if (product.Quantity == 0)
+                CurrentTransaction.Products.Remove(product);
+            
+        }else
+        {
+            DialogService.Alert("Invalid entry.", "Error");
+        }
+    }
+}

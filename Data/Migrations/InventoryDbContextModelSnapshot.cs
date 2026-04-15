@@ -93,6 +93,96 @@ namespace Data.Migrations
                     b.ToTable("Pricing");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TransMstId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransMstId");
+
+                    b.ToTable("TransactionDetails");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClientName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("TransactionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("TransactionNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TransactionType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("TransactionMst");
+                });
+
             modelBuilder.Entity("Domain.Entities.TransactionSlip", b =>
                 {
                     b.Property<int>("Id")
@@ -204,9 +294,6 @@ namespace Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ClientDetailId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("ClientId")
                         .HasColumnType("int");
 
@@ -218,7 +305,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientDetailId");
+                    b.HasIndex("ClientId");
 
                     b.HasIndex("VendorId");
 
@@ -326,76 +413,21 @@ namespace Data.Migrations
                     b.Property<decimal?>("TotalPurchasePrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("TransactionId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("TransactionId");
 
                     b.HasIndex("VendorId");
 
                     b.ToTable("VendorStock");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClientAddress")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("ClientAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("ClientId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ClientName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("TransactionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("TransactionNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TransactionType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("VendorClientId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("VendorClientId");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("VendorTransaction");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -473,9 +505,27 @@ namespace Data.Migrations
                     b.ToTable("ProductCategories");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionDetails", b =>
+                {
+                    b.HasOne("Domain.Entities.TransactionMst", "TransMst")
+                        .WithMany("TransactionDetails")
+                        .HasForeignKey("TransMstId");
+
+                    b.Navigation("TransMst");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.HasOne("Domain.Entities.VendorClientDetail", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId");
+
+                    b.Navigation("Client");
+                });
+
             modelBuilder.Entity("Domain.Entities.TransactionSlip", b =>
                 {
-                    b.HasOne("Domain.Entities.VendorTransaction", "Transaction")
+                    b.HasOne("Domain.Entities.TransactionMst", "Transaction")
                         .WithOne("TransactionSlip")
                         .HasForeignKey("Domain.Entities.TransactionSlip", "TransactionId");
 
@@ -486,9 +536,7 @@ namespace Data.Migrations
                 {
                     b.HasOne("Domain.Entities.VendorClientDetail", "ClientDetail")
                         .WithMany()
-                        .HasForeignKey("ClientDetailId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ClientId");
 
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorClients")
@@ -505,36 +553,19 @@ namespace Data.Migrations
                         .WithMany("Stocks")
                         .HasForeignKey("ProductId");
 
+                    b.HasOne("Domain.Entities.TransactionMst", "TransactionMst")
+                        .WithMany()
+                        .HasForeignKey("TransactionId");
+
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorStocks")
                         .HasForeignKey("VendorId");
 
                     b.Navigation("Product");
 
+                    b.Navigation("TransactionMst");
+
                     b.Navigation("Vendor");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
-                {
-                    b.HasOne("Domain.Entities.VendorClientDetail", "Client")
-                        .WithMany()
-                        .HasForeignKey("ClientId");
-
-                    b.HasOne("Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId");
-
-                    b.HasOne("Domain.Entities.VendorClient", null)
-                        .WithMany("VendorTransactions")
-                        .HasForeignKey("VendorClientId");
-
-                    b.HasOne("Domain.Entities.Vendor", null)
-                        .WithMany("VendorTransactions")
-                        .HasForeignKey("VendorId");
-
-                    b.Navigation("Client");
-
-                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -548,24 +579,19 @@ namespace Data.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.Navigation("TransactionDetails");
+
+                    b.Navigation("TransactionSlip")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Entities.Vendor", b =>
                 {
                     b.Navigation("VendorClients");
 
                     b.Navigation("VendorStocks");
-
-                    b.Navigation("VendorTransactions");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorClient", b =>
-                {
-                    b.Navigation("VendorTransactions");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
-                {
-                    b.Navigation("TransactionSlip")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Product", b =>

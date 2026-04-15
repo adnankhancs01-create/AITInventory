@@ -27,11 +27,12 @@ namespace Data.Repositories
             {
                 if (!vendorStock.StockNumber.HasValue || vendorStock.StockNumber == 0)
                 {
+                    vendorStock.StockNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
                     await _dbContext.VendorStock.AddAsync(new VendorStock
                     {
                         ProductId = vendorStock.ProductId,
                         Quantity = vendorStock.Quantity,
-                        StockNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
+                        StockNumber = vendorStock.StockNumber,
                         TotalPurchasePrice = vendorStock.TotalPurchasePrice,
                         VendorId = vendorStock.VendorId,
                         CreatedOn = DateTime.Now
@@ -102,6 +103,53 @@ namespace Data.Repositories
             return (data, totalCount);
 
 
+        }
+        public async Task<BaseResponse<bool>> DeductStockAsync( int productId, int quantity)
+        {
+            // Get all stock entries for the product, ordered oldest first
+            var stockList = await _dbContext.VendorStock
+                .Where(x => x.ProductId == productId && x.Quantity > 0)
+                .OrderBy(x => x.CreatedOn)
+                .ToListAsync();
+
+            if (stockList == null || stockList.Count == 0)
+                return BaseResponse<bool>.FailureResponse(
+                    new List<string> { "Stock not found" },
+                    "Stock not found");
+
+            int remaining = quantity;
+
+            foreach (var stock in stockList)
+            {
+                if (remaining <= 0) break;
+
+                if (stock.Quantity >= remaining)
+                {
+                    // Deduct only what is needed
+                    stock.Quantity -= remaining;
+                    stock.ModifiedOn = DateTime.Now;
+                    remaining = 0;
+                }
+                else
+                {
+                    // Deduct all from this stock and continue
+                    remaining -= stock.Quantity??0;
+                    stock.Quantity = 0;
+                    stock.ModifiedOn = DateTime.Now;
+                }
+            }
+
+            // If after looping we still have remaining > 0, not enough stock
+            if (remaining > 0)
+            {
+                return BaseResponse<bool>.FailureResponse(
+                    new List<string> { "Insufficient stock" },
+                    "Not enough stock to fulfill deduction");
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            return BaseResponse<bool>.SuccessResponse(true, "Stock deducted successfully");
         }
 
     }

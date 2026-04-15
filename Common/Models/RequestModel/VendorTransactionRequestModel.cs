@@ -23,7 +23,7 @@ namespace Common.Models.RequestModel
 
         public decimal? TotalAmount => UnitPrice * Quantity;
 
-        public decimal? ClientAmount { get; set; }
+        public decimal? Discount { get; set; }
 
         public DateTime? TransactionDate { get; set; } = DateTime.Now;
 

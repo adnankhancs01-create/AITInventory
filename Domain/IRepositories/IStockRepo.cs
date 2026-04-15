@@ -10,5 +10,6 @@ namespace Domain.IRepositories
     {
         Task<BaseResponse<VendorStock>> AddEditVendorStockAsync(VendorStock vendorStock);
         Task<(List<VendorStock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter);
+        Task<BaseResponse<bool>> DeductStockAsync(int productId, int quantity);
     }
 }

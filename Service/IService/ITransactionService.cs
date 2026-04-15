@@ -11,8 +11,9 @@ namespace Service.IService
 {
     public interface ITransactionService
     {
-        Task<BaseResponse<AddEditTransactionResponseModel>> AddEditTransactionAsync(AddEditTransactionRequestModel request);
+        //Task<BaseResponse<AddEditTransactionResponseModel>> AddEditTransactionAsync(AddEditTransactionRequestModel request);
         Task PrintSlipAsync(string slipContent);
-        Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter);
+        //Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter);
+        Task<BaseResponse<int?>> ProcessTransactions(ProcessTransactionsModel transactionModel);
     }
 }

@@ -57,7 +57,7 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -92,13 +92,13 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    City = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Country = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    City = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Country = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -111,8 +111,8 @@ namespace Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
@@ -159,31 +159,103 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TransactionMst",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ClientName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClientAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NetAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    TransactionNumber = table.Column<long>(type: "bigint", nullable: true),
+                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClientId = table.Column<int>(type: "int", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TransactionMst", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionMst_VendorClientDetail_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "VendorClientDetail",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "VendorClient",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    VendorId = table.Column<int>(type: "int", nullable: false),
-                    ClientId = table.Column<int>(type: "int", nullable: false),
-                    ClientDetailId = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    VendorId = table.Column<int>(type: "int", nullable: true),
+                    ClientId = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_VendorClient", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_VendorClient_VendorClientDetail_ClientDetailId",
-                        column: x => x.ClientDetailId,
+                        name: "FK_VendorClient_VendorClientDetail_ClientId",
+                        column: x => x.ClientId,
                         principalTable: "VendorClientDetail",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_VendorClient_Vendor_VendorId",
                         column: x => x.VendorId,
                         principalTable: "Vendor",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TransactionDetails",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    TransMstId = table.Column<int>(type: "int", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TransactionDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionDetails_TransactionMst_TransMstId",
+                        column: x => x.TransMstId,
+                        principalTable: "TransactionMst",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TransactionSlip",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TransactionId = table.Column<int>(type: "int", nullable: true),
+                    SlipContent = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TransactionSlip", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionSlip_TransactionMst_TransactionId",
+                        column: x => x.TransactionId,
+                        principalTable: "TransactionMst",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -193,14 +265,15 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     VendorId = table.Column<int>(type: "int", nullable: true),
-                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: true),
                     TotalPurchasePrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     StockNumber = table.Column<long>(type: "bigint", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    TransactionId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -209,48 +282,14 @@ namespace Data.Migrations
                         name: "FK_VendorStock_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_VendorStock_TransactionMst_TransactionId",
+                        column: x => x.TransactionId,
+                        principalTable: "TransactionMst",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_VendorStock_Vendor_VendorId",
-                        column: x => x.VendorId,
-                        principalTable: "Vendor",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "VendorTransaction",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClientId = table.Column<int>(type: "int", nullable: false),
-                    ProductId = table.Column<int>(type: "int", nullable: false),
-                    TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
-                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ClientAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    VendorId = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VendorTransaction", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VendorTransaction_Products_ProductId",
-                        column: x => x.ProductId,
-                        principalTable: "Products",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VendorTransaction_VendorClient_ClientId",
-                        column: x => x.ClientId,
-                        principalTable: "VendorClient",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VendorTransaction_Vendor_VendorId",
                         column: x => x.VendorId,
                         principalTable: "Vendor",
                         principalColumn: "Id");
@@ -262,9 +301,26 @@ namespace Data.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_VendorClient_ClientDetailId",
+                name: "IX_TransactionDetails_TransMstId",
+                table: "TransactionDetails",
+                column: "TransMstId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TransactionMst_ClientId",
+                table: "TransactionMst",
+                column: "ClientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TransactionSlip_TransactionId",
+                table: "TransactionSlip",
+                column: "TransactionId",
+                unique: true,
+                filter: "[TransactionId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VendorClient_ClientId",
                 table: "VendorClient",
-                column: "ClientDetailId");
+                column: "ClientId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VendorClient_VendorId",
@@ -277,23 +333,13 @@ namespace Data.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VendorStock_TransactionId",
+                table: "VendorStock",
+                column: "TransactionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VendorStock_VendorId",
                 table: "VendorStock",
-                column: "VendorId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VendorTransaction_ClientId",
-                table: "VendorTransaction",
-                column: "ClientId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VendorTransaction_ProductId",
-                table: "VendorTransaction",
-                column: "ProductId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VendorTransaction_VendorId",
-                table: "VendorTransaction",
                 column: "VendorId");
         }
 
@@ -307,28 +353,34 @@ namespace Data.Migrations
                 name: "Pricing");
 
             migrationBuilder.DropTable(
+                name: "TransactionDetails");
+
+            migrationBuilder.DropTable(
+                name: "TransactionSlip");
+
+            migrationBuilder.DropTable(
                 name: "UserMst");
+
+            migrationBuilder.DropTable(
+                name: "VendorClient");
 
             migrationBuilder.DropTable(
                 name: "VendorStock");
 
             migrationBuilder.DropTable(
-                name: "VendorTransaction");
-
-            migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
-                name: "VendorClient");
+                name: "TransactionMst");
+
+            migrationBuilder.DropTable(
+                name: "Vendor");
 
             migrationBuilder.DropTable(
                 name: "ProductCategories");
 
             migrationBuilder.DropTable(
                 name: "VendorClientDetail");
-
-            migrationBuilder.DropTable(
-                name: "Vendor");
         }
     }
 }

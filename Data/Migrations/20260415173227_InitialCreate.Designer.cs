@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260409173844_InitialCreate")]
+    [Migration("20260415173227_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -96,6 +96,126 @@ namespace Data.Migrations
                     b.ToTable("Pricing");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TransMstId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransMstId");
+
+                    b.ToTable("TransactionDetails");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClientName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("TransactionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("TransactionNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TransactionType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("TransactionMst");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionSlip", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SlipContent")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("TransactionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique()
+                        .HasFilter("[TransactionId] IS NOT NULL");
+
+                    b.ToTable("TransactionSlip");
+                });
+
             modelBuilder.Entity("Domain.Entities.UserMst", b =>
                 {
                     b.Property<int>("UserId")
@@ -134,24 +254,21 @@ namespace Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("City")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Country")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -160,12 +277,10 @@ namespace Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PostalCode")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("State")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -182,21 +297,18 @@ namespace Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ClientDetailId")
+                    b.Property<int?>("ClientId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ClientId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
+                    b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<int>("VendorId")
+                    b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientDetailId");
+                    b.HasIndex("ClientId");
 
                     b.HasIndex("VendorId");
 
@@ -239,7 +351,6 @@ namespace Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FirstName")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -247,7 +358,6 @@ namespace Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("LastName")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -294,7 +404,7 @@ namespace Data.Migrations
                     b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("Quantity")
@@ -306,64 +416,21 @@ namespace Data.Migrations
                     b.Property<decimal?>("TotalPurchasePrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("TransactionId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("TransactionId");
 
                     b.HasIndex("VendorId");
 
                     b.ToTable("VendorStock");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("ClientAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ClientId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Remarks")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TransactionType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("VendorTransaction");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -423,7 +490,6 @@ namespace Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ModifiedBy")
@@ -442,19 +508,42 @@ namespace Data.Migrations
                     b.ToTable("ProductCategories");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionDetails", b =>
+                {
+                    b.HasOne("Domain.Entities.TransactionMst", "TransMst")
+                        .WithMany("TransactionDetails")
+                        .HasForeignKey("TransMstId");
+
+                    b.Navigation("TransMst");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.HasOne("Domain.Entities.VendorClientDetail", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TransactionSlip", b =>
+                {
+                    b.HasOne("Domain.Entities.TransactionMst", "Transaction")
+                        .WithOne("TransactionSlip")
+                        .HasForeignKey("Domain.Entities.TransactionSlip", "TransactionId");
+
+                    b.Navigation("Transaction");
+                });
+
             modelBuilder.Entity("Domain.Entities.VendorClient", b =>
                 {
                     b.HasOne("Domain.Entities.VendorClientDetail", "ClientDetail")
                         .WithMany()
-                        .HasForeignKey("ClientDetailId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ClientId");
 
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorClients")
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("VendorId");
 
                     b.Navigation("ClientDetail");
 
@@ -465,9 +554,11 @@ namespace Data.Migrations
                 {
                     b.HasOne("Product", "Product")
                         .WithMany("Stocks")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ProductId");
+
+                    b.HasOne("Domain.Entities.TransactionMst", "TransactionMst")
+                        .WithMany()
+                        .HasForeignKey("TransactionId");
 
                     b.HasOne("Domain.Entities.Vendor", "Vendor")
                         .WithMany("VendorStocks")
@@ -475,30 +566,9 @@ namespace Data.Migrations
 
                     b.Navigation("Product");
 
+                    b.Navigation("TransactionMst");
+
                     b.Navigation("Vendor");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorTransaction", b =>
-                {
-                    b.HasOne("Domain.Entities.VendorClient", "Client")
-                        .WithMany("VendorTransactions")
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.Vendor", null)
-                        .WithMany("VendorTransactions")
-                        .HasForeignKey("VendorId");
-
-                    b.Navigation("Client");
-
-                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -512,18 +582,19 @@ namespace Data.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
+                {
+                    b.Navigation("TransactionDetails");
+
+                    b.Navigation("TransactionSlip")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Entities.Vendor", b =>
                 {
                     b.Navigation("VendorClients");
 
                     b.Navigation("VendorStocks");
-
-                    b.Navigation("VendorTransactions");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorClient", b =>
-                {
-                    b.Navigation("VendorTransactions");
                 });
 
             modelBuilder.Entity("Product", b =>
