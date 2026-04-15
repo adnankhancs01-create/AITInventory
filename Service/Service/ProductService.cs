@@ -86,6 +86,11 @@ namespace Service.Service
                 else
                     request.CreatedOn = DateTime.Now;
                 
+                //request.Stocks=new List<VendorStock>().Add(new VendorStock { 
+                //    Quantity=requestModel.Quantity,
+                //    TotalPurchasePrice = requestModel.TotalPurchasePrice,
+                //    StockNumber=requestModel.StockNumber
+                //});
                 var result= await _productRepo.AddEditProductAsync(request);
                 if (result.Success && 
                     (requestModel.Quantity.HasValue || requestModel.TotalPurchasePrice.HasValue))
@@ -102,11 +107,15 @@ namespace Service.Service
                 if (result.Success && (requestModel.UnitPrice.HasValue))
                     await _productRepo.AddPricingAsync(new Pricing
                     {
+                        StockNumber=stockNumber,
                         ProductCode = result.Data.ProductCode,
                         UnitPrice = requestModel.UnitPrice
                     });
 
-                return BaseResponse<ProductModel>.SuccessResponse(_mapper.Map<Product, ProductModel>(result.Data));
+                if (result.Success)     
+                    return BaseResponse<ProductModel>.SuccessResponse(_mapper.Map<Product, ProductModel>(result.Data));
+                else
+                    return BaseResponse<ProductModel>.FailureResponse(result.Errors, result.Message);
             }
             catch (Exception ex)
             {

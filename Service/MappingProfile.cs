@@ -26,7 +26,7 @@ namespace Service
             CreateMap<VendorClientDetail, ClientModel>();
             CreateMap<VendorStock, VendorStockModel>();
             CreateMap<Pricing, PricingModel>();
-            CreateMap<VendorTransaction, VendorTransactionModel>();
+            //CreateMap<VendorTransaction, VendorTransactionModel>();
         }
     }
 }

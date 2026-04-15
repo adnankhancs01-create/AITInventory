@@ -9,6 +9,8 @@ namespace Domain.Entities
     public class Pricing
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+
         public int Id { get; set; }
         [Column(TypeName = "decimal(10,2)")]
         public decimal? UnitPrice { get; set; }// Sell Price

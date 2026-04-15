@@ -1,0 +1,28 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text;
+
+namespace Domain.Entities
+{
+    public class TransactionDetails
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+
+        public int Id { get; set; }
+        public int ProductId { get; set; }
+        public int Quantity { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? UnitPrice { get; set; } = default(decimal?);
+        public int? TransMstId { get; set; }   // refers to VendorClient
+
+        [ForeignKey("TransMstId")]
+        public TransactionMst TransMst { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public int? CreatedBy { get; set; }
+        public DateTime? ModifiedOn { get; set; }
+        public int? ModifiedBy { get; set; }
+    }
+}

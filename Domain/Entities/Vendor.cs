@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
 namespace Domain.Entities
 {
     public class Vendor
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+
         public int Id { get; set; }
 
         [Required]
@@ -34,6 +38,6 @@ namespace Domain.Entities
         // Navigation properties
         public ICollection<VendorStock> VendorStocks { get; set; }
         public ICollection<VendorClient> VendorClients { get; set; }
-        public ICollection<VendorTransaction> VendorTransactions { get; set; }
+        //public ICollection<VendorTransaction> VendorTransactions { get; set; }
     }
 }

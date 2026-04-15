@@ -5,7 +5,6 @@ using Common.Helpers;
 using Common.Models;
 using Common.Models.RequestModel;
 using Common.Models.ResponseModel;
-using Data.Migrations;
 using Data.Repositories;
 using Domain.Entities;
 using Domain.IRepositories;
@@ -24,13 +23,15 @@ namespace Service.Service
         private readonly ILogRepository _logRepo;
         private readonly IClientRepository _clientRepo;
         private readonly ISlipPrinter _slipPrinter;
+        private readonly IStockRepo _stockRepo;
         public TransactionService(
             ITransactionRepo transactionRepo,
             IMapper mapper,
             ILogRepository logRepo,
             ISlipPrinter slipPrinter,
             IProductRepo productRepo,
-            IClientRepository clientRepo)
+            IClientRepository clientRepo,
+            IStockRepo stockRepo)
         {
             _transactionRepo = transactionRepo;
             _mapper = mapper;
@@ -38,6 +39,7 @@ namespace Service.Service
             _slipPrinter = slipPrinter;
             _productRepo = productRepo;
             _clientRepo = clientRepo;
+            _stockRepo = stockRepo;
         }
 
         private async Task<BaseResponse<AddEditTransactionResponseModel>> ValidateTransactionAsync
@@ -53,7 +55,7 @@ namespace Service.Service
             //        new List<string> { "Client required" },
             //        "Error occurred "
             //    );
-            if (!request.ClientAmount.HasValue || (request.ClientAmount == 0 || request.ClientAmount == decimal.Zero))
+            if (!request.Discount.HasValue || (request.Discount == 0 || request.Discount == decimal.Zero))
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Client amount required" },
                     "Error occurred "
@@ -109,75 +111,79 @@ namespace Service.Service
             );
         }
 
-        public async Task<BaseResponse<AddEditTransactionResponseModel>> AddEditTransactionAsync(AddEditTransactionRequestModel request)
-        {
-            try
-            {
-                var validate=await ValidateTransactionAsync(request);
-                if(!validate.Success)
-                    return validate;
+        //public async Task<BaseResponse<AddEditTransactionResponseModel>> AddEditTransactionAsync(AddEditTransactionRequestModel request)
+        //{
+        //    try
+        //    {
+        //        var validate=await ValidateTransactionAsync(request);
+        //        if(!validate.Success)
+        //            return validate;
 
-                var transactionEntity = new VendorTransaction();
-                transactionEntity.Id = request.Id;
-                transactionEntity.ClientId = request.ClientId;
-                transactionEntity.ProductId = request.ProductId;
-                transactionEntity.Quantity = request.Quantity;
-                transactionEntity.UnitPrice = request.UnitPrice;
-                transactionEntity.ClientAmount = transactionEntity.ClientAmount;
+        //        var transactionEntity = new VendorTransaction();
+        //        transactionEntity.Id = request.Id;
+        //        transactionEntity.ClientId = request.ClientId;
+        //        transactionEntity.ProductId = request.ProductId;
+        //        transactionEntity.Quantity = request.Quantity;
+        //        transactionEntity.UnitPrice = request.UnitPrice;
+        //        transactionEntity.ClientAmount = transactionEntity.ClientAmount;
 
-                if (!string.IsNullOrEmpty(request.ClientPhone) 
-                    && !string.IsNullOrEmpty(request.ClientName)
-                    && (!request.ClientId.HasValue || request.ClientId == 0 ))
-                { 
-                    var analyzeResult = await AnaylyzeAndAddClient(
-                        request.ClientName, request.ClientPhone, request.ClientAddress);
-                    transactionEntity.ClientId = analyzeResult;
-                }
-                if (!request.ClientId.HasValue || request.ClientId == 0)
-                {
-                    transactionEntity.ClientName = request.ClientName;
-                    transactionEntity.ClientAddress = request.ClientAddress;
-                }
-                transactionEntity.Remarks = request.Remarks;
-                transactionEntity.TransactionType = request.TransactionType;
-                transactionEntity.TransactionDate ??= DateTime.Now;
-                transactionEntity.TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
+        //        if (!string.IsNullOrEmpty(request.ClientPhone) 
+        //            && !string.IsNullOrEmpty(request.ClientName)
+        //            && (!request.ClientId.HasValue || request.ClientId == 0 ))
+        //        { 
+        //            var analyzeResult = await AnaylyzeAndAddClient(
+        //                request.ClientName, request.ClientPhone, request.ClientAddress);
+        //            transactionEntity.ClientId = analyzeResult;
+        //        }
+        //        if (!request.ClientId.HasValue || request.ClientId == 0)
+        //        {
+        //            transactionEntity.ClientName = request.ClientName;
+        //            transactionEntity.ClientAddress = request.ClientAddress;
+        //        }
+        //        transactionEntity.Remarks = request.Remarks;
+        //        transactionEntity.TransactionType = request.TransactionType;
+        //        transactionEntity.TransactionDate ??= DateTime.Now;
+        //        transactionEntity.TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
 
-                // Save transaction
-                var savedTransaction = await _transactionRepo.AddEditTransactionAsync(transactionEntity);
+        //        // Save transaction
+        //        string slip = string.Empty;
+        //        var savedTransaction = await _transactionRepo.AddEditTransactionAsync(transactionEntity);
+        //        if (savedTransaction.Id > 0)
+        //        {
+        //            var stockDeductionResult=await _stockRepo.DeductStockAsync(request.ProductId.Value, request.Quantity.Value);
+        //            // Generate slip
+        //            slip = _transactionRepo.GenerateSlip(savedTransaction, request.ClientName);
 
-                // Generate slip
-                var slip = _transactionRepo.GenerateSlip(savedTransaction, request.ClientName);
+        //            await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
+        //            {
+        //                TransactionId = savedTransaction.Id,
+        //                SlipContent = slip
+        //            });
 
-                // Map entity back to response model
-                var responseModel = new AddEditTransactionResponseModel();
-                responseModel.Slip = slip;
-                responseModel.TransactionId = savedTransaction.Id;
+        //            //await PrintSlipAsync(slip);
+        //        }
 
-                await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
-                {
-                    TransactionId = savedTransaction.Id,
-                    SlipContent = slip
-                });
+        //        // Map entity back to response model
+        //        var responseModel = new AddEditTransactionResponseModel();
+        //        responseModel.Slip = slip;
+        //        responseModel.TransactionId = savedTransaction.Id;
 
-                //await PrintSlipAsync(slip);
+        //        return BaseResponse<AddEditTransactionResponseModel>.SuccessResponse(
+        //            responseModel,
+        //            "Transaction processed successfully"
+        //        );
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log error
+        //        await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
 
-                return BaseResponse<AddEditTransactionResponseModel>.SuccessResponse(
-                    responseModel,
-                    "Transaction processed successfully"
-                );
-            }
-            catch (Exception ex)
-            {
-                // Log error
-                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
-
-                return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
-                    new List<string> { ex.Message },
-                    "Error occurred "
-                );
-            }
-        }
+        //        return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
+        //            new List<string> { ex.Message },
+        //            "Error occurred "
+        //        );
+        //    }
+        //}
         public async Task PrintSlipAsync(string slipContent)
         {
             try
@@ -191,51 +197,51 @@ namespace Service.Service
                 throw; // Re-throw exception after logging
             }
         }
-        public async Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter)
-        {
-            try
-            {
-                (List<VendorTransaction>,int) getTransactions = await _transactionRepo.GetTransactionAsync(transactionId, pageIndex, pageSize, Filter);
+        //public async Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter)
+        //{
+        //    try
+        //    {
+        //        (List<VendorTransaction>,int) getTransactions = await _transactionRepo.GetTransactionAsync(transactionId, pageIndex, pageSize, Filter);
 
-                var result = getTransactions.Item1.Select(t => new GetTransactionResponseModel
-                {
+        //        var result = getTransactions.Item1.Select(t => new GetTransactionResponseModel
+        //        {
 
-                    ClientName = (t.Client == null)
-            ? null
-            : $"{t.Client.FirstName} {t.Client.LastName}".Trim(),
-                    ClientPhone = t.Client?.Phone,
-                    ClientAddress = t.Client?.Address,
-                    ProductName=t.Product?.Name,
-                    Id = t.Id,
-                    ClientId = t.ClientId,
-                    ProductId = t.ProductId,
-                    Quantity = t.Quantity,
-                    UnitPrice = t.UnitPrice,
-                    ClientAmount = t.ClientAmount,
-                    Remarks = t.Remarks,
-                    TransactionType = t.TransactionType,
-                    TransactionDate =t.TransactionDate
-                }).ToList();
-                if (result == null || result.Count == 0)
-                    return new BaseResponse<(List<GetTransactionResponseModel>, int)>(
-                        new List<string> { "Transactions not found" }, "Error fetching transactions");
+        //            ClientName = (t.Client == null)
+        //    ? null
+        //    : $"{t.Client.FirstName} {t.Client.LastName}".Trim(),
+        //            ClientPhone = t.Client?.Phone,
+        //            ClientAddress = t.Client?.Address,
+        //            ProductName=t.Product?.Name,
+        //            Id = t.Id,
+        //            ClientId = t.ClientId,
+        //            ProductId = t.ProductId,
+        //            Quantity = t.Quantity,
+        //            UnitPrice = t.UnitPrice,
+        //            Discount = t.ClientAmount,
+        //            Remarks = t.Remarks,
+        //            TransactionType = t.TransactionType,
+        //            TransactionDate =t.TransactionDate
+        //        }).ToList();
+        //        if (result == null || result.Count == 0)
+        //            return new BaseResponse<(List<GetTransactionResponseModel>, int)>(
+        //                new List<string> { "Transactions not found" }, "Error fetching transactions");
 
-                return BaseResponse<(List<GetTransactionResponseModel>, int)>.SuccessResponse(
-                    (result, getTransactions.Item2),
-                    "Transaction retrieved successfully"
-                );
-            }
-            catch (Exception ex)
-            {
-                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
+        //        return BaseResponse<(List<GetTransactionResponseModel>, int)>.SuccessResponse(
+        //            (result, getTransactions.Item2),
+        //            "Transaction retrieved successfully"
+        //        );
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
 
-                return BaseResponse<(List<GetTransactionResponseModel>, int)>.FailureResponse(
-                    new List<string> { ex.Message },
-                    "Error occurred "
-                );
-            }
+        //        return BaseResponse<(List<GetTransactionResponseModel>, int)>.FailureResponse(
+        //            new List<string> { ex.Message },
+        //            "Error occurred "
+        //        );
+        //    }
 
-        }
+        //}
         private async Task<int?> AnaylyzeAndAddClient(string? name, string? address, string? phone)
         {
             int? clientId=null;
@@ -271,6 +277,72 @@ namespace Service.Service
                 await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error in AnaylyzeAndAddClient}");
             }
             return clientId;
+        }
+
+        public async Task<BaseResponse<int?>> ProcessTransactions(ProcessTransactionsModel transactionModel)
+        {
+            try
+            {
+                if (transactionModel == null)
+                    return BaseResponse<int?>.FailureResponse(
+                        new List<string> { "model is null" },
+                        "Error occurred "
+                    );
+
+
+                var transactionEntity = new TransactionMst
+                {
+                    ClientAddress = transactionModel.ClientAddress,
+                    ClientId = transactionModel.ClientId,
+                    ClientName = transactionModel.ClientName,
+                    TransactionType = transactionModel.TransactionType,
+                    NetAmount = transactionModel.NetAmount,
+                    TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
+                    TransactionDate = transactionModel.TransactionDate,
+                    Remarks = transactionModel.Remarks,
+                    CreatedOn = DateTime.UtcNow,
+                    CreatedBy = transactionModel.CreatedBy,
+                    TransactionSlip = new TransactionSlip
+                    {
+                        SlipContent = string.Empty
+                    },
+                    TransactionDetails = transactionModel?.Products?.Select(td => new TransactionDetails
+                    {
+                        ProductId = td.ProductId,
+                        Quantity = td.Quantity,
+                        UnitPrice = td.UnitPrice,
+                        CreatedOn = DateTime.UtcNow,
+                        CreatedBy = transactionModel.CreatedBy
+                    }).ToList()
+                };
+
+
+                if (!string.IsNullOrEmpty(transactionModel.ClientPhone)
+                    && !string.IsNullOrEmpty(transactionModel.ClientName)
+                    && (!transactionModel.ClientId.HasValue || transactionModel.ClientId == 0))
+                {
+                    var analyzeResult = await AnaylyzeAndAddClient(
+                        transactionModel.ClientName, transactionModel.ClientPhone, transactionModel.ClientAddress);
+                    transactionEntity.ClientId = analyzeResult;
+                }
+                if (!transactionModel.ClientId.HasValue || transactionModel.ClientId == 0)
+                {
+                    transactionEntity.ClientName = transactionModel.ClientName;
+                    transactionEntity.ClientAddress = transactionModel.ClientAddress;
+                }
+                BaseResponse<int?> response = await _transactionRepo.ProcessTransactions(transactionEntity);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error ProcessTransactions}");
+
+                return BaseResponse<int?>.FailureResponse(
+                    new List<string> { ex.Message },
+                    "Error occurred "
+                );
+            }
         }
     }
 }
