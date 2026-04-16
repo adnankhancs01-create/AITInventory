@@ -1,0 +1,191 @@
+﻿@page "/transaction"
+@using AIT_Inventory_App.C_.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Service.IService
+@using static Common.Contants.Enums
+@inject ITransactionService TransactionService
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.Pupups
+<!-- FILTERS -->
+<RadzenStack Orientation="Orientation.Horizontal"
+             Gap="12px"
+             Style="margin-bottom:15px; align-items:flex-end; flex-wrap:wrap;">
+
+    <!-- From Date -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker @bind-Value="fromDate"
+                          Style="width:160px" />
+    </div>
+
+    <!-- To Date -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker @bind-Value="toDate"
+                          Style="width:160px" />
+    </div>
+
+    <!-- Transaction Type Dropdown -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Type</label>
+        <RadzenDropDown @bind-Value="transactionType"
+                        Data="@transactionOptions"
+                        TextProperty="Text"
+                        ValueProperty="Value"
+                        Placeholder="Select Type"
+                        Style="width:180px" />
+
+
+    </div>
+
+    <!-- Search Button -->
+    <RadzenButton Text="Search"
+                  Icon="search"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Click="@(() => grid.Reload())" />
+
+</RadzenStack>
+<RadzenCard Style="padding:24px; margin-bottom:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+            <h3 style="margin:0; font-weight:600;">Transaction Summary</h3>
+            <small style="color:#6c757d;">Overview of totals, discounts, and net amount</small>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+        
+        <div style="flex:1; min-width:150px; background:#f8f9fa; padding:16px; border-radius:10px;">
+            <div style="font-size:12px; color:#6c757d;">Total</div>
+            <div style="font-size:20px; font-weight:600;">@summary.TotalAmount</div>
+        </div>
+
+        <div style="flex:1; min-width:150px; background:#fff3cd; padding:16px; border-radius:10px;">
+            <div style="font-size:12px; color:#856404;">Discount</div>
+            <div style="font-size:20px; font-weight:600;">@summary.TotalDiscount</div>
+        </div>
+
+        <div style="flex:1; min-width:150px; background:#d4edda; padding:16px; border-radius:10px;">
+            <div style="font-size:12px; color:#155724;">Net Amount</div>
+            <div style="font-size:20px; font-weight:600;">@summary.FinalAmount</div>
+        </div>
+
+    </div>
+@* 
+    <!-- Chart -->
+    <RadzenChart Style="height:300px;">
+        <RadzenColumnSeries Data="@summaryChart"
+                            CategoryProperty="Label"
+                            ValueProperty="Value" />
+    </RadzenChart>
+ *@
+</RadzenCard>
+<RadzenDataGrid @ref="grid"
+                TItem="TransactionDetailModel"
+                Data="@transactions"
+                Count="@totalCount"
+                LoadData="@LoadData"
+                AllowPaging="true"
+                PageSize="10">
+
+    <Columns>
+
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Property="TransactionId" Title="ID" />
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Property="Quantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Property="UnitPrice" Title="Price" />
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Property="Total" Title="Total" />
+
+        <RadzenDataGridColumn TItem="TransactionDetailModel" Title="Actions">
+            <Template Context="data">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() =>  View(data))" />
+                <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => Edit(data))" />
+            </Template>
+        </RadzenDataGridColumn>
+
+    </Columns>
+
+</RadzenDataGrid>
+@code {
+
+    RadzenDataGrid<TransactionDetailModel> grid;
+    private string transactionType = TransactionType.Sell.ToString(); // default
+
+    private List<dynamic> transactionOptions = new()
+{
+    new { Text = "Purchase", Value = TransactionType.Purchase.ToString() },
+    new { Text = "Sell", Value = TransactionType.Sell.ToString() },
+    new { Text = "Return", Value = TransactionType.Return.ToString() }
+};
+    List<TransactionDetailModel> transactions = new();
+    int totalCount;
+    TransactionSummaryModel summary = new();
+    List<ChartItem> summaryChart = new();
+
+    DateTime? fromDate = DateTime.Now.AddDays(-1);
+    DateTime? toDate = DateTime.Now;
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+    }
+    async Task LoadData(LoadDataArgs args)
+    {
+        int skip = args.Skip ?? 0;
+        int top = args.Top ?? 0;
+        var request = new TransactionFilterRequest
+        {
+            PageNumber = (skip / top) + 1,
+            PageSize = args.Top ?? 10,
+            FromDate = fromDate??DateTime.Now.AddDays(-1),
+            ToDate = toDate ?? DateTime.Now,
+            TransactionType = transactionType
+        };
+
+        var result = await TransactionService.GetTransactionsAsync(request);
+
+        transactions = result.Data;
+        totalCount = result.TotalCount;
+        summary = result.Summary;
+
+        summaryChart = new List<ChartItem>
+        {
+            new ChartItem { Label = "Total", Value = summary.TotalAmount },
+            new ChartItem { Label = "Discount", Value = summary.TotalDiscount },
+            new ChartItem { Label = "Net", Value = summary.FinalAmount }
+        };
+    }
+
+    private async Task View(TransactionDetailModel item)
+    {
+        try
+        {
+            var result = new Dictionary<string, string>();
+            result.Add("Product Name", item.ProductName);
+            result.Add("Category", item.CategoryName);
+            result.Add("Product Code", item.ProductCode);
+            result.Add("Transaction Number", item.TransactionNumber?.ToString());
+            result.Add("Quantity", item.Quantity.ToString());
+            result.Add("Unit Price", item.UnitPrice?.ToString());
+            result.Add("Total", item.Total?.ToString());
+            result.Add("Added On", item.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt"));
+
+            await DialogService.OpenAsync<ViewPopup>(
+                "Transaction Details",
+                new Dictionary<string, object>() { { "Obj", result } },
+                new DialogOptions() { Width = "600px", Height = "auto" }
+            );
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    void Edit(TransactionDetailModel item)
+    {
+        Console.WriteLine($"Edit {item.TransactionId}");
+    }
+}

@@ -15,5 +15,6 @@ namespace Service.IService
         Task PrintSlipAsync(string slipContent);
         //Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter);
         Task<BaseResponse<int?>> ProcessTransactions(ProcessTransactionsModel transactionModel);
+        Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
     }
 }

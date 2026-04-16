@@ -385,5 +385,9 @@ namespace Service.Service
 
             return sb.ToString();
         }
+        public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
+        {
+            return await _transactionRepo.GetTransactionsAsync(request);
+        }
     }
 }
