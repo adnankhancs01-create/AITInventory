@@ -1,4 +1,5 @@
 ﻿using Common;
+using Common.Models.RequestModel;
 using Domain.Entities;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -25,27 +26,6 @@ namespace Data.Repositories
         //    await _dbContext.SaveChangesAsync();
 
         //    return transaction;
-        //}
-        //public string GenerateSlip(VendorTransaction transaction, string? clientName)
-        //{
-        //    var sb = new StringBuilder();
-        //    clientName= string.IsNullOrEmpty(clientName) ? $"{transaction?.Client?.FirstName} {transaction?.Client?.LastName}:" : clientName;
-        //    sb.AppendLine("========== Transaction Slip ==========");
-        //    sb.AppendLine($"Slip No: {transaction.TransactionNumber}");
-        //    sb.AppendLine($"Date: {transaction.TransactionDate?.ToString("dd-MMM-yyyy HH:mm")}");
-        //    sb.AppendLine("--------------------------------------");
-        //    sb.AppendLine($"Client: {clientName}");
-        //    sb.AppendLine($"Product: {transaction?.Product?.Name}");
-        //    sb.AppendLine($"Type: {transaction.TransactionType}");
-        //    sb.AppendLine($"Quantity: {transaction.Quantity}");
-        //    sb.AppendLine($"Unit Price: {transaction.UnitPrice:C}");
-        //    sb.AppendLine($"Total Amount: {transaction.TotalAmount:C}");
-        //    sb.AppendLine($"Client Amount: {transaction.ClientAmount:C}");//recieved amount
-        //    sb.AppendLine("--------------------------------------");
-        //    sb.AppendLine($"Remarks: {transaction.Remarks}");
-        //    sb.AppendLine("======================================");
-
-        //    return sb.ToString();
         //}
         public async Task<TransactionSlip> AddEditTransactionSlipAsync(TransactionSlip transactionSlip)
         {
