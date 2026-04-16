@@ -1,10 +1,15 @@
 ﻿using Common;
 using Common.Models.RequestModel;
+using Common.Models.ResponseModel;
+using Dapper;
 using Domain.Entities;
 using Domain.IRepositories;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace Data.Repositories
@@ -12,9 +17,11 @@ namespace Data.Repositories
     public class TransactionRepo : ITransactionRepo
     {
         private readonly InventoryDbContext _dbContext;
-        public TransactionRepo(InventoryDbContext dbContext)
+        private readonly string _connectionString;
+        public TransactionRepo(InventoryDbContext dbContext, IConfiguration config)
         {
             _dbContext = dbContext;
+            _connectionString = config.GetConnectionString("DefaultConnection");
         }
         //public async Task<VendorTransaction> AddEditTransactionAsync(VendorTransaction transaction)
         //{
@@ -78,6 +85,37 @@ namespace Data.Repositories
                 await _dbContext.SaveChangesAsync();
             }
             return BaseResponse<int?>.SuccessResponse(transactionMst.Id, "Transaction processed successfully");
+        }
+        public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
+        {
+            using var con = new SqlConnection(_connectionString);
+
+            var multi = await con.QueryMultipleAsync(
+                "sp_GetTransactions_Paged",
+                new
+                {
+                    request.FromDate,
+                    request.ToDate,
+                    request.ProductId,
+                    request.CategoryId,
+                    request.ClientId,
+                    request.TransactionType,
+                    request.PageNumber,
+                    request.PageSize
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var data = (await multi.ReadAsync<TransactionDetailModel>()).ToList();
+            var totalCount = await multi.ReadFirstAsync<int>();
+            var summary = await multi.ReadFirstAsync<TransactionSummaryModel>();
+
+            return new PagedTransactionResponse
+            {
+                Data = data,
+                TotalCount = totalCount,
+                Summary = summary
+            };
         }
     }
 }

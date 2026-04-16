@@ -8,8 +8,9 @@ namespace Common.Contants
     {
         public enum TransactionType
         {
-            Buy,   // Vendor buys product from supplier (if applicable)
-            Sell   // Vendor sells product to client
+            Purchase,   // Vendor buys product from supplier (if applicable)
+            Sell   ,// Vendor sells product to client
+            Return
         }
 
         /// <summary>
