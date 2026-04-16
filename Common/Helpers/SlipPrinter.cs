@@ -13,12 +13,14 @@ namespace Common.Helpers
         {
             _slipContent = slipContent;
 
+            // uncomment the following code to enable actual printing
             PrintDocument printDoc = new PrintDocument();
             printDoc.PrintPage += PrintPageHandler;
 
             // Optional: set printer name
             // printDoc.PrinterSettings.PrinterName = "YourPrinterName";
 
+            // uncomment the following code to enable actual printing
             printDoc.Print();
         }
 

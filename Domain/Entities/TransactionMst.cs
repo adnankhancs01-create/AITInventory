@@ -17,6 +17,10 @@ namespace Domain.Entities
         public string? TransactionType { get; set; }  // BUY / SELL
         [Column(TypeName = "decimal(18,2)")]
         public decimal? NetAmount { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Discount { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TotalAmount { get; set; }
         public long? TransactionNumber { get; set; }
         public DateTime? TransactionDate { get; set; }
         public string? Remarks { get; set; }

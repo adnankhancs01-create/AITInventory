@@ -11,6 +11,7 @@ using Domain.IRepositories;
 using Microsoft.Identity.Client;
 using Service.IService;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Service.Service
@@ -296,16 +297,14 @@ namespace Service.Service
                     ClientId = transactionModel.ClientId,
                     ClientName = transactionModel.ClientName,
                     TransactionType = transactionModel.TransactionType,
+                    Discount = transactionModel.Discount,
+                    TotalAmount = transactionModel.TotalAmount,
                     NetAmount = transactionModel.NetAmount,
                     TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
-                    TransactionDate = transactionModel.TransactionDate,
+                    TransactionDate = transactionModel.TransactionDate?? DateTime.Now,
                     Remarks = transactionModel.Remarks,
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = transactionModel.CreatedBy,
-                    TransactionSlip = new TransactionSlip
-                    {
-                        SlipContent = string.Empty
-                    },
                     TransactionDetails = transactionModel?.Products?.Select(td => new TransactionDetails
                     {
                         ProductId = td.ProductId,
@@ -331,7 +330,21 @@ namespace Service.Service
                     transactionEntity.ClientAddress = transactionModel.ClientAddress;
                 }
                 BaseResponse<int?> response = await _transactionRepo.ProcessTransactions(transactionEntity);
+                if (response.Success)
 
+                {
+                    transactionModel.TransactionDate= transactionModel.TransactionDate ?? transactionEntity.TransactionDate;
+                    // Generate slip
+                    string slip = GenerateSlip(transactionModel, transactionModel.ClientName, transactionEntity.TransactionNumber.ToString());
+
+                    await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
+                    {
+                        TransactionId = transactionEntity.Id,
+                        SlipContent = slip
+                    });
+
+                    await PrintSlipAsync(slip);
+                }
                 return response;
             }
             catch (Exception ex)
@@ -343,6 +356,34 @@ namespace Service.Service
                     "Error occurred "
                 );
             }
+        }
+        private string GenerateSlip(ProcessTransactionsModel transaction, string? clientName, string? transactionNumber)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("========== Transaction Slip ==========");
+            sb.AppendLine($"Slip No: {transactionNumber}");
+            sb.AppendLine($"Date   : {transaction.TransactionDate?.ToString("dd-MMM-yyyy HH:mm")}");
+            sb.AppendLine($"Client : {clientName}");
+            sb.AppendLine($"Type   : {transaction.TransactionType}");
+            sb.AppendLine("-----------Product details------------");
+            transaction.Products
+            .Select((x, index) => new { x, index })
+            .ToList()
+             .ForEach(item =>
+             {
+                 sb.AppendLine($"{item.index + 1}. Product: {item.x?.Name}");
+                 sb.AppendLine($"    Quantity  : {item.x?.Quantity}");
+                 sb.AppendLine($"    Unit Price: {item.x.UnitPrice:C}");
+                 sb.AppendLine($"    Total     : {(item.x.Quantity * (item.x.UnitPrice)):C}");
+             });
+            sb.AppendLine($"Discount  : {transaction.Discount ?? 0:C}");
+            sb.AppendLine($"Total     : {transaction.TotalAmount ?? 0:C}");
+            sb.AppendLine($"Net Amount: {transaction.NetAmount:C}");
+            sb.AppendLine("--------------------------------------");
+            sb.AppendLine($"Remarks: {transaction.Remarks}");
+            sb.AppendLine("======================================");
+
+            return sb.ToString();
         }
     }
 }

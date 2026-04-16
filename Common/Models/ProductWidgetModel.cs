@@ -14,5 +14,6 @@ namespace Common.Models
         public string ImageUrl { get; set; }
         public int Quantity { get; set; } = 0;
         public int ProductId { get; set; } = 0;
+        public bool IsEditingQuantity { get; set; } = false;
     }
 }

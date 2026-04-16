@@ -1,4 +1,5 @@
 ﻿//using Android.Renderscripts;
+using AIT_Inventory_App.C_.Models;
 using Common.Helpers;
 using Data;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Radzen;
 using Service;
+using System.Drawing.Printing;
 namespace AIT_Inventory_App
 {
     public static class MauiProgram
@@ -42,6 +44,8 @@ namespace AIT_Inventory_App
             builder.Services.AddRadzenComponents();
             builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
             builder.Services.AddScoped<ISlipPrinter, SlipPrinter>();
+            builder.Services.Configure<Paths>(
+    builder.Configuration.GetSection("Paths"));
 
             return builder.Build();
         }
