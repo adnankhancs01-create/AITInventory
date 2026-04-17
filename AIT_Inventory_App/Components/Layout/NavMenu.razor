@@ -1,18 +1,28 @@
-﻿@* <div class="top-row ps-3 navbar navbar-dark">
+﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand">AIT_Inventory_App</a>
-        <!-- Toggle button -->
+        @* <!-- Toggle button -->
         <button class="navbar-toggler" @onclick="ToggleNav">
             <span class="navbar-toggler-icon"></span>
-        </button>
+        </button> *@
     </div>
-</div> *@
+</div>
 
 
 <nav class="nav flex-column">
     <div class="nav-item px-3">
         <NavLink class="nav-link" href="home">
             <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="Order">
+            <span class="bi bi-cash-stack" aria-hidden="true"></span> Order
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="Transaction">
+            <span class="bi bi-cash-stack" aria-hidden="true"></span> Transaction Report
         </NavLink>
     </div>
     <div class="nav-item px-3">
@@ -33,11 +43,6 @@
     <div class="nav-item px-3">
         <NavLink class="nav-link" href="Category">
             <span class="bi bi-tags" aria-hidden="true"></span> Category
-        </NavLink>
-    </div>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="Transaction">
-            <span class="bi bi-cash-stack" aria-hidden="true"></span> Transaction
         </NavLink>
     </div>
 </nav>

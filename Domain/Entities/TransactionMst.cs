@@ -18,7 +18,7 @@ namespace Domain.Entities
         [Column(TypeName = "decimal(18,2)")]
         public decimal? NetAmount { get; set; }
         [Column(TypeName = "decimal(18,2)")]
-        public decimal? Discount { get; set; }
+        public decimal? TotalDiscount { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal? TotalAmount { get; set; }
         public long? TransactionNumber { get; set; }
