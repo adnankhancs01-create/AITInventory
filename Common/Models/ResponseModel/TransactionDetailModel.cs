@@ -23,9 +23,10 @@ namespace Common.Models.ResponseModel
     public class TransactionSummaryModel
     {
         public int TotalTransactions { get; set; }
-        public decimal? TotalAmount { get; set; }
+        public int TotalItemSold { get; set; }
+        public decimal? TotalAmountGenerated { get; set; }
         public decimal? TotalDiscount { get; set; }
-        public decimal? FinalAmount { get; set; }
+        public decimal? TotalReceivedAmount { get; set; }
     }
 
     public class PagedTransactionResponse

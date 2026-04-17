@@ -1,0 +1,396 @@
+﻿@page "/order"
+@using AIT_Inventory_App.C_.Models
+@using Common.Models
+@using Common.Models.RequestModel
+@using Common.Models.ResponseModel
+@using Microsoft.Extensions.Options
+@using Service.IService
+@using Service.Service
+@inject IProductService _ProductService
+@inject DialogService DialogService
+@inject ITransactionService _transactionService
+@inject IOptions<Paths> _Paths
+
+    
+<!-- FILTERS -->
+<RadzenStack Orientation="Orientation.Horizontal"
+             Gap="12px"
+             Style="margin-bottom:15px; align-items:flex-end; flex-wrap:wrap;">
+
+    <!-- Category -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Category</label>
+        <RadzenDropDown Data="@categories"
+                        TextProperty="Name"
+                        ValueProperty="Id"
+                        @bind-Value="categoryId"
+                        Style="width:160px"
+                        Name="CategoryId"
+                        Placeholder="Choose a category"
+                        AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    </div>
+
+    <!-- Search Button -->
+    <RadzenButton Text="Search"
+                  Icon="search"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Click="@(() => LoadPageAsync($"x.CategoryId=={categoryId}"))" />
+
+</RadzenStack>
+
+<RadzenStack Orientation="Orientation.Horizontal" Style="height:100%; gap:1rem;">
+    <!-- Left side: product form -->
+    <RadzenStack Orientation="Orientation.Vertical"
+                 Style="width:25%; min-width:250px; max-width:300px; border:1px solid #ccc; padding:1rem; border-radius:8px; background:#fafafa;">
+        <RadzenLabel Text="Product Details" Style="font-weight:bold" />
+        <div style="
+            margin-top:10px;
+            padding:12px;
+            border-radius:10px;
+            background:#ffffff;
+            border:1px solid #e0e0e0;
+            box-shadow:0 2px 6px rgba(0,0,0,0.05);
+            ">
+
+            <div style="font-weight:bold; margin-bottom:8px; font-size:14px; color:#555;">
+                Selected Products
+            </div>
+
+            @foreach (var product in CurrentTransaction.Products)
+            {
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    padding:6px 0;
+                    border-bottom:1px dashed #eee;
+                    ">
+                    <!-- Left: Name + Qty -->
+                    <div>
+                        <div style="font-weight:500;">@product.Name</div>
+                        <div style="font-size:12px; color:#888;">
+                            Qty: @product.Quantity × $@product.UnitPrice
+                        </div>
+                    </div>
+
+                    <!-- Right: Total -->
+                    <div style="font-weight:600;">
+                        $ @(product.Quantity* product.UnitPrice)
+                    </div>
+                </div>
+            }
+
+            @if (!CurrentTransaction.Products.Any())
+            {
+                <div style="text-align:center; color:#999; padding:10px;">
+                    No products selected
+                </div>
+            }
+
+        </div>
+
+        <div style="
+            margin-top:10px;
+            padding:12px;
+            border-radius:10px;
+            background:#f8f9fa;
+            border:1px solid #e0e0e0;
+            font-family:'Segoe UI', sans-serif;
+            ">
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span>Total</span>
+                <span>$ @CurrentTransaction.TotalAmount</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#dc3545;">
+                <span>Total Discount</span>
+                <span>- $ @(CurrentTransaction.TotalDiscount ?? 0)</span>
+            </div>
+
+            <hr style="margin:8px 0;" />
+
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:16px;">
+                <span>Net Amount</span>
+                <span style="color:#28a745;">
+                    $ @(
+                    CurrentTransaction.TotalDiscount.HasValue
+                        ? CurrentTransaction.TotalAmount - CurrentTransaction.TotalDiscount.Value
+                                                    : CurrentTransaction.TotalAmount
+                                            )
+                </span>
+            </div>
+
+        </div>
+        <RadzenLabel Text=$"Total Discount : {@(CurrentTransaction.TotalDiscount ?? 0)}" />
+        @* <RadzenNumeric @bind-Value="CurrentTransaction.TotalDiscount" Min="0" Style="width:100%" /> *@
+        <RadzenLabel Text="Transaction Type" />
+        <RadzenDropDown @bind-Value="CurrentTransaction.TransactionType"
+                        Data="@transactionOptions"
+                        TextProperty="Text"
+                        ValueProperty="Value"
+                        Style="width:100%" />
+
+        <RadzenLabel Text="Transaction Date & Time" />
+        <RadzenDatePicker @bind-Value="CurrentTransaction.TransactionDate"
+                          Style="width:100%" />
+
+
+        <RadzenLabel Text="Remarks" />
+        <RadzenTextArea @bind-Value="CurrentTransaction.Remarks" Style="width:100%; height:80px" />
+
+        <RadzenButton Text="Save" Click="() => OnSave(CurrentTransaction)" Style="margin-top:1rem; width:100%" />
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Vertical" Style="flex:1; padding:1rem;">
+        <RadzenLabel Text="Product Catalog" Style="font-weight:bold; font-size:18px;" />
+
+        <RadzenDataList Data="@widgetProducts" Style="width:100%" WrapItems="true" GridColumns="3">
+            <Template Context="product">
+                <div class="product-card"
+                     style="margin:1rem; border:1px solid #e0e0e0;
+                    padding:1rem; border-radius:12px;
+                    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+                    text-align:center;">
+
+                    <!-- Product Image -->
+                    <img src="@product.ImageUrl" alt="@product.Name"
+                         style="width:120px; height:120px; object-fit:cover; border-radius:8px;" />
+
+                    <!-- Product Info Table -->
+                    <table style="width:100%; margin-top:0.75rem; font-size:14px;
+                        border-collapse:collapse; border:1px solid #ccc;">
+                        <tr>
+                            <td style="border:1px solid #ccc; font-weight:600; color:#333;">Name</td>
+                            <td style="border:1px solid #ccc;">@product.Name</td>
+                        </tr>
+                        <tr>
+                            <td style="border:1px solid #ccc; font-weight:600; color:#333;">Price</td>
+                            <td style="border:1px solid #ccc; color:#28a745; font-weight:bold;">
+                                $@product.UnitPrice
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:1px solid #ccc; font-weight:600; color:#333;">Discount</td>
+                            <td style="border:1px solid #ccc;">
+                                <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
+                                              Disabled="@(@product.DiscountPercentValue < 0)"
+                                              Click="() => ChangeDiscount(product, false)" />
+                                <span style="margin:0 8px;">@product.DiscountPercentValue % | @product.Discount?.ToString("N2") PKR</span>
+                                <RadzenButton Text="+" ButtonStyle="ButtonStyle.Secondary"
+                                              Click="() => ChangeDiscount(product, true)" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:1px solid #ccc; font-weight:600; color:#333;">Quantity</td>
+                            <td style="border:1px solid #ccc;">
+                                <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
+                                              Disabled="@(@product.Quantity == 0)"
+                                              Click="() => DecreaseQuantity(product)" />
+                                <RadzenNumeric @bind-Value="product.Quantity" Min="0"
+                                               Style="margin:0 8px; width:60px;" />
+                                <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
+                                              Click="() => AddToTransaction(product)" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border:1px solid #ccc; text-align:center;">
+                                <RadzenButton Icon="upload" Text="Upload Image"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Click="async () => await OnAddImage(product)"
+                                              Style="width:100%; margin-top:0.5rem;" />
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </Template>
+        </RadzenDataList>
+    </RadzenStack>
+
+</RadzenStack>
+
+                    @code {
+
+
+    private List<ProductWidgetModel> widgetProducts = new();
+    private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
+    private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
+    private List<ProductCategoryModel> categories = new List<ProductCategoryModel>();
+    private List<dynamic> transactionOptions = new List<dynamic>
+    {
+        new { Text = "Sell", Value = "Sell" },
+        new { Text = "Return", Value = "Return" }
+    };
+    int categoryId;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPageAsync();
+    }
+
+    private async Task LoadPageAsync(string? filter = null)
+    {
+        CurrentTransaction.TransactionType = "Sell";
+        var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
+        if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
+            categories = getCategories.Data.Item1;
+
+        var result = await _ProductService.GetProductsReportAsync(0, 1, int.MaxValue, filter);
+        if (result.Success)
+        {
+            widgetProducts = result.Data.Item1.Select(p => new ProductWidgetModel
+            {
+                Id = p.Id.Value,
+                Name = p.Name,
+                UnitPrice = p?.PricingModel?.UnitPrice ?? 0,
+                Description = p.Description,
+                ProductId = p.Id.Value,
+            }).ToList();
+
+            existingProducts = result.Data.Item1.ToList();
+        }
+        else
+        {
+            // Fallback to hardcoded products if API call fails
+
+        }
+
+        foreach (var product in widgetProducts)
+        {
+            var folder = _Paths.Value.ProductImagePath;
+            var filePath = Path.Combine(folder, $"{product.Id}.png");
+
+            product.ImageUrl = await GetImageBase64(filePath);
+        }
+        widgetProducts = widgetProducts.OrderBy(p => p.Name).ToList();
+    }
+
+    private async Task<string> GetImageBase64(string filePath)
+    {
+        string defaultImgPath = Path.Combine(_Paths.Value.ProductImagePath, _Paths.Value.DefaultFileName);
+        if (!File.Exists(filePath))
+            return $"data:image/png;base64,{Convert.ToBase64String(await File.ReadAllBytesAsync(defaultImgPath))}";
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        var base64 = Convert.ToBase64String(bytes);
+
+        return $"data:image/png;base64,{base64}";
+    }
+    private async Task OnAddImage(ProductWidgetModel product)
+    {
+        var result = await FilePicker.PickAsync(new PickOptions
+        {
+            PickerTitle = "Select product image",
+            FileTypes = FilePickerFileType.Images
+        });
+
+        if (result != null)
+        {
+            var folder = _Paths.Value.ProductImagePath;
+
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            var filePath = Path.Combine(folder, $"{product.Id}.png");
+
+            // 🔥 IMPORTANT: Read into memory FIRST
+            byte[] bytes;
+
+            using (var stream = await result.OpenReadAsync())
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                bytes = memoryStream.ToArray();
+            }
+
+            // 🔥 Now write AFTER stream is closed
+            await File.WriteAllBytesAsync(filePath, bytes);
+
+            // Load image
+            product.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    private async Task OnSave(ProcessTransactionsModel ProcessTransactionsModel)
+    {
+        if(ProcessTransactionsModel.Products.Count==0)
+        {
+            await DialogService.Alert("No product selected", "Error");
+            return;
+
+        }
+        var response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
+        if (response.Success)
+        {
+            await DialogService.Alert("Transaction saved successfully!", "Success");
+            CurrentTransaction = new ProcessTransactionsModel(); // Reset form
+            widgetProducts.ForEach(p => p.Quantity = 0); // Reset quantities
+        }
+        else
+        {
+            await DialogService.Alert(response.Message, "Error");
+        }
+    }
+
+    private void AddToTransaction(ProductWidgetModel product)
+    {
+        product.Quantity++;
+        var existing = existingProducts.FirstOrDefault(p => p.Id == product.Id);
+        if (existing != null)
+        {
+            if (existing.TotalStock < product.Quantity)
+            {
+                product.Quantity--;
+                // Show error message
+                DialogService.Alert($"Request stock exceeds {existing.TotalStock}", "Error");
+                return;
+            }
+        }
+        if (!CurrentTransaction.Products.Any(p => p.Id == product.Id))
+            CurrentTransaction.Products.Add(product);
+        UpdateDiscount();
+    }
+
+    private void DecreaseQuantity(ProductWidgetModel product)
+    {
+        if (product.Quantity > 0)
+        {
+            product.Quantity--;
+            if (product.Quantity == 0)
+                CurrentTransaction.Products.Remove(product);
+            UpdateDiscount();
+        }
+        else
+        {
+            DialogService.Alert("Invalid entry.", "Error");
+        }
+    }
+
+    private void ChangeDiscount(ProductWidgetModel product,bool isPositive)
+    {
+        if (!isPositive)
+        {
+            product.DiscountPercentValue--; 
+            if (product.DiscountPercentValue > 0)
+            {
+                product.Discount =Math.Round((((product.Quantity * product.UnitPrice) * product.DiscountPercentValue) / 100)??0);
+            }
+        }
+        else
+        {
+            product.DiscountPercentValue++;
+            product.Discount = Math.Round((((product.Quantity * product.UnitPrice) * product.DiscountPercentValue) / 100)??0);
+        }
+    }
+    private void UpdateDiscount()
+    {
+        foreach (var product in CurrentTransaction.Products)
+        {
+            product.Discount = Math.Round((((product.Quantity * product.UnitPrice) * product.DiscountPercentValue) / 100)??0);
+        }
+
+    }   
+
+}

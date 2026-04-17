@@ -297,7 +297,7 @@ namespace Service.Service
                     ClientId = transactionModel.ClientId,
                     ClientName = transactionModel.ClientName,
                     TransactionType = transactionModel.TransactionType,
-                    Discount = transactionModel.Discount,
+                    TotalDiscount = transactionModel.TotalDiscount,
                     TotalAmount = transactionModel.TotalAmount,
                     NetAmount = transactionModel.NetAmount,
                     TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
@@ -310,6 +310,7 @@ namespace Service.Service
                         ProductId = td.ProductId,
                         Quantity = td.Quantity,
                         UnitPrice = td.UnitPrice,
+                        Discount=td.Discount,
                         CreatedOn = DateTime.UtcNow,
                         CreatedBy = transactionModel.CreatedBy
                     }).ToList()
@@ -376,7 +377,7 @@ namespace Service.Service
                  sb.AppendLine($"    Unit Price: {item.x.UnitPrice:C}");
                  sb.AppendLine($"    Total     : {(item.x.Quantity * (item.x.UnitPrice)):C}");
              });
-            sb.AppendLine($"Discount  : {transaction.Discount ?? 0:C}");
+            sb.AppendLine($"Discount  : {transaction.TotalDiscount ?? 0:C}");
             sb.AppendLine($"Total     : {transaction.TotalAmount ?? 0:C}");
             sb.AppendLine($"Net Amount: {transaction.NetAmount:C}");
             sb.AppendLine("--------------------------------------");
