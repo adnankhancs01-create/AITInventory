@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260417210605_extrafieldsintrans")]
-    partial class extrafieldsintrans
+    [Migration("20260418210654_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -169,17 +169,8 @@ namespace Data.Migrations
                     b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("NetAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TotalDiscount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("TransactionDate")
                         .HasColumnType("datetime2");
@@ -220,9 +211,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TransactionId")
-                        .IsUnique()
-                        .HasFilter("[TransactionId] IS NOT NULL");
+                    b.HasIndex("TransactionId");
 
                     b.ToTable("TransactionSlip");
                 });
@@ -409,6 +398,9 @@ namespace Data.Migrations
                     b.Property<DateTime?>("CreatedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("int");
 
@@ -548,8 +540,8 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.TransactionSlip", b =>
                 {
                     b.HasOne("Domain.Entities.TransactionMst", "Transaction")
-                        .WithOne("TransactionSlip")
-                        .HasForeignKey("Domain.Entities.TransactionSlip", "TransactionId");
+                        .WithMany()
+                        .HasForeignKey("TransactionId");
 
                     b.Navigation("Transaction");
                 });
@@ -576,7 +568,7 @@ namespace Data.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Domain.Entities.TransactionMst", "TransactionMst")
+                    b.HasOne("Domain.Entities.TransactionDetails", "TransactionDetails")
                         .WithMany()
                         .HasForeignKey("TransactionId");
 
@@ -586,7 +578,7 @@ namespace Data.Migrations
 
                     b.Navigation("Product");
 
-                    b.Navigation("TransactionMst");
+                    b.Navigation("TransactionDetails");
 
                     b.Navigation("Vendor");
                 });
@@ -605,9 +597,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
                 {
                     b.Navigation("TransactionDetails");
-
-                    b.Navigation("TransactionSlip")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Entities.Vendor", b =>

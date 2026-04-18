@@ -3,37 +3,43 @@
 @using Service.IService
 @inject IStockService _stockService
 @inject DialogService DialogService
-
 <RadzenTemplateForm TItem="AddEditVendorStockRequestModel" Data="@Stock" Submit="@OnSubmit">
     <ChildContent>
-        <RadzenFieldset Text="Stock Information">
+        <RadzenFieldset Text="Stock Information" Style="padding:20px; border-radius:8px; background-color:#f9f9f9;">
+            
             @if (Products != null && Products.Count > 0)
             {
-                 <RadzenLabel Text="Products" />
+                <RadzenLabel Text="Products" Style="font-weight:600; color:#444;" />
                 <RadzenDropDown Data="@Products"
-                            TextProperty="Name"
-                            ValueProperty="Id"
-                            @bind-Value="Stock.ProductId"
-                            Style="width:100%"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                @bind-Value="Stock.ProductId"
+                                Style="width:100%; margin-bottom:15px;"
                                 Name="ProductId"
                                 Placeholder="Choose a Product"
                                 AllowFiltering="true"
                                 FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
-
-            <br />   
             }
-            <RadzenLabel Text="Quatity" />
-            <RadzenNumeric @bind-Value="Stock.Quantity" Name="Quatity" Style="width:100%" />
-            
-            <br />
-            <RadzenLabel Text="Total Purchase Price" />
-            <RadzenNumeric @bind-Value="Stock.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%" />
-            <RadzenNumeric @bind-Value="Stock.StockNumber" Name="StockNumber" hidden/>
-            <br />
 
-            <div style="margin-top:15px;">
-                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
-                <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />
+            <RadzenLabel Text="Quantity" Style="font-weight:600; color:#444;" />
+            <RadzenNumeric @bind-Value="Stock.Quantity" Name="Quantity" Style="width:100%; margin-bottom:15px;" />
+
+            <RadzenLabel Text="Total Purchase Price" Style="font-weight:600; color:#444;" />
+            <RadzenNumeric @bind-Value="Stock.TotalPurchasePrice" Name="TotalPurchasePrice" Style="width:100%; margin-bottom:15px;" />
+
+            <RadzenNumeric @bind-Value="Stock.StockNumber" Name="StockNumber" hidden />
+
+            <div class="form-group d-flex align-items-center mb-3" style="margin-top:10px;">
+                <RadzenCheckBox @bind-Value="Stock.IsActive" Name="IsActive"
+                                Style="margin-right:8px; width:20px; height:20px;" />
+                <label class="form-label" style="font-weight:500; color:#333;">
+                    Active Stock
+                </label>
+            </div>
+
+            <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" Style="margin-right:10px;" />
+                <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Secondary" Click="@OnCancel" />
             </div>
         </RadzenFieldset>
     </ChildContent>

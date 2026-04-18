@@ -1,4 +1,5 @@
 ﻿using Common;
+using Common.Models;
 using Common.Models.RequestModel;
 using Common.Models.ResponseModel;
 using Dapper;
@@ -37,9 +38,11 @@ namespace Data.Repositories
         public async Task<TransactionSlip> AddEditTransactionSlipAsync(TransactionSlip transactionSlip)
         {
             if (transactionSlip.Id > 0)
-                _dbContext.TransactionSlip.Update(transactionSlip);
+            {
+                _dbContext.Update(transactionSlip);
+            }
             else
-                await _dbContext.TransactionSlip.AddAsync(transactionSlip);
+                await _dbContext.AddAsync(transactionSlip);
 
             await _dbContext.SaveChangesAsync();
 
@@ -62,28 +65,52 @@ namespace Data.Repositories
         //}
 
         public async Task<BaseResponse<int?>> ProcessTransactions(TransactionMst transactionMst)
-        { 
-            await _dbContext.AddAsync(transactionMst);
+        {
+            if (transactionMst.Id < 0)
+                return BaseResponse<int?>.FailureResponse(new List<string> { "Failed to save transaction" }, "Transaction processing failed");
+
+            if (transactionMst.Id > 0)
+            {
+                _dbContext.ChangeTracker.Clear(); 
+                _dbContext.Update(transactionMst);
+            }
+            else
+                await _dbContext.AddAsync(transactionMst);
             await _dbContext.SaveChangesAsync();
 
             var stocks = new List<VendorStock>();
+            var listTransactionDetailId = transactionMst.TransactionDetails.ToList().Select(x=>x.Id).ToList();
+            var getStocks = await _dbContext.VendorStock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
             transactionMst.TransactionDetails.ToList().ForEach(detail =>
             {
+                // inactive recent stock
+                if (getStocks != null && getStocks.Count > 0)
+                {
+                    var stocksToUpdate = getStocks.Where(s => s.TransactionId == detail.Id).ToList();
+                    if (stocksToUpdate != null && stocksToUpdate.Count > 0)
+                    {
+                        stocksToUpdate.ForEach(s => s.IsActive = false);
+                    }
+                }
+
+                // add new stock record
                 var stock = new VendorStock
                 {
                     ProductId = detail.ProductId,
                     Quantity = transactionMst.TransactionType == "Purchase" ? detail.Quantity : -detail.Quantity,
-                    TransactionId = transactionMst.Id,
+                    TransactionId = detail.Id,
                     CreatedOn = DateTime.UtcNow,
-                    CreatedBy = transactionMst.CreatedBy
+                    CreatedBy = transactionMst.CreatedBy,
+                    IsActive= true
                 };
                 stocks.Add(stock);
             });
 
             if (stocks.Count > 0)
-            { await _dbContext.VendorStock.AddRangeAsync(stocks);
-                await _dbContext.SaveChangesAsync();
+            {
+                await _dbContext.AddRangeAsync(stocks);
             }
+            await _dbContext.SaveChangesAsync();
             return BaseResponse<int?>.SuccessResponse(transactionMst.Id, "Transaction processed successfully");
         }
         public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
@@ -91,7 +118,7 @@ namespace Data.Repositories
             using var con = new SqlConnection(_connectionString);
 
             var multi = await con.QueryMultipleAsync(
-                "sp_GetTransactions_Paged",
+                "sp_GetTransactions",
                 new
                 {
                     request.FromDate,
@@ -117,5 +144,19 @@ namespace Data.Repositories
                 Summary = summary
             };
         }
+
+        public async Task<TransactionMst> GetTransactionByIdAsync(int transactionId)
+        {
+            // Load master + details in one query
+            var transaction = await _dbContext.TransactionMst.AsNoTracking()
+                .Include(t => t.TransactionDetails).ThenInclude(d => d.Product).AsNoTracking() // Include product details for name and unit price
+                .FirstOrDefaultAsync(t => t.Id == transactionId);
+
+            if (transaction == null)
+                return null;
+
+            return transaction;
+        }
+
     }
 }

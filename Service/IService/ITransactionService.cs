@@ -16,5 +16,6 @@ namespace Service.IService
         //Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter);
         Task<BaseResponse<int?>> ProcessTransactions(ProcessTransactionsModel transactionModel);
         Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
+        Task<ProcessTransactionsModel> GetTransactionByIdAsync(int transactionId);
     }
 }

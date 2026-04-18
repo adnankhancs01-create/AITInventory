@@ -35,7 +35,8 @@ namespace Data.Repositories
                         StockNumber = vendorStock.StockNumber,
                         TotalPurchasePrice = vendorStock.TotalPurchasePrice,
                         VendorId = vendorStock.VendorId,
-                        CreatedOn = DateTime.Now
+                        CreatedOn = DateTime.Now,
+                        IsActive = vendorStock.IsActive
                     });
                 }
                 else
@@ -50,6 +51,7 @@ namespace Data.Repositories
                     stock.VendorId = vendorStock.VendorId;
                     stock.TotalPurchasePrice = vendorStock.TotalPurchasePrice;
                     stock.ModifiedOn = DateTime.Now;
+                    stock.IsActive = vendorStock.IsActive;
                 }
 
                 await _dbContext.SaveChangesAsync();

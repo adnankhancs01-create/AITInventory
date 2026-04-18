@@ -86,11 +86,6 @@ namespace Service.Service
                 else
                     request.CreatedOn = DateTime.Now;
                 
-                //request.Stocks=new List<VendorStock>().Add(new VendorStock { 
-                //    Quantity=requestModel.Quantity,
-                //    TotalPurchasePrice = requestModel.TotalPurchasePrice,
-                //    StockNumber=requestModel.StockNumber
-                //});
                 var result= await _productRepo.AddEditProductAsync(request);
                 if (result.Success && 
                     (requestModel.Quantity.HasValue || requestModel.TotalPurchasePrice.HasValue))
@@ -99,7 +94,8 @@ namespace Service.Service
                         ProductId=result.Data.Id,
                         Quantity=requestModel.Quantity,
                         StockNumber=requestModel.StockNumber,
-                        TotalPurchasePrice=requestModel.TotalPurchasePrice
+                        TotalPurchasePrice=requestModel.TotalPurchasePrice,
+                        IsActive=true
                     });
                     stockNumber = stockResult?.Data?.StockNumber;
                 }
@@ -109,7 +105,8 @@ namespace Service.Service
                     {
                         StockNumber=stockNumber,
                         ProductCode = result.Data.ProductCode,
-                        UnitPrice = requestModel.UnitPrice
+                        UnitPrice = requestModel.UnitPrice,
+                        IsActive = true
                     });
 
                 if (result.Success)     

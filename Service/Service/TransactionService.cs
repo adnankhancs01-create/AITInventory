@@ -46,7 +46,7 @@ namespace Service.Service
         private async Task<BaseResponse<AddEditTransactionResponseModel>> ValidateTransactionAsync
             (AddEditTransactionRequestModel request)
         {
-            if(!request.ProductId.HasValue || request.ProductId==0)
+            if (!request.ProductId.HasValue || request.ProductId == 0)
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Product required" },
                     "Error occurred "
@@ -76,30 +76,30 @@ namespace Service.Service
                     new List<string> { "Transaction type required" },
                     "Error occurred "
                 );
-            if (!new string[] { "Sell","Purchase"}.Contains(request.TransactionType))
+            if (!new string[] { "Sell", "Purchase" }.Contains(request.TransactionType))
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Invalid transaction type" },
                     "Error occurred "
                 );
-            if(!request.TransactionDate.HasValue)
+            if (!request.TransactionDate.HasValue)
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Transaction date required" },
                     "Error occurred "
                 );
-            if(request.TransactionDate>DateTime.Now)
+            if (request.TransactionDate > DateTime.Now)
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Transaction date cannot be in the future" },
                     "Error occurred "
                 );
 
-            var getProduct=await _productRepo.GetProductsAsync(request.ProductId.Value, 1, 1, string.Empty);
-            if(getProduct.Item1 == null || getProduct.Item2==0|| getProduct.Item1.Count==0)
+            var getProduct = await _productRepo.GetProductsAsync(request.ProductId.Value, 1, 1, string.Empty);
+            if (getProduct.Item1 == null || getProduct.Item2 == 0 || getProduct.Item1.Count == 0)
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Product not found" },
                     "Error occurred "
                 );
 
-            int currentStock = getProduct.Item1[0].Stocks.Sum(s => s.Quantity??0);
+            int currentStock = getProduct.Item1[0].Stocks.Sum(s => s.Quantity ?? 0);
             if (currentStock < request.Quantity)
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Insufficient stock" },
@@ -245,7 +245,7 @@ namespace Service.Service
         //}
         private async Task<int?> AnaylyzeAndAddClient(string? name, string? address, string? phone)
         {
-            int? clientId=null;
+            int? clientId = null;
             try
             {
 
@@ -260,7 +260,8 @@ namespace Service.Service
 
                     if (selectedClient != null)
                         clientId = selectedClient?.Id;
-                    else {             
+                    else
+                    {
                         var newClient = new AddEditClientDetailRequestModel
                         {
                             FirstName = name,
@@ -268,7 +269,7 @@ namespace Service.Service
                             Address = address
                         };
                         var addedClient = await _clientRepo.AddEditClientAsync(newClient);
-                        if(addedClient.Success)
+                        if (addedClient.Success)
                             clientId = addedClient.Data;
                     }
                 }
@@ -293,24 +294,26 @@ namespace Service.Service
 
                 var transactionEntity = new TransactionMst
                 {
+                    Id= transactionModel.TransactionId??0,
                     ClientAddress = transactionModel.ClientAddress,
                     ClientId = transactionModel.ClientId,
                     ClientName = transactionModel.ClientName,
                     TransactionType = transactionModel.TransactionType,
-                    TotalDiscount = transactionModel.TotalDiscount,
-                    TotalAmount = transactionModel.TotalAmount,
-                    NetAmount = transactionModel.NetAmount,
+                    //TotalDiscount = transactionModel.TotalDiscount,
+                    //TotalAmount = transactionModel.TotalAmount,
+                    //NetAmount = transactionModel.NetAmount,
                     TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
-                    TransactionDate = transactionModel.TransactionDate?? DateTime.Now,
+                    TransactionDate = transactionModel.TransactionDate ?? DateTime.Now,
                     Remarks = transactionModel.Remarks,
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = transactionModel.CreatedBy,
                     TransactionDetails = transactionModel?.Products?.Select(td => new TransactionDetails
                     {
+                        Id=td.Id,
                         ProductId = td.ProductId,
                         Quantity = td.Quantity,
                         UnitPrice = td.UnitPrice,
-                        Discount=td.Discount,
+                        Discount = td.Discount,
                         CreatedOn = DateTime.UtcNow,
                         CreatedBy = transactionModel.CreatedBy
                     }).ToList()
@@ -334,17 +337,20 @@ namespace Service.Service
                 if (response.Success)
 
                 {
-                    transactionModel.TransactionDate= transactionModel.TransactionDate ?? transactionEntity.TransactionDate;
-                    // Generate slip
-                    string slip = GenerateSlip(transactionModel, transactionModel.ClientName, transactionEntity.TransactionNumber.ToString());
-
-                    await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
+                    if (!transactionModel.TransactionId.HasValue || transactionModel.TransactionId==0)
                     {
-                        TransactionId = transactionEntity.Id,
-                        SlipContent = slip
-                    });
+                        transactionModel.TransactionDate = transactionModel.TransactionDate ?? transactionEntity.TransactionDate;
+                        // Generate slip
+                        string slip = GenerateSlip(transactionModel, transactionModel.ClientName, transactionEntity.TransactionNumber.ToString());
 
-                    await PrintSlipAsync(slip);
+                        await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
+                        {
+                            TransactionId = transactionEntity.Id,
+                            SlipContent = slip
+                        });
+
+                        await PrintSlipAsync(slip);
+                    }
                 }
                 return response;
             }
@@ -389,6 +395,42 @@ namespace Service.Service
         public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
         {
             return await _transactionRepo.GetTransactionsAsync(request);
+        }
+        public async Task<ProcessTransactionsModel> GetTransactionByIdAsync(int transactionId)
+        {
+            var getTransaction = await _transactionRepo.GetTransactionByIdAsync(transactionId);
+            if (getTransaction == null)
+                return null;
+
+            // Map to your ProcessTransactionsModel
+            var model = new ProcessTransactionsModel
+            {
+                TransactionId=getTransaction.Id,
+                ClientId = getTransaction.ClientId,
+                ClientName = getTransaction.ClientName,
+                ClientAddress = getTransaction.ClientAddress,
+                TransactionType = getTransaction.TransactionType,
+
+                // predefined fields can be calculated here if needed, or you can choose to return them as null and calculate on the client side
+                //TotalDiscount = getTransaction.TotalDiscount,
+                //TotalAmount = getTransaction.TotalAmount,
+                //NetAmount = getTransaction.NetAmount,
+                //TransactionNumber = getTransaction.TransactionNumber,
+
+                TransactionDate = getTransaction.TransactionDate,
+                Remarks = getTransaction.Remarks,
+                Products = getTransaction.TransactionDetails.Select(d => new ProductWidgetModel
+                {
+                    Id = d.Id,
+                    ProductId = d.ProductId,
+                    Name = d.Product.Name,
+                    Quantity = d.Quantity,
+                    UnitPrice = d.UnitPrice.Value,
+                    Discount = d.Discount
+                }).ToList()
+            };
+
+            return model;
         }
     }
 }

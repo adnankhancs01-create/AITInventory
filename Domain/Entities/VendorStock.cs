@@ -30,7 +30,7 @@ namespace Domain.Entities
         public int? ModifiedBy { get; set; }
         public int? TransactionId { get; set; }
         [ForeignKey("TransactionId")]
-        public TransactionMst TransactionMst { get; set; }
-
+        public TransactionDetails TransactionDetails { get; set; }
+        public bool IsActive { get; set; }
     }
 }

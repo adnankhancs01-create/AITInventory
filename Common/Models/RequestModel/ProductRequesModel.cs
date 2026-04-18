@@ -16,6 +16,7 @@ namespace Common.Models.RequestModel
         public decimal? UnitPrice { get; set; }
         public long? StockNumber { get; set; }
         public decimal? TotalPurchasePrice { get; set; }
+        public bool IsActive { get; set; } =true;
     }
     public class ProductCategoryRequesModel
     {
@@ -23,5 +24,6 @@ namespace Common.Models.RequestModel
         public int? UserId { get; set; }
         public string?Name { get; set; }
         public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }
