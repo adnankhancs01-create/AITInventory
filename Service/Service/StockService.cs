@@ -38,7 +38,8 @@ namespace Service.Service
                     ProductId = requestModel.ProductId,
                     Quantity = requestModel.Quantity,
                     StockNumber = requestModel.StockNumber,
-                    TotalPurchasePrice = requestModel.TotalPurchasePrice
+                    TotalPurchasePrice = requestModel.TotalPurchasePrice,
+                    IsActive = requestModel.IsActive
                 });
                 if (!stockResult.Success)
                     return new BaseResponse<VendorStockModel>(

@@ -1,4 +1,5 @@
-﻿@using Common.Models
+﻿@using AIT_Inventory_App.Components.Fields
+@using Common.Models
 @using Common.Models.RequestModel
 @using Service.IService
 @inject IProductService _ProductService
@@ -8,10 +9,6 @@
     <ChildContent>
         <RadzenFieldset Text="Product Information">
 
-            <RadzenLabel Text="Name" />
-            <RadzenTextBox @bind-Value="Product.Name" Name="Name" Style="width:100%" />
-            <RadzenRequiredValidator Component="Name" Text="Name is required" />
-            <br />
             <RadzenLabel Text="Category" />
             <RadzenDropDown Data="@categories"
                             TextProperty="Name"
@@ -24,9 +21,15 @@
                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"                           />
 
             <br />
-           
+
+            <RadzenLabel Text="Name" />
+            <RadzenTextBox @bind-Value="Product.Name" Name="Name" Style="width:100%" />
+            <RadzenRequiredValidator Component="Name" Text="Name is required" />
+            <br />
+
             <RadzenLabel Text="Unit Price" />
             <RadzenNumeric @bind-Value="Product.UnitPrice" Name="UnitPrice" Style="width:100%" />
+            <RadzenRequiredValidator Component="UnitPrice" Text="Unit price is required" />
             
             
             <br />
@@ -43,7 +46,9 @@
             }
             <RadzenLabel Text="Description" />
             <RadzenTextArea @bind-Value="Product.Description" Name="Description" Style="width:100%" />
-           
+
+           <ActiveCheckBox @bind-Value="Product.IsActive" Label="Active Product " />
+
             <div style="margin-top:15px;">
                 <RadzenButton ButtonStyle="ButtonStyle.Primary" Text="Save" Icon="save" Type="Submit" />
                 <RadzenButton Text="Cancel" Icon="close" Click="@OnCancel" Style="margin-left:10px;" />

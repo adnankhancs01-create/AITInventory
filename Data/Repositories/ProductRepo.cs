@@ -30,14 +30,14 @@ namespace Data.Repositories
         {
             var query = _dbContext.Products
     .AsNoTracking()
-                .Where(x => x.Id == id || id == 0);
+                .Where(x => x.IsActive && (x.Id == id || id == 0));
 
             if (!string.IsNullOrEmpty(Filter))
                 query = query.Where(Filter);
 
             var totalCount = await query.CountAsync();
 
-            var data = await query.Include(x => x.Category).Include(x => x.Stocks)
+            var data = await query.Include(x => x.Category).Include(x => x.Stocks.Where(x=>x.IsActive==true))
                 .OrderByDescending(x => x.Id)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -51,7 +51,7 @@ namespace Data.Repositories
         {
             var query = _dbContext.ProductCategories
     .AsNoTracking()
-                .Where(x => x.Id == id || id == 0);
+                .Where(x => x.IsActive && (x.Id == id || id == 0));
 
             if (!string.IsNullOrEmpty(Filter))
                 query = query.Where(Filter);
@@ -85,7 +85,8 @@ namespace Data.Repositories
                     getProduct.Description = product.Description;
                     getProduct.CategoryId = product.CategoryId;
                     getProduct.ModifiedOn = product.ModifiedOn;
-                }
+                    getProduct.IsActive = product.IsActive;
+                }   
                 else
                 {
                     // Generate Product Code
@@ -127,6 +128,7 @@ namespace Data.Repositories
                     getcategory.Name = productCategory.Name;
                     getcategory.Description = productCategory.Description;
                     getcategory.ModifiedOn = DateTime.Now;
+                    getcategory.IsActive = productCategory.IsActive;
 
                 }
                 else
@@ -135,6 +137,7 @@ namespace Data.Repositories
                         Name= productCategory.Name,
                         Description =  productCategory.Description,
                         CreatedOn   =   DateTime.Now,
+                        IsActive=productCategory.IsActive
                     });
                 }
 
@@ -224,7 +227,7 @@ namespace Data.Repositories
         {
             try
             {
-                var query = _dbContext.Pricing.AsQueryable();
+                var query = _dbContext.Pricing.AsNoTracking().AsQueryable();
                 if (productCodes != null && productCodes.Any())
                 {
                     query = query.Where(x => productCodes.Contains(x.ProductCode));

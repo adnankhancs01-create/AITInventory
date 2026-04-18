@@ -44,6 +44,7 @@ namespace Common.Models
         public int? Quantity { get; set; } = 0;
         public decimal? TotalPurchasePrice { get; set; }
         public long? StockNumber { get; set; }
+        public bool IsActive { get; set; } = true;
 
     }
     public class PricingModel

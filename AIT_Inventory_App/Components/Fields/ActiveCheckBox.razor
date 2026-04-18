@@ -1,0 +1,17 @@
+﻿@using System.Linq.Expressions
+<div class="form-group d-flex align-items-center mb-3">
+    <RadzenCheckBox Value="@Value"
+                    ValueChanged="@((bool newValue) => ValueChanged.InvokeAsync(newValue))"
+                    ValueExpression="ValueExpression"
+                    Style="margin-right:8px; width:20px; height:20px;" />
+    <label class="form-label" style="font-weight:500; color:#333;">
+        @Label
+    </label>
+</div>
+
+@code {
+    [Parameter] public bool Value { get; set; } = true; // default checked
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+    [Parameter] public Expression<Func<bool>> ValueExpression { get; set; }
+    [Parameter] public string Label { get; set; } = "Active";
+}

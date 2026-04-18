@@ -15,6 +15,7 @@ namespace Domain.IRepositories
         Task<BaseResponse<int?>> ProcessTransactions(TransactionMst transactionMst);
         //Task<(List<VendorTransaction>, int)> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? filter);
         Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
+        Task<TransactionMst> GetTransactionByIdAsync(int transactionId);
 
     }
 }

@@ -167,7 +167,6 @@ namespace Data.Migrations
                     ClientName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ClientAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NetAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     TransactionNumber = table.Column<long>(type: "bigint", nullable: true),
                     TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -225,11 +224,18 @@ namespace Data.Migrations
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    Discount = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TransactionDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionDetails_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_TransactionDetails_TransactionMst_TransMstId",
                         column: x => x.TransMstId,
@@ -273,7 +279,8 @@ namespace Data.Migrations
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ModifiedBy = table.Column<int>(type: "int", nullable: true),
-                    TransactionId = table.Column<int>(type: "int", nullable: true)
+                    TransactionId = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,11 +289,12 @@ namespace Data.Migrations
                         name: "FK_VendorStock_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_VendorStock_TransactionMst_TransactionId",
+                        name: "FK_VendorStock_TransactionDetails_TransactionId",
                         column: x => x.TransactionId,
-                        principalTable: "TransactionMst",
+                        principalTable: "TransactionDetails",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_VendorStock_Vendor_VendorId",
@@ -301,6 +309,11 @@ namespace Data.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TransactionDetails_ProductId",
+                table: "TransactionDetails",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TransactionDetails_TransMstId",
                 table: "TransactionDetails",
                 column: "TransMstId");
@@ -313,9 +326,7 @@ namespace Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_TransactionSlip_TransactionId",
                 table: "TransactionSlip",
-                column: "TransactionId",
-                unique: true,
-                filter: "[TransactionId] IS NOT NULL");
+                column: "TransactionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VendorClient_ClientId",
@@ -353,9 +364,6 @@ namespace Data.Migrations
                 name: "Pricing");
 
             migrationBuilder.DropTable(
-                name: "TransactionDetails");
-
-            migrationBuilder.DropTable(
                 name: "TransactionSlip");
 
             migrationBuilder.DropTable(
@@ -368,13 +376,16 @@ namespace Data.Migrations
                 name: "VendorStock");
 
             migrationBuilder.DropTable(
+                name: "TransactionDetails");
+
+            migrationBuilder.DropTable(
+                name: "Vendor");
+
+            migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
                 name: "TransactionMst");
-
-            migrationBuilder.DropTable(
-                name: "Vendor");
 
             migrationBuilder.DropTable(
                 name: "ProductCategories");

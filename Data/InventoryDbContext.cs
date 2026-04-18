@@ -23,6 +23,8 @@ namespace Data
         public DbSet<UserMst> UserMst { get; set; }
         public DbSet<Pricing> Pricing { get; set; }
         public DbSet<TransactionSlip> TransactionSlip { get; set; }
+        public DbSet<TransactionMst> TransactionMst { get; set; }
+        public DbSet<TransactionDetails> TransactionDetails { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -32,9 +34,9 @@ namespace Data
                 .Property(t => t.UnitPrice)
                 .HasColumnType("decimal(18,2)");
 
-            modelBuilder.Entity<TransactionMst>()
-                .Property(t => t.NetAmount)
-                .HasColumnType("decimal(18,2)");
+            //modelBuilder.Entity<TransactionMst>()
+            //    .Property(t => t.NetAmount)
+            //    .HasColumnType("decimal(18,2)");
 
             modelBuilder.Entity<VendorStock>()
                 .Property(v => v.TotalPurchasePrice)

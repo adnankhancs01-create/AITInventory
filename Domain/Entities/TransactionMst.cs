@@ -15,19 +15,19 @@ namespace Domain.Entities
         public string? ClientName { get; set; }
         public string? ClientAddress { get; set; }
         public string? TransactionType { get; set; }  // BUY / SELL
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? NetAmount { get; set; }
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? TotalDiscount { get; set; }
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? TotalAmount { get; set; }
+        //[Column(TypeName = "decimal(18,2)")]
+        //public decimal? NetAmount { get; set; }
+        //[Column(TypeName = "decimal(18,2)")]
+        //public decimal? TotalDiscount { get; set; }
+        //[Column(TypeName = "decimal(18,2)")]
+        //public decimal? TotalAmount { get; set; }
         public long? TransactionNumber { get; set; }
         public DateTime? TransactionDate { get; set; }
         public string? Remarks { get; set; }
         public int? ClientId { get; set; }   // refers to VendorClient
         [ForeignKey("ClientId")]
         public VendorClientDetail Client { get; set; }
-        public TransactionSlip TransactionSlip { get; set; }
+        //public ICollection<TransactionSlip> TransactionSlips { get; set; }
         public ICollection<TransactionDetails> TransactionDetails { get; set; }
         public DateTime? CreatedOn { get; set; }
         public int? CreatedBy { get; set; }

@@ -18,5 +18,6 @@ namespace Domain.Entities
         public long? StockNumber { get; set; }
         public DateTime? CreatedOn { get; set; }=DateTime.Now;
         public int? CreatedBy { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

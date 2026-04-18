@@ -10,6 +10,8 @@
 @inject IProductService _ProductService
 @using AIT_Inventory_App.Components.Pupups
 @using Service.Service
+@inject NavigationManager NavigationManager
+
 
 
 <!-- FILTERS -->
@@ -210,6 +212,6 @@
 
     void Edit(TransactionDetailModel item)
     {
-        Console.WriteLine($"Edit {item.TransactionId}");
+        NavigationManager.NavigateTo($"/order/{item.TransactionId}");
     }
 }

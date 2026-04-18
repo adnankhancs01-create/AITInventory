@@ -71,7 +71,7 @@ namespace Data.Repositories
 
         private async Task<string> GetClientCodeAsync()
         {
-            var getClient=await _dbContext.VendorClientDetail.OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+            var getClient=await _dbContext.VendorClientDetail.AsNoTracking().OrderByDescending(x => x.Id).FirstOrDefaultAsync();
             if(getClient == null || string.IsNullOrEmpty(getClient.ClientCode))
                 return "CLT-0001";
 
@@ -81,7 +81,7 @@ namespace Data.Repositories
 
         public async Task<(List<VendorClientDetail>,int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize,string? Filter)
         {
-            var query = _dbContext.VendorClientDetail
+            var query = _dbContext.VendorClientDetail.AsNoTracking()
                 .Where(x => x.Id == id || id == 0);
 
             if (!string.IsNullOrEmpty(Filter))
