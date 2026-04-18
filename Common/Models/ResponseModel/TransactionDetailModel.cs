@@ -13,6 +13,7 @@ namespace Common.Models.ResponseModel
         public int Quantity { get; set; }
         public decimal? UnitPrice { get; set; }
         public decimal? Total { get; set; }
+        public decimal? Discount { get; set; }
         public string? CategoryName { get; set; }
         public string? ProductCode { get; set; }
         public long? TransactionNumber { get; set; }

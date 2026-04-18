@@ -35,7 +35,7 @@
     <RadzenButton Text="Search"
                   Icon="search"
                   ButtonStyle="ButtonStyle.Primary"
-                  Click="@(() => LoadPageAsync($"x.CategoryId=={categoryId}"))" />
+                  Click="@(() => LoadPageAsync(categoryId>0?$"CategoryId=={categoryId}":string.Empty))" />
 
 </RadzenStack>
 
@@ -226,15 +226,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        CurrentTransaction.TransactionType = "Sell";
+        var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
+        if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
+            categories = getCategories.Data.Item1;
         await LoadPageAsync();
     }
 
     private async Task LoadPageAsync(string? filter = null)
     {
-        CurrentTransaction.TransactionType = "Sell";
-        var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
-        if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
-            categories = getCategories.Data.Item1;
 
         var result = await _ProductService.GetProductsReportAsync(0, 1, int.MaxValue, filter);
         if (result.Success)
@@ -326,7 +326,7 @@
         {
             await DialogService.Alert("Transaction saved successfully!", "Success");
             CurrentTransaction = new ProcessTransactionsModel(); // Reset form
-            widgetProducts.ForEach(p => p.Quantity = 0); // Reset quantities
+            widgetProducts.ForEach(p => { p.Quantity = 0; p.Discount = 0; p.DiscountPercentValue = 0; }); // Reset quantities and discounts
         }
         else
         {
