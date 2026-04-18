@@ -185,14 +185,17 @@
         try
         {
             var result = new Dictionary<string, string>();
+            result.Add("Transaction Id", item.TransactionId.ToString());
+            result.Add("Transaction Number", item.TransactionNumber?.ToString());
             result.Add("Product Name", item.ProductName);
             result.Add("Category", item.CategoryName);
             result.Add("Product Code", item.ProductCode);
-            result.Add("Transaction Number", item.TransactionNumber?.ToString());
             result.Add("Quantity", item.Quantity.ToString());
             result.Add("Unit Price", item.UnitPrice?.ToString());
             result.Add("Total", item.Total?.ToString());
-            result.Add("Added On", item.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt"));
+            result.Add("Discount", item.Discount.ToString());
+            result.Add("Transaction Type", item.TransactionType);
+            result.Add("Transaction Date", item.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt"));
 
             await DialogService.OpenAsync<ViewPopup>(
                 "Transaction Details",
