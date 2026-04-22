@@ -8,6 +8,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Data;
+using static Dapper.SqlMapper;
 
 namespace Data.Repositories
 {
@@ -15,10 +16,12 @@ namespace Data.Repositories
     {
         private readonly InventoryDbContext _dbContext;
         private readonly string _connectionString;
-        public TransactionRepo(InventoryDbContext dbContext, IConfiguration config)
+        private readonly ILogRepository _logRepo;
+        public TransactionRepo(InventoryDbContext dbContext, IConfiguration config, ILogRepository logRepo)
         {
             _dbContext = dbContext;
             _connectionString = config.GetConnectionString("DefaultConnection");
+            _logRepo = logRepo;
         }
         public async Task<TransactionSlip> AddEditTransactionSlipAsync(TransactionSlip transactionSlip)
         {
@@ -40,7 +43,7 @@ namespace Data.Repositories
 
             if (transactionMst.Id > 0)
             {
-                _dbContext.ChangeTracker.Clear(); 
+                _dbContext.ChangeTracker.Clear();
                 _dbContext.Update(transactionMst);
             }
             else
@@ -48,7 +51,7 @@ namespace Data.Repositories
             await _dbContext.SaveChangesAsync();
 
             var stocks = new List<VendorStock>();
-            var listTransactionDetailId = transactionMst.TransactionDetails.ToList().Select(x=>x.Id).ToList();
+            var listTransactionDetailId = transactionMst.TransactionDetails.ToList().Select(x => x.Id).ToList();
             var getStocks = await _dbContext.VendorStock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
             transactionMst.TransactionDetails.ToList().ForEach(detail =>
             {
@@ -70,7 +73,7 @@ namespace Data.Repositories
                     TransactionId = detail.Id,
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = transactionMst.CreatedBy,
-                    IsActive= true
+                    IsActive = true
                 };
                 stocks.Add(stock);
             });
@@ -198,8 +201,60 @@ namespace Data.Repositories
 
         public async Task<TransactionDetails?> GetTransactionDetailByProduct(int transactionId, int productId)
         {
-            return await _dbContext.TransactionDetails.Include(x=> x.TransMst).AsNoTracking()
+            return await _dbContext.TransactionDetails.Include(x => x.TransMst).AsNoTracking()
                 .FirstOrDefaultAsync(x => x.TransMstId == transactionId && x.ProductId == productId);
+        }
+        public async Task<BaseResponse<bool>> RevertTransaction(int id)
+        {
+            try
+            {
+                using var transaction = await _dbContext.Database.BeginTransactionAsync();
+                try
+                {
+                    // 🔑 FIX: Load TRACKED entity (NO AsNoTracking)
+                    var freshTransaction = await _dbContext.TransactionMst
+                        .Include(t => t.TransactionDetails)
+                        .FirstOrDefaultAsync(t => t.Id == id); // ✅ TRACKED entity
+
+                    if (freshTransaction == null)
+                        return BaseResponse<bool>.FailureResponse(new List<string> { "Transaction not found" }, "Revert failed");
+
+                    // ✅ SAFE: Modify tracked entity directly
+                    freshTransaction.IsActive = false;
+                    freshTransaction.RevertedOn = DateTime.UtcNow;
+                    freshTransaction.RevertedBy = 1;
+
+                    await _dbContext.SaveChangesAsync();
+
+                    // ✅ Stock logic - works with tracked entities
+                    var transactionDetailIds = freshTransaction.TransactionDetails.Select(d => d.Id).ToList();
+                    var currentStocks = await _dbContext.VendorStock
+                        .Where(s => s.TransactionId.HasValue
+                                 && transactionDetailIds.Contains(s.TransactionId.Value)
+                                 && s.IsActive == true)
+                        .ToListAsync();
+
+                    foreach (var stock in currentStocks)
+                    {
+                        stock.IsActive = false; // ✅ EF tracks changes automatically
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return BaseResponse<bool>.SuccessResponse(true, "Transaction reverted successfully");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": \"error RevertTransactions\"}");
+                return BaseResponse<bool>.FailureResponse(new List<string> { ex.Message }, "Database error during revert");
+            }
         }
     }
 }

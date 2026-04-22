@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260422173341_returntrans")]
-    partial class returntrans
+    [Migration("20260422211406_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -203,6 +203,9 @@ namespace Data.Migrations
                     b.Property<DateTime?>("CreatedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("int");
 
@@ -211,6 +214,12 @@ namespace Data.Migrations
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RevertedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevertedOn")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("TransactionDate")
                         .HasColumnType("datetime2");
@@ -438,7 +447,7 @@ namespace Data.Migrations
                     b.Property<DateTime?>("CreatedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<int?>("ModifiedBy")
@@ -451,6 +460,9 @@ namespace Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RevertTransactionId")
                         .HasColumnType("int");
 
                     b.Property<long?>("StockNumber")

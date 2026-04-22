@@ -31,6 +31,7 @@ namespace Domain.Entities
         public int? TransactionId { get; set; }
         [ForeignKey("TransactionId")]
         public TransactionDetails TransactionDetails { get; set; }
-        public bool IsActive { get; set; }
+        public bool? IsActive { get; set; }
+        public int? RevertTransactionId { get; set; }
     }
 }
