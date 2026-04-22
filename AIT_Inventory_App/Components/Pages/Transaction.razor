@@ -126,6 +126,10 @@
             <Template Context="data">
                 <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() =>  View(data))" />
                 <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => Edit(data))" />
+                <RadzenButton Title="@($"Return {data?.TransactionNumber}")"
+                              Icon="arrow_left"
+                              Size="ButtonSize.Small"
+                              Click="@(() => Return(data))" />
             </Template>
         </RadzenDataGridColumn>
 
@@ -161,33 +165,6 @@
             Products = getProducts?.Data.Item1;
         await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
     }
-    // async Task LoadData(LoadDataArgs args)
-    // {
-    //     // var getProducts = await _ProductService.GetProductsAsync(0, 1, int.MaxValue, string.Empty);
-    //     // if (getProducts != null || (getProducts.Data.Item1 != null || getProducts.Data.Item1.Count > 0))
-    //     //     Products = getProducts?.Data.Item1;
-
-
-    //     int skip = args.Skip ?? 0;
-    //     int top = args.Top ?? 0;
-    //     var request = new TransactionFilterRequest
-    //     {
-    //         PageNumber = (top > 0) ? (skip / top) + 1 : 1,
-    //         PageSize = top,
-    //         FromDate = fromDate??DateTime.Now.AddDays(-1),
-    //         ToDate = toDate ?? DateTime.Now,
-    //         TransactionType = transactionType,
-    //         ProductId = productId
-    //     };
-
-    //     var result = await TransactionService.GetTransactionsAsync(request);
-
-    //     transactions = result.Data;
-    //     totalCount = result.TotalCount;
-    //     summaryData = result.SummaryData;
-    //     summary = result.Summary;
-
-    // }
     bool isLoading;
 
     async Task LoadData(LoadDataArgs args)
@@ -228,73 +205,8 @@
             isLoading = false;
         }
     }
-    // private async Task View(TransactionSummaryModel data)
-    // {
-    //     try
-    //     {
-    //         var transactionDetails = transactions.Where(x => x.TransactionId == data.TransactionId).ToList();
-    //         var result = new Dictionary<string, string>();
-    //         result.Add("Transaction Id", item.TransactionId.ToString());
-    //         result.Add("Transaction Number", item.TransactionNumber?.ToString());
-    //         result.Add("Product Name", item.ProductName);
-    //         result.Add("Category", item.CategoryName);
-    //         result.Add("Product Code", item.ProductCode);
-    //         result.Add("Quantity", item.Quantity.ToString());
-    //         result.Add("Unit Price", item.UnitPrice?.ToString());
-    //         result.Add("Total", item.Total?.ToString());
-    //         result.Add("Discount", item.Discount.ToString());
-    //         result.Add("Transaction Type", item.TransactionType);
-    //         result.Add("Transaction Date", item.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt"));
-
-    //         await DialogService.OpenAsync<ViewPopup>(
-    //             "Transaction Details",
-    //             new Dictionary<string, object>() { { "Obj", result } },
-    //             new DialogOptions() { Width = "600px", Height = "auto" }
-    //         );
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //     }
-    // }
     private async Task View(TransactionSummaryDataModel data)
-    {
-        // try
-        // {
-        //     var transactionDetails = transactions.Where(x => x.TransactionId == data.TransactionId).ToList();
-        //     if (!transactionDetails.Any()) return;
-
-        //     var result = new Dictionary<string, string>();
-
-        //     foreach (var item in transactionDetails)
-        //     {
-        //         var productDetails =
-        //             $"Code      : {item.ProductCode}\n" +
-        //             $"Quantity  : {item.Quantity}\n" +
-        //             $"Unit Price: {item.UnitPrice?.ToString("N2")}\n" +
-        //             $"Total     : {item.Total?.ToString("N2")}\n" +
-        //             $"Discount  : {item.Discount?.ToString("N2")}";
-
-        //         result.Add($"Product: {item.ProductName}", productDetails);
-        //     }
-
-        //     // Add transaction-level info (common for all products)
-        //     var first = transactionDetails.First();
-        //     result.Add("Transaction Id", first.TransactionId.ToString());
-        //     result.Add("Transaction Number", first.TransactionNumber?.ToString() ?? "-");
-        //     result.Add("Transaction Type", first.TransactionType ?? "-");
-        //     result.Add("Transaction Date", first.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt") ?? "-");
-
-        //     await DialogService.OpenAsync<ViewPopup>(
-        //         "Transaction Details",
-        //         new Dictionary<string, object>() { { "Obj", result } },
-        //         new DialogOptions() { Width = "600px", Height = "auto" }
-        //     );
-        // }
-        // catch (Exception ex)
-        // {
-        //     await DialogService.Alert("Error loading transaction details", "Error");
-        // }
-        
+    {   
         var transactionDetails = transactions.Where(x => x.TransactionId == data.TransactionId).ToList();
         if (!transactionDetails.Any()) return;
         var sections = new List<ViewSection>();
@@ -324,7 +236,7 @@
         new() { Label = "Date", Value = first?.TransactionDate?.ToString("MMM/dd/yyyy hh:mm tt") ?? "-" }
     }
         });
-        
+
         await DialogService.OpenAsync<ViewPopupV2>(
             "Transaction Details",
             new Dictionary<string, object> { { "Sections", sections } },
@@ -335,5 +247,10 @@
     void Edit(TransactionSummaryDataModel item)
     {
         NavigationManager.NavigateTo($"/order/{item.TransactionId}");
+    }
+
+    void Return(TransactionSummaryDataModel item)
+    {
+        NavigationManager.NavigateTo($"/order/{item.TransactionId}/{true}");
     }
 }

@@ -25,6 +25,7 @@ namespace Data
         public DbSet<TransactionSlip> TransactionSlip { get; set; }
         public DbSet<TransactionMst> TransactionMst { get; set; }
         public DbSet<TransactionDetails> TransactionDetails { get; set; }
+        public DbSet<ReturnTransaction> ReturnTransaction { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

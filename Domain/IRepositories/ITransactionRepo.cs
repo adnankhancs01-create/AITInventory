@@ -14,6 +14,16 @@ namespace Domain.IRepositories
         Task<BaseResponse<int?>> ProcessTransactions(TransactionMst transactionMst);
         Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
         Task<TransactionMst> GetTransactionByIdAsync(int transactionId);
+        Task<TransactionDetails?> GetTransactionDetailByProduct(int detailId, int productId);
+
+
+        Task<BaseResponse<int?>> CreateReturnTransaction(
+    int transactionId,
+    int productId,
+    int quantity,
+    decimal amount,
+    int stockQty,
+    int createdBy);
 
     }
 }

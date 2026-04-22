@@ -16,6 +16,7 @@ namespace Domain.Entities
         [ForeignKey("ProductId")]
         public virtual Product Product { get; set; }
         public int Quantity { get; set; }
+        public int? ReturnedQuantity { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal? UnitPrice { get; set; } = default(decimal?);
         public int? TransMstId { get; set; }   // refers to VendorClient

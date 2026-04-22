@@ -136,6 +136,70 @@ namespace Data.Repositories
 
             return transaction;
         }
+        public async Task<BaseResponse<int?>> CreateReturnTransaction(
+    int transactionId,
+    int productId,
+    int quantity,
+    decimal amount,
+    int stockQty,
+    int createdBy)
+        {
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
+            try
+            {
+                var item = await _dbContext.TransactionDetails
+                    .FirstOrDefaultAsync(x => x.TransMstId == transactionId && x.ProductId == productId);
+
+                if (item == null)
+                    return BaseResponse<int?>.FailureResponse(new List<string> { "Item not found" }, "Error");
+
+                // 🧾 Insert return
+                var returnEntity = new ReturnTransaction
+                {
+                    TransactionId = transactionId,
+                    TransactionDetailId = item.Id,
+                    ProductId = productId,
+                    Quantity = quantity,
+                    Amount = amount,
+                    CreatedOn = DateTime.UtcNow,
+                    CreatedBy = createdBy
+                };
+
+                await _dbContext.ReturnTransaction.AddAsync(returnEntity);
+
+                // 🔄 Update returned qty
+                item.ReturnedQuantity = (item.ReturnedQuantity ?? 0) + quantity;
+
+                // 📦 Add stock entry
+                var stock = new VendorStock
+                {
+                    ProductId = productId,
+                    Quantity = stockQty,
+                    TransactionId = item.Id,
+                    CreatedOn = DateTime.UtcNow,
+                    CreatedBy = createdBy,
+                    IsActive = true
+                };
+
+                await _dbContext.VendorStock.AddAsync(stock);
+
+                await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return BaseResponse<int?>.SuccessResponse(returnEntity.Id, "Return successful");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return BaseResponse<int?>.FailureResponse(new List<string> { ex.Message }, "Error occurred");
+            }
+        }
+
+        public async Task<TransactionDetails?> GetTransactionDetailByProduct(int transactionId, int productId)
+        {
+            return await _dbContext.TransactionDetails.Include(x=> x.TransMst).AsNoTracking()
+                .FirstOrDefaultAsync(x => x.TransMstId == transactionId && x.ProductId == productId);
+        }
     }
 }
