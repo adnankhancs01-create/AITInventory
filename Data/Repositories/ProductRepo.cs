@@ -1,17 +1,10 @@
 ﻿using Common;
-using Common.Models;
 using Domain.Entities;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Linq.Dynamic.Core;
-using System.Net.Http.Json;
-using System.Text;
+
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using static System.Net.WebRequestMethods;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Data.Repositories
 {
@@ -68,12 +61,6 @@ namespace Data.Repositories
 
 
         }
-        //public async Task<List<ProductCategory>> GetProductCategoriesAsync(int? id)
-        //{
-        //    return await _dbContext.ProductCategories
-        //        .Where(x => id.HasValue ? id == x.Id : 1 == 1)
-        //        .ToListAsync();
-        //}
         public async Task<BaseResponse<Product>> AddEditProductAsync(Product product)
         {
             try

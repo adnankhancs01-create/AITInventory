@@ -51,11 +51,6 @@ namespace Service.Service
                     new List<string> { "Product required" },
                     "Error occurred "
                 );
-            //if((!request.ClientId.HasValue || request.ClientId == 0 )&&string.IsNullOrEmpty(request.ClientName))
-            //    return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
-            //        new List<string> { "Client required" },
-            //        "Error occurred "
-            //    );
             if (!request.Discount.HasValue || (request.Discount == 0 || request.Discount == decimal.Zero))
                 return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
                     new List<string> { "Client amount required" },
@@ -111,80 +106,6 @@ namespace Service.Service
                 "Transaction processed successfully"
             );
         }
-
-        //public async Task<BaseResponse<AddEditTransactionResponseModel>> AddEditTransactionAsync(AddEditTransactionRequestModel request)
-        //{
-        //    try
-        //    {
-        //        var validate=await ValidateTransactionAsync(request);
-        //        if(!validate.Success)
-        //            return validate;
-
-        //        var transactionEntity = new VendorTransaction();
-        //        transactionEntity.Id = request.Id;
-        //        transactionEntity.ClientId = request.ClientId;
-        //        transactionEntity.ProductId = request.ProductId;
-        //        transactionEntity.Quantity = request.Quantity;
-        //        transactionEntity.UnitPrice = request.UnitPrice;
-        //        transactionEntity.ClientAmount = transactionEntity.ClientAmount;
-
-        //        if (!string.IsNullOrEmpty(request.ClientPhone) 
-        //            && !string.IsNullOrEmpty(request.ClientName)
-        //            && (!request.ClientId.HasValue || request.ClientId == 0 ))
-        //        { 
-        //            var analyzeResult = await AnaylyzeAndAddClient(
-        //                request.ClientName, request.ClientPhone, request.ClientAddress);
-        //            transactionEntity.ClientId = analyzeResult;
-        //        }
-        //        if (!request.ClientId.HasValue || request.ClientId == 0)
-        //        {
-        //            transactionEntity.ClientName = request.ClientName;
-        //            transactionEntity.ClientAddress = request.ClientAddress;
-        //        }
-        //        transactionEntity.Remarks = request.Remarks;
-        //        transactionEntity.TransactionType = request.TransactionType;
-        //        transactionEntity.TransactionDate ??= DateTime.Now;
-        //        transactionEntity.TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
-
-        //        // Save transaction
-        //        string slip = string.Empty;
-        //        var savedTransaction = await _transactionRepo.AddEditTransactionAsync(transactionEntity);
-        //        if (savedTransaction.Id > 0)
-        //        {
-        //            var stockDeductionResult=await _stockRepo.DeductStockAsync(request.ProductId.Value, request.Quantity.Value);
-        //            // Generate slip
-        //            slip = _transactionRepo.GenerateSlip(savedTransaction, request.ClientName);
-
-        //            await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
-        //            {
-        //                TransactionId = savedTransaction.Id,
-        //                SlipContent = slip
-        //            });
-
-        //            //await PrintSlipAsync(slip);
-        //        }
-
-        //        // Map entity back to response model
-        //        var responseModel = new AddEditTransactionResponseModel();
-        //        responseModel.Slip = slip;
-        //        responseModel.TransactionId = savedTransaction.Id;
-
-        //        return BaseResponse<AddEditTransactionResponseModel>.SuccessResponse(
-        //            responseModel,
-        //            "Transaction processed successfully"
-        //        );
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log error
-        //        await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
-
-        //        return BaseResponse<AddEditTransactionResponseModel>.FailureResponse(
-        //            new List<string> { ex.Message },
-        //            "Error occurred "
-        //        );
-        //    }
-        //}
         public async Task PrintSlipAsync(string slipContent)
         {
             try
@@ -198,51 +119,6 @@ namespace Service.Service
                 throw; // Re-throw exception after logging
             }
         }
-        //public async Task<BaseResponse<(List<GetTransactionResponseModel>, int)>> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? Filter)
-        //{
-        //    try
-        //    {
-        //        (List<VendorTransaction>,int) getTransactions = await _transactionRepo.GetTransactionAsync(transactionId, pageIndex, pageSize, Filter);
-
-        //        var result = getTransactions.Item1.Select(t => new GetTransactionResponseModel
-        //        {
-
-        //            ClientName = (t.Client == null)
-        //    ? null
-        //    : $"{t.Client.FirstName} {t.Client.LastName}".Trim(),
-        //            ClientPhone = t.Client?.Phone,
-        //            ClientAddress = t.Client?.Address,
-        //            ProductName=t.Product?.Name,
-        //            Id = t.Id,
-        //            ClientId = t.ClientId,
-        //            ProductId = t.ProductId,
-        //            Quantity = t.Quantity,
-        //            UnitPrice = t.UnitPrice,
-        //            Discount = t.ClientAmount,
-        //            Remarks = t.Remarks,
-        //            TransactionType = t.TransactionType,
-        //            TransactionDate =t.TransactionDate
-        //        }).ToList();
-        //        if (result == null || result.Count == 0)
-        //            return new BaseResponse<(List<GetTransactionResponseModel>, int)>(
-        //                new List<string> { "Transactions not found" }, "Error fetching transactions");
-
-        //        return BaseResponse<(List<GetTransactionResponseModel>, int)>.SuccessResponse(
-        //            (result, getTransactions.Item2),
-        //            "Transaction retrieved successfully"
-        //        );
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
-
-        //        return BaseResponse<(List<GetTransactionResponseModel>, int)>.FailureResponse(
-        //            new List<string> { ex.Message },
-        //            "Error occurred "
-        //        );
-        //    }
-
-        //}
         private async Task<int?> AnaylyzeAndAddClient(string? name, string? address, string? phone)
         {
             int? clientId = null;
@@ -299,9 +175,6 @@ namespace Service.Service
                     ClientId = transactionModel.ClientId,
                     ClientName = transactionModel.ClientName,
                     TransactionType = transactionModel.TransactionType,
-                    //TotalDiscount = transactionModel.TotalDiscount,
-                    //TotalAmount = transactionModel.TotalAmount,
-                    //NetAmount = transactionModel.NetAmount,
                     TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
                     TransactionDate = transactionModel.TransactionDate ?? DateTime.Now,
                     Remarks = transactionModel.Remarks,
@@ -410,13 +283,6 @@ namespace Service.Service
                 ClientName = getTransaction.ClientName,
                 ClientAddress = getTransaction.ClientAddress,
                 TransactionType = getTransaction.TransactionType,
-
-                // predefined fields can be calculated here if needed, or you can choose to return them as null and calculate on the client side
-                //TotalDiscount = getTransaction.TotalDiscount,
-                //TotalAmount = getTransaction.TotalAmount,
-                //NetAmount = getTransaction.NetAmount,
-                //TransactionNumber = getTransaction.TransactionNumber,
-
                 TransactionDate = getTransaction.TransactionDate,
                 Remarks = getTransaction.Remarks,
                 Products = getTransaction.TransactionDetails.Select(d => new ProductWidgetModel
