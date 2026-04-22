@@ -85,27 +85,6 @@
             new Dictionary<string, object>() { { "Stock", data } },
             new DialogOptions() { Width = "600px", Height = "auto" }
         );
-        // if (result.Success)
-        // {
-        //     var data = new AddEditVendorStockRequestModel();
-        //     // data.StockNumber = result.Data.Item1.FirstOrDefault()?.StockNumber;
-        //     data.StockNumber = stock.StockNumber;
-        //     data.Id = stock.Id;
-        //     data.ProductId = stock.ProductId;
-        //     data.Quantity = stock.Quantity;
-        //     data.TotalPurchasePrice = stock.TotalPurchasePrice;
-        //     // data.StockNumber = result.Data.Item1.FirstOrDefault()?.Stock?.StockNumber;
-        //     // work on category required
-        //     // data.Id = StockId;
-        //     // data.ProductId = result.Data.Item1.FirstOrDefault().ProductId;
-
-        //     await DialogService.OpenAsync<AddEditStockPopup>(
-        //         "Edit Stock",
-        //         new Dictionary<string, object>() { { "Stock", data } },
-        //         new DialogOptions() { Width = "600px", Height = "auto" }
-        //     );
-        // }
-        // After closing, refresh grid
         await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
     }
     private async Task ViewStock(GetStockResponseModel Stock)

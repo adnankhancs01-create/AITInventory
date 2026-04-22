@@ -1,5 +1,4 @@
 ﻿using Common;
-using Common.Models;
 using Common.Models.RequestModel;
 using Common.Models.ResponseModel;
 using Dapper;
@@ -8,10 +7,7 @@ using Domain.IRepositories;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Text;
 
 namespace Data.Repositories
 {
@@ -24,17 +20,6 @@ namespace Data.Repositories
             _dbContext = dbContext;
             _connectionString = config.GetConnectionString("DefaultConnection");
         }
-        //public async Task<VendorTransaction> AddEditTransactionAsync(VendorTransaction transaction)
-        //{
-        //    if (transaction.Id > 0)
-        //        _dbContext.VendorTransaction.Update(transaction);
-        //    else
-        //        await _dbContext.VendorTransaction.AddAsync(transaction);
-
-        //    await _dbContext.SaveChangesAsync();
-
-        //    return transaction;
-        //}
         public async Task<TransactionSlip> AddEditTransactionSlipAsync(TransactionSlip transactionSlip)
         {
             if (transactionSlip.Id > 0)
@@ -48,22 +33,6 @@ namespace Data.Repositories
 
             return transactionSlip;
         }
-
-        //public async Task<(List<VendorTransaction>, int)> GetTransactionAsync(int? transactionId, int pageIndex, int pageSize, string? filter)
-        //{
-        //    var query = _dbContext.VendorTransaction
-        //        .Include(t => t.Client)
-        //        .Include(t => t.Product)
-        //        .AsQueryable();
-        //    if (transactionId.HasValue && transactionId>0)
-        //        query = query.Where(t => t.Id == transactionId.Value);
-        //    if (!string.IsNullOrEmpty(filter))
-        //        query = query.Where(t => t.Client.FirstName.Contains(filter) || t.Client.LastName.Contains(filter) || t.Product.Name.Contains(filter));
-        //    var totalRecords = await query.CountAsync();
-        //    var transactions = await query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
-        //    return (transactions, totalRecords);
-        //}
-
         public async Task<BaseResponse<int?>> ProcessTransactions(TransactionMst transactionMst)
         {
             if (transactionMst.Id < 0)
@@ -133,17 +102,27 @@ namespace Data.Repositories
                 commandType: CommandType.StoredProcedure
             );
 
+            // 1. Detail records
             var data = (await multi.ReadAsync<TransactionDetailModel>()).ToList();
+
+            // 2. Summary per transaction
+            var summaryData = (await multi.ReadAsync<TransactionSummaryDataModel>()).ToList();
+
+            // 3. Total count
             var totalCount = await multi.ReadFirstAsync<int>();
+
+            // 4. Dashboard summary
             var summary = await multi.ReadFirstAsync<TransactionSummaryModel>();
 
             return new PagedTransactionResponse
             {
                 Data = data,
+                SummaryData = summaryData,
                 TotalCount = totalCount,
                 Summary = summary
             };
         }
+
 
         public async Task<TransactionMst> GetTransactionByIdAsync(int transactionId)
         {

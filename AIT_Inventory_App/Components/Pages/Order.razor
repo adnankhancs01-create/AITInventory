@@ -124,7 +124,6 @@
 
         </div>
         <RadzenLabel Text=$"Total Discount : {@(CurrentTransaction.TotalDiscount ?? 0)}" />
-        @* <RadzenNumeric @bind-Value="CurrentTransaction.TotalDiscount" Min="0" Style="width:100%" /> *@
         <RadzenLabel Text="Transaction Type" />
         <RadzenDropDown @bind-Value="CurrentTransaction.TransactionType"
                         Data="@transactionOptions"
@@ -184,15 +183,11 @@
                         <tr>
                             <td style="border:1px solid #ccc; font-weight:600; color:#333;">Quantity</td>
                             <td style="border:1px solid #ccc;">
-@*                                 <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
-                                              Disabled="@(@product.Quantity == 0)"
-                                              Click="() => DecreaseQuantity(product)" /> *@
                                 <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
+                                              Disabled="@(@product.Quantity == 0)"
                                               Click="() => UpdateTransaction(product, product.Quantity - 1)" />
                                 <RadzenNumeric @bind-Value="product.Quantity" Min="0"
                                                Style="margin:0 8px; width:60px;" />
-                                @* <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
-                                              Click="() => AddToTransaction(product)" /> *@
                                 <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
                                               Click="() => UpdateTransaction(product, product.Quantity + 1)" />
                             </td>
@@ -282,7 +277,7 @@
         foreach (var product in widgetProducts)
         {
             var folder = _Paths.Value.ProductImagePath;
-            var filePath = Path.Combine(folder, $"{product.Id}.png");
+            var filePath = Path.Combine(folder, $"{product.ProductId}.png");
 
             product.ImageUrl = await GetImageBase64(filePath);
         }
@@ -374,40 +369,52 @@
         if (transactionId.HasValue)
             CurrentTransaction.Products.Remove(product);
 
-        if (!CurrentTransaction.Products.Any(p => p.Id == product.Id))
+        if (!CurrentTransaction.Products.Any(p => p.ProductId == product.ProductId))
             CurrentTransaction.Products.Add(product);
 
         UpdateDiscount();
     }
     private void UpdateTransaction(ProductWidgetModel product, int newQuantity)
     {
-        var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
-        if (existing == null) return;
-
-        int oldQuantity = product.Quantity;
-        int difference = newQuantity - oldQuantity;
-
-        // If increasing, check stock availability
-        if (difference > 0 && existing.TotalStock < difference)
+        if (transactionId > 0)
         {
-            DialogService.Alert($"Requested quantity exceeds stock {existing.TotalStock}", "Error");
-            return;
+            var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
+            if (existing == null) return;
+
+            int oldQuantity = product.Quantity;
+            int difference = newQuantity - oldQuantity;
+
+            // If increasing, check stock availability
+            if (difference > 0 && existing.TotalStock < difference)
+            {
+                DialogService.Alert($"Requested quantity exceeds stock {existing.TotalStock}", "Error");
+                return;
+            }
+
+            // Adjust stock
+            existing.TotalStock -= difference;
+
+            // Update transaction quantity
+            product.Quantity = newQuantity;
+
+            // Replace product in transaction
+            if (transactionId.HasValue)
+                CurrentTransaction.Products.Remove(product);
+
+            if (!CurrentTransaction.Products.Any(p => p.ProductId == product.ProductId))
+                CurrentTransaction.Products.Add(product);
+
+            UpdateDiscount();
         }
-
-        // Adjust stock
-        existing.TotalStock -= difference;
-
-        // Update transaction quantity
-        product.Quantity = newQuantity;
-
-        // Replace product in transaction
-        if (transactionId.HasValue)
-            CurrentTransaction.Products.Remove(product);
-
-        if (!CurrentTransaction.Products.Any(p => p.Id == product.Id))
-            CurrentTransaction.Products.Add(product);
-
-        UpdateDiscount();
+        else
+        {
+            if (newQuantity > 0 && newQuantity>=product.Quantity)
+                AddToTransaction(product);
+            else
+            {
+                DecreaseQuantity(product);
+            }
+        }
     }
 
     private void DecreaseQuantity(ProductWidgetModel product)

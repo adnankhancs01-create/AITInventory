@@ -9,7 +9,6 @@ namespace Common.Models.ResponseModel
         public int TransactionId { get; set; }
         public int ProductId { get; set; }
         public string ProductName { get; set; }
-
         public int Quantity { get; set; }
         public decimal? UnitPrice { get; set; }
         public decimal? Total { get; set; }
@@ -23,16 +22,31 @@ namespace Common.Models.ResponseModel
 
     public class TransactionSummaryModel
     {
+        public int TransactionId { get; set; }
         public int TotalTransactions { get; set; }
         public int TotalItemSold { get; set; }
         public decimal? TotalAmountGenerated { get; set; }
         public decimal? TotalDiscount { get; set; }
         public decimal? TotalReceivedAmount { get; set; }
+        public DateTime? TransactionDate { get; set; }
     }
+    public class TransactionSummaryDataModel
+    {
+        public int TransactionId { get; set; }
+        public long? TransactionNumber { get; set; }
+        public DateTime? TransactionDate { get; set; }
+        public string? TransactionType { get; set; }
+        public int TotalQuantity { get; set; }
+        public decimal? TotalAmount { get; set; }
+        public decimal? TotalDiscount { get; set; }
+        public decimal? NetAmount { get; set; }
+    }
+
 
     public class PagedTransactionResponse
     {
         public List<TransactionDetailModel> Data { get; set; }
+        public List<TransactionSummaryDataModel> SummaryData { get; set; }
         public TransactionSummaryModel Summary { get; set; }
         public int TotalCount { get; set; }
     }
