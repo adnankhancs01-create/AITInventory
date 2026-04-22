@@ -298,5 +298,58 @@ namespace Service.Service
 
             return model;
         }
+        public async Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request)
+        {
+            try
+            {
+                if (request == null || request.Products == null || !request.Products.Any())
+                    return BaseResponse<int?>.FailureResponse(new List<string> { "Invalid request" }, "Error");
+
+                foreach (var product in request.Products)
+                {
+                    var item = await _transactionRepo.GetTransactionDetailByProduct(request.TransactionId, product.ProductId);
+                    if (item == null)
+                        return BaseResponse<int?>.FailureResponse(new List<string> { $"Product {product.ProductId} not found" }, "Error");
+
+                    int requestedReturnQuantity = product.Quantity == 0 ? item.Quantity : product.Quantity;
+                    if (item?.Quantity == product.Quantity)
+                        continue;
+
+                    int alreadyReturned = item.ReturnedQuantity ?? 0;
+                    int availableQty = item.Quantity - alreadyReturned;
+
+                    if (product.Quantity > availableQty)
+                        return BaseResponse<int?>.FailureResponse(new List<string> { $"Only {availableQty} available for return" }, "Error");
+
+                    decimal unitPrice = item.UnitPrice ?? 0;
+                    decimal discount = item.Discount ?? 0;
+                    decimal amount = (unitPrice * requestedReturnQuantity) - discount;
+
+                    int stockQty = item.TransMst.TransactionType == "Sell"
+                        ? product.Quantity
+                        : -product.Quantity;
+
+                    // 🔁 Call data layer
+                    var resp = await _transactionRepo.CreateReturnTransaction(
+                        request.TransactionId,
+                        product.ProductId,
+                        product.Quantity==0?item.Quantity:product.Quantity,
+                        amount,
+                        stockQty,
+                        request.CreatedBy??0
+                    );
+
+                    if (!resp.Success)
+                        return resp;
+                }
+
+                return BaseResponse<int?>.SuccessResponse(request.TransactionId, "Return successful");
+            }
+            catch (Exception ex)
+            {
+                return BaseResponse<int?>.FailureResponse(new List<string> { ex.Message }, "Error occurred");
+            }
+        }
+
     }
 }

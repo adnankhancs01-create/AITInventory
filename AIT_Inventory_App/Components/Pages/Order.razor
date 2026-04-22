@@ -1,5 +1,6 @@
-﻿@page "/order/{transactionId:int?}"
+﻿@page "/order/{transactionId:int?}/{isReturn:bool?}"
 @using AIT_Inventory_App.C_.Models
+@using Common
 @using Common.Models
 @using Common.Models.RequestModel
 @using Common.Models.ResponseModel
@@ -210,10 +211,12 @@
 
                     @code {
     [Parameter] public int? transactionId { get; set; }
+    [Parameter] public bool? isReturn { get; set; }
     private List<ProductWidgetModel> widgetProducts = new();
     private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
     private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
     private List<ProductCategoryModel> categories = new List<ProductCategoryModel>();
+    private List<int> ReturnProductIds = new List<int>();
     private List<dynamic> transactionOptions = new List<dynamic>
     {
         new { Text = "Sell", Value = "Sell" },
@@ -225,6 +228,9 @@
     protected override async Task OnInitializedAsync()
     {
         CurrentTransaction.TransactionType = "Sell";
+        if(isReturn.HasValue && isReturn.Value)
+            CurrentTransaction.TransactionType = "Return";
+
         var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
         if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
             categories = getCategories.Data.Item1;
@@ -339,7 +345,32 @@
             return;
 
         }
-        var response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
+        if(string.IsNullOrEmpty(ProcessTransactionsModel.TransactionType))
+        {
+            await DialogService.Alert("Transaction Type required", "Error");
+            return;
+
+        }
+        BaseResponse<int?> response;
+        var fasfs = isReturn;
+        if(ProcessTransactionsModel.TransactionType=="Sell")
+            response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
+        else
+        {
+            var returnProducts = ProcessTransactionsModel.Products.Where(x=> ReturnProductIds.Contains(x.ProductId)).Select(p => new ReturnProductModel
+            {
+                ProductId = p.ProductId,
+                Quantity = p.Quantity
+            }).ToList();
+            response = await _transactionService.CreateReturnTransaction(new ReturnRequestModel
+            {
+                TransactionId = ProcessTransactionsModel.TransactionId ?? 0,
+                CreatedBy = ProcessTransactionsModel.CreatedBy,
+                Products = returnProducts
+            });
+
+        }
+          
         if (response.Success)
         {
             await DialogService.Alert("Transaction saved successfully!", "Success");
@@ -354,6 +385,12 @@
 
     private void AddToTransaction(ProductWidgetModel product)
     {
+        if(isReturn.HasValue && isReturn.Value)
+        {
+            if (!ReturnProductIds.Contains(product.ProductId))
+                ReturnProductIds.Add(product.ProductId);
+        }
+
         product.Quantity++;
         var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
         if (existing != null)
@@ -378,6 +415,12 @@
     {
         if (transactionId > 0)
         {
+            if (isReturn.HasValue && isReturn.Value)
+            {
+                if (!ReturnProductIds.Contains(product.ProductId))
+                    ReturnProductIds.Add(product.ProductId);
+            }
+
             var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
             if (existing == null) return;
 
