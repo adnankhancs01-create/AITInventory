@@ -130,6 +130,12 @@
                               Icon="arrow_left"
                               Size="ButtonSize.Small"
                               Click="@(() => Return(data))" />
+                <RadzenButton Style="hover:text-orange-500;"
+                              Icon="undo"
+                              Size="ButtonSize.Small"
+                              Title="Revert Transaction"
+                              Click="@(() => RevertTransaction(data.TransactionId))"
+                              />
             </Template>
         </RadzenDataGridColumn>
 
@@ -193,12 +199,8 @@
             transactions = result.Data;
             totalCount = result.TotalCount;
             summaryData = result.SummaryData;
-
-            // ⚠️ update summary only if changed (important)
-            if (summary?.TotalAmountGenerated != result.Summary?.TotalAmountGenerated)
-            {
-                summary = result.Summary;
-            }
+            
+            summary = result.Summary;
         }
         finally
         {
@@ -252,5 +254,19 @@
     void Return(TransactionSummaryDataModel item)
     {
         NavigationManager.NavigateTo($"/order/{item.TransactionId}/{true}");
+    }
+
+    async Task RevertTransaction(int id)
+    {
+        var result = await TransactionService.RevertTransaction(id);
+        if(result.Success)
+        {
+            DialogService.Alert("Transaction reverted successfully", "Success", new AlertOptions() { OkButtonText = "OK"});
+            await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+        }
+        else
+        {
+            DialogService.Alert(result.Message ?? "Failed to revert transaction", "Error", new AlertOptions() { OkButtonText = "OK"});
+        }
     }
 }

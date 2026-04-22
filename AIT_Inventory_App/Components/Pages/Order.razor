@@ -140,7 +140,10 @@
         <RadzenLabel Text="Remarks" />
         <RadzenTextArea @bind-Value="CurrentTransaction.Remarks" Style="width:100%; height:80px" />
 
-        <RadzenButton Text="Save" Click="() => OnSave(CurrentTransaction)" Style="margin-top:1rem; width:100%" />
+        <RadzenButton Text="Save (Ctrl+S)"
+                      Click="() => OnSave(CurrentTransaction)"
+                      KeyboardShortcut="ctrl+s"
+                      Style="position:fixed; bottom:20px; right:20px; z-index:999;" />
     </RadzenStack>
     <RadzenStack Orientation="Orientation.Vertical" Style="flex:1; padding:1rem;">
         <RadzenLabel Text="Product Catalog" Style="font-weight:bold; font-size:18px;" />
@@ -217,19 +220,29 @@
     private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
     private List<ProductCategoryModel> categories = new List<ProductCategoryModel>();
     private List<int> ReturnProductIds = new List<int>();
-    private List<dynamic> transactionOptions = new List<dynamic>
-    {
-        new { Text = "Sell", Value = "Sell" },
-        new { Text = "Return", Value = "Return" }
-    };
+    private List<dynamic> transactionOptions = new List<dynamic>();
     int categoryId;
     int currentStock;
 
     protected override async Task OnInitializedAsync()
     {
-        CurrentTransaction.TransactionType = "Sell";
-        if(isReturn.HasValue && isReturn.Value)
+        if (isReturn.HasValue && isReturn.Value)
+        {
             CurrentTransaction.TransactionType = "Return";
+            transactionOptions = new List<dynamic>
+            {
+                new { Text = "Return", Value = "Return" }
+            };
+        }
+        else
+        {
+            CurrentTransaction.TransactionType = "Sell";
+            transactionOptions = new List<dynamic>
+            {
+                new { Text = "Sell", Value = "Sell" },
+                new { Text = "Return", Value = "Return" }
+            };
+        }
 
         var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
         if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)

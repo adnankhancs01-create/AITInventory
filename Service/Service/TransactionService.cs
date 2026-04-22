@@ -177,6 +177,7 @@ namespace Service.Service
                     TransactionType = transactionModel.TransactionType,
                     TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
                     TransactionDate = transactionModel.TransactionDate ?? DateTime.Now,
+                    IsActive= true,
                     Remarks = transactionModel.Remarks,
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = transactionModel.CreatedBy,
@@ -350,6 +351,25 @@ namespace Service.Service
                 return BaseResponse<int?>.FailureResponse(new List<string> { ex.Message }, "Error occurred");
             }
         }
+        public async Task<BaseResponse<bool>> RevertTransaction(int transactionId)
+        {
+            try
+            {
+                // Call repository to revert
+                BaseResponse<bool> response = await _transactionRepo.RevertTransaction(transactionId);
 
+                return response;
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null,
+                    additionalData: "{ \"message\": \"Error RevertTransaction\", \"TransactionId\": " + transactionId + "}");
+
+                return BaseResponse<bool>.FailureResponse(
+                    new List<string> { ex.Message },
+                    "Revert failed"
+                );
+            }
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace Service.IService
         Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
         Task<ProcessTransactionsModel> GetTransactionByIdAsync(int transactionId);
         Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request);
+        Task<BaseResponse<bool>> RevertTransaction(int transactionId);
     }
 }

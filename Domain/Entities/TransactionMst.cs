@@ -24,6 +24,8 @@ namespace Domain.Entities
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public int? ModifiedBy { get; set; }
-
+        public bool? IsActive { get; set; }
+        public DateTime? RevertedOn { get; set; }
+        public int? RevertedBy { get; set; }
     }
 }

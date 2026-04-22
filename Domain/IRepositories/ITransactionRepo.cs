@@ -25,5 +25,6 @@ namespace Domain.IRepositories
     int stockQty,
     int createdBy);
 
+        Task<BaseResponse<bool>> RevertTransaction(int id);
     }
 }

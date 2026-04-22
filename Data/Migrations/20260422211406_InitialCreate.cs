@@ -43,7 +43,8 @@ namespace Data.Migrations
                     ProductCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StockNumber = table.Column<long>(type: "bigint", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: true)
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -59,6 +60,7 @@ namespace Data.Migrations
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ModifiedBy = table.Column<int>(type: "int", nullable: true)
@@ -66,6 +68,25 @@ namespace Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProductCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReturnTransaction",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TransactionId = table.Column<int>(type: "int", nullable: true),
+                    TransactionDetailId = table.Column<int>(type: "int", nullable: true),
+                    ProductId = table.Column<int>(type: "int", nullable: true),
+                    Quantity = table.Column<int>(type: "int", nullable: true),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReturnTransaction", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -145,7 +166,8 @@ namespace Data.Migrations
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -174,7 +196,10 @@ namespace Data.Migrations
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true)
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: true),
+                    RevertedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RevertedBy = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -219,6 +244,7 @@ namespace Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductId = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
+                    ReturnedQuantity = table.Column<int>(type: "int", nullable: true),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     TransMstId = table.Column<int>(type: "int", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -280,7 +306,8 @@ namespace Data.Migrations
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ModifiedBy = table.Column<int>(type: "int", nullable: true),
                     TransactionId = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    IsActive = table.Column<bool>(type: "bit", nullable: true),
+                    RevertTransactionId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -362,6 +389,9 @@ namespace Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Pricing");
+
+            migrationBuilder.DropTable(
+                name: "ReturnTransaction");
 
             migrationBuilder.DropTable(
                 name: "TransactionSlip");
