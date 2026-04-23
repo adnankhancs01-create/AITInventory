@@ -1,4 +1,5 @@
 ﻿using Common;
+using Common.Models.ResponseModel;
 using Domain.Entities;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -76,7 +77,7 @@ namespace Data.Repositories
         {
             var query = _dbContext.VendorStock
     .AsNoTracking().Include(x => x.Product).ThenInclude(x => x.Category)
-                .Where(x => (productId.HasValue || productId == 0) || x.ProductId == productId);
+                .Where(x => ((productId.HasValue || productId == 0) || x.ProductId == productId) && x.IsActive==true && x.StockNumber.HasValue);
 
             if (!string.IsNullOrEmpty(filter))
             {
@@ -153,6 +154,108 @@ namespace Data.Repositories
 
             return BaseResponse<bool>.SuccessResponse(true, "Stock deducted successfully");
         }
+        public async Task<(List<StockFifoDto> Data, int TotalCount)> GetFifoStockReport(
+    int? productId,
+    DateTime? fromDate,
+    DateTime? toDate,
+    int pageIndex,
+    int pageSize)
+        {
+            // =========================
+            // 1. BASE QUERY (FILTER)
+            // =========================
+            var query = _dbContext.VendorStock.Include(x => x.Product).ThenInclude(x => x.Category)
+                .AsNoTracking()
+                .Where(x =>
+                    x.IsActive == true &&
+                    (!productId.HasValue || x.ProductId == productId) &&
+                    (!fromDate.HasValue || x.CreatedOn >= fromDate) &&
+                    (!toDate.HasValue || x.CreatedOn <= toDate)
+                );
 
+            // =========================
+            // 2. LOAD DATA (ORDERED)
+            // =========================
+            var data = await query
+                .OrderBy(x => x.ProductId)
+                .ThenBy(x => x.CreatedOn)
+                .ThenBy(x => x.Id)
+                .Select(x => new
+                {
+                    x.ProductId,
+                    x.CreatedOn,
+                    x.Quantity,
+                    ProductName = x.Product.Name,
+                    ProductCode = x.Product.ProductCode,
+                    CategoryName = x.Product.Category.Name,
+                    Id = x.Id,
+                    StockNumber = x.StockNumber,
+                    TotalPurchasePrice=x.TotalPurchasePrice,
+                    ModifiedOn=x.ModifiedOn,
+                })
+                .ToListAsync();
+
+            // =========================
+            // 3. FIFO CALCULATION
+            // =========================
+            var result = new List<StockFifoDto>();
+
+            foreach (var group in data.GroupBy(x => x.ProductId))
+            {
+                decimal runningPurchase = 0;
+
+                var sales = group
+                    .Where(x => x.Quantity < 0)
+                    .Select(x => -x.Quantity)
+                    .Sum();
+
+                foreach (var purchase in group.Where(x => x.Quantity > 0))
+                {
+                    runningPurchase += (purchase.Quantity ?? 0);
+
+                    int soldQty;
+
+                    if (sales <= (runningPurchase - purchase.Quantity))
+                        soldQty = 0;
+                    else if (sales >= runningPurchase)
+                        soldQty = (purchase.Quantity ?? 0);
+                    else
+                        soldQty = ((int)(sales ?? 0) - (int)(runningPurchase  - (purchase.Quantity ?? 0)));
+
+                    result.Add(new StockFifoDto
+                    {
+                        ProductId = purchase.ProductId??0,
+                        PurchaseDate = purchase.CreatedOn??DateTime.Now,
+                        PurchaseQty = purchase.Quantity ?? 0,
+                        SoldQty = soldQty,
+                        RemainingQty = (purchase.Quantity ?? 0) - soldQty,
+                        ProductName = purchase.ProductName,
+                        ProductCode = purchase.ProductCode,
+                        StockNumber= purchase.StockNumber ?? 0,
+                        TotalPurchasePrice = purchase.TotalPurchasePrice,
+                        Category=purchase.CategoryName,
+                        Id= purchase.Id,
+                        ModifiedOn=purchase.ModifiedOn
+                    });
+                }
+            }
+
+            // =========================
+            // 4. TOTAL COUNT
+            // =========================
+            var totalCount = result.Count;
+
+            // =========================
+            // 5. PAGINATION
+            // =========================
+            var pagedData = result
+                .OrderBy(x => x.ProductId)
+                .ThenBy(x => x.PurchaseDate)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (pagedData, totalCount);
+        }
     }
 }

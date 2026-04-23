@@ -12,5 +12,11 @@ namespace Service.IService
     {
         Task<BaseResponse<VendorStockModel>> AddEditVendorStockAsync(AddEditVendorStockRequestModel requestModel);
         Task<BaseResponse<(List<GetStockResponseModel>, int)>> GetStocksReportAsync(int? productId, int pageIndex, int pageSize, string? Filter);
+        Task<BaseResponse<(List<StockFifoDto> Data, int TotalCount)>> GetFifoStocksReportAsync(
+    int? productId,
+    DateTime? fromDate,
+    DateTime? toDate,
+    int pageIndex,
+    int pageSize);
     }
 }
