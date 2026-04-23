@@ -10,44 +10,98 @@
 @using AIT_Inventory_App.Components.Pupups
 
 
+<!-- FILTERS -->
+<RadzenStack Orientation="Orientation.Horizontal"
+             Gap="12px"
+             Style="margin-bottom:15px; align-items:flex-end; flex-wrap:wrap;">
+
+    <!-- From Date -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker @bind-Value="fromDate" DateFormat="MM/dd/yyyy"
+                          Style="width:160px" />
+    </div>
+
+    <!-- To Date -->
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker @bind-Value="toDate" DateFormat="MM/dd/yyyy"
+                          Style="width:160px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Products</label>
+        <RadzenDropDown Data="@Products"
+                        TextProperty="Name"
+                        ValueProperty="Id"
+                        @bind-Value="productId"
+                        Style="width:180px"
+                        Name="ProductId"
+                        Placeholder="Choose a Product"
+                        AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+
+
+    </div>
+    
+    @* Click="@(() => grid.Reload())" /> *@
+    <!-- Search Button -->
+    <RadzenButton Text="Search"
+                  Icon="search"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Click="@(() => grid.Reload())" />
+
+</RadzenStack>
+
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <h3 style="margin:0;">Stock Management</h3>
     <RadzenButton Text="Add Stock" Icon="add_circle" ButtonStyle="ButtonStyle.Primary"
                   Click="@AddStock" />
 </div>
 
-
-<RadzenDataGrid Data="@Stocks" TItem="GetStockResponseModel"
+<RadzenDataGrid @ref="grid"
+                TItem="StockFifoDto"
+                Data="@Stocks"
                 Count="@count"
                 LoadData="@LoadData"
-                AllowPaging="true" PageSize="20"
-                AllowSorting="false"
-                AllowFiltering="true">
+                AllowPaging="true" AllowVirtualization="false"
+                PageSize="10">
 
     <Columns>
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="ProductName" Title="Product Name" Filterable="true" />
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="StockNumber" Title="Stock Number" Filterable="true" />
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="Quantity" Title="Quantity" Filterable="true" />
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="TotalPurchasePrice" Title="Total Purchase Price" Filterable="true" />
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Property="CreatedOn" Title="Added On" Filterable="true" />
 
-        <RadzenDataGridColumn TItem="GetStockResponseModel" Title="Actions" Filterable="false">
-            <Template Context="Stock">
-                <RadzenButton Text="" Icon="edit" Size="ButtonSize.Small"
-                              Click="@(() => EditStock(Stock))" Style="margin-right:5px" />
-                <RadzenButton Text="" Icon="visibility" Size="ButtonSize.Small"
-                              Click="@(() => ViewStock(Stock))" />
-                <RadzenButton Text="Add Stock" Icon="add_circle" Size="ButtonSize.Small" IconColor="green"
-                              Click="@(() => AddStock(Stock.ProductId))" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="Id" Title="ID" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="ProductName" Title="ProductName" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="PurchaseQty" Title="PurchaseQty" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="SoldQty" Title="SoldQty" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="RemainingQty" Title="RemainingQty" />
+        <RadzenDataGridColumn TItem="StockFifoDto" Property="PurchaseDate" Title="PurchaseDate" />
+
+        <RadzenDataGridColumn TItem="StockFifoDto" Title="Actions">
+            <Template Context="data">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() => ViewStock(data))" />
+                 <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditStock(data))" />
             </Template>
         </RadzenDataGridColumn>
+
     </Columns>
+
 </RadzenDataGrid>
 
 @code {
-    private IEnumerable<GetStockResponseModel>? Stocks;
+    private IEnumerable<StockFifoDto>? Stocks;
     private int count;
-
+    RadzenDataGrid<StockFifoDto> grid;
+    private List<ProductModel> Products;
+    DateTime? fromDate = DateTime.Now.AddDays(-1);
+    DateTime? toDate = DateTime.Now;
+    int? productId;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var getProducts = await _ProductService.GetProductsAsync(0, 1, int.MaxValue, string.Empty);
+        if (getProducts != null || (getProducts.Data.Item1 != null || getProducts.Data.Item1.Count > 0))
+            Products = getProducts?.Data.Item1;
+        await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+    }
     private async Task LoadData(LoadDataArgs args)
     {
         // args.Skip = starting record index
@@ -57,7 +111,7 @@
         int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
         int pageSize = args.Top ?? 10;
 
-        var result = await _stockService.GetStocksReportAsync(0, pageIndex, pageSize, args.Filter);
+        var result = await _stockService.GetFifoStocksReportAsync(null, null, null, pageIndex, pageSize);
         if (result.Success)
         {
             Stocks = result.Data.Item1.ToList();
@@ -66,18 +120,18 @@
         else
         {
             // Handle error (e.g., show message)
-            Stocks = new List<GetStockResponseModel>();
+            Stocks = new List<StockFifoDto>();
             count = 0;
         }
     }
 
-    private async Task EditStock(GetStockResponseModel stock)
+    private async Task EditStock(StockFifoDto stock)
     {
         var data = new AddEditVendorStockRequestModel();
         data.StockNumber = stock.StockNumber;
         data.Id = stock.Id;
         data.ProductId = stock.ProductId;
-        data.Quantity = stock.Quantity;
+        data.Quantity = stock.PurchaseQty;
         data.TotalPurchasePrice = stock.TotalPurchasePrice;
 
         await DialogService.OpenAsync<AddEditStockPopup>(
@@ -87,7 +141,7 @@
         );
         await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
     }
-    private async Task ViewStock(GetStockResponseModel Stock)
+    private async Task ViewStock(StockFifoDto Stock)
     {
         try
         {
@@ -96,10 +150,10 @@
             result.Add("ProductCode", Stock.ProductCode);
             result.Add("Category", Stock.Category);
             result.Add("Stock Number", Stock.StockNumber.ToString());
-            result.Add("Added On", Stock.CreatedOn?.ToShortDateString());
+            result.Add("Added On", Stock.PurchaseDate.ToShortDateString());
             result.Add("Modified On", Stock.ModifiedOn?.ToShortDateString());
-            result.Add("Quantity", Stock.Quantity.ToString());
-            result.Add("Total Purchase Price", Stock.TotalPurchasePrice.ToString());
+            result.Add("Quantity", Stock.PurchaseQty.ToString());
+            result.Add("Total Purchase Price", Stock.TotalPurchasePrice?.ToString());
 
             await DialogService.OpenAsync<ViewPopup>(
                 "Stock Details",
@@ -111,6 +165,7 @@
         {
         }
     }
+
     private async Task AddStock(int? productId)
     {
         await DialogService.OpenAsync<AddEditStockPopup>(
@@ -121,6 +176,7 @@
         // After closing, refresh grid
         await LoadData(new LoadDataArgs() { Skip = 0, Top = 20 });
     }
+
     private async Task AddStock()
     {
         var getProducts = await _ProductService.GetProductsAsync(0, 1, int.MaxValue,string.Empty);

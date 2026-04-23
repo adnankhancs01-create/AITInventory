@@ -93,5 +93,25 @@ namespace Service.Service
             }
 
         }
+        public async Task<BaseResponse<(List<StockFifoDto> Data, int TotalCount)>> GetFifoStocksReportAsync(
+    int? productId,
+    DateTime? fromDate,
+    DateTime? toDate,
+    int pageIndex,
+    int pageSize)
+        {
+            try
+            {
+                (List<StockFifoDto>, int) getStocks = await _stockRepo.GetFifoStockReport(productId, fromDate, toDate, pageIndex, pageSize);
+                return new BaseResponse<(List<StockFifoDto> Data, int TotalCount)>((getStocks.Item1, getStocks.Item2), string.Empty);
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
+
+                return new BaseResponse<(List<StockFifoDto> Data, int TotalCount)>(
+                        new List<string> { ex.Message }, "Error fetching stocks");
+            }       
+        }
     }
 }
