@@ -3,26 +3,54 @@
 @inject IUserService _userService
 @inherits LayoutComponentBase
 <RadzenDialog />
-<div class="page">
-    <div class="sidebar">
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar @(isSidebarCollapsed ? "collapsed" : "")">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-           
-            <button @onclick="HandleLogout">Logout</button>
+    <!-- Main -->
+    <div class="main-area">
+        
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                
+                <!-- 🔥 Toggle Button -->
+                <button class="toggle-btn" @onclick="ToggleSidebar">
+                    <i class="bi bi-list"></i>
+                </button>
 
-            <a href="https://www.facebook.com/AdvancedInstituteOfTechnology26/" target="_blank">About</a>
-        </div>
+                <span class="app-title">Inventory System</span>
+            </div>
 
-        <article class="content px-4">
+            <div class="topbar-right">
+                <a href="https://www.facebook.com/AdvancedInstituteOfTechnology26/"
+                       target="_blank"
+                       class="about-link">
+                    About
+                </a>
+
+                <button class="logout-btn" @onclick="HandleLogout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="content">
             @Body
-        </article>
-    </main>
+        </main>
+    </div>
 </div>
 
 @code {
+    private bool isSidebarCollapsed = false;
+
+    private void ToggleSidebar()
+    {
+        isSidebarCollapsed = !isSidebarCollapsed;
+    }
     private async Task HandleLogout()
     {
         try
