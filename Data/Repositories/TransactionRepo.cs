@@ -256,5 +256,63 @@ namespace Data.Repositories
                 return BaseResponse<bool>.FailureResponse(new List<string> { ex.Message }, "Database error during revert");
             }
         }
+        public async Task<DashboardSummary> GetSummaryAsync(DateTime? from, DateTime? to)
+        {
+            var query = _dbContext.TransactionMst.AsQueryable();
+
+            if (from.HasValue)
+                query = query.Where(x => x.TransactionDate >= from);
+
+            if (to.HasValue)
+                query = query.Where(x => x.TransactionDate <= to);
+
+            var data = await query
+                .Select(x => new
+                {
+                    x.TransactionType,
+                    x.TransactionDetails
+                })
+                .ToListAsync();
+
+            decimal sales = data
+                .Where(x => x.TransactionType == "Sell")
+                .Sum(x => x.TransactionDetails.Sum(d => (d.UnitPrice ?? 0) * d.Quantity));
+
+            decimal purchases = data
+                .Where(x => x.TransactionType == "Purchase")
+                .Sum(x => x.TransactionDetails.Sum(d => (d.UnitPrice ?? 0) * d.Quantity));
+
+            decimal returns = await _dbContext.ReturnTransaction
+                .Where(r => (!from.HasValue || r.CreatedOn >= from) &&
+                            (!to.HasValue || r.CreatedOn <= to))
+                .SumAsync(r => (decimal?)r.Amount) ?? 0;
+
+            return new DashboardSummary
+            {
+                TotalSales = sales,
+                TotalPurchases = purchases,
+                TotalReturns = returns,
+                NetRevenue = sales - purchases - returns,
+                TotalTransactions = data.Count
+            };
+        }
+
+        public async Task<List<TransactionSummaryData>> GetRecentTransactionsAsync(int count)
+        {
+            return await _dbContext.TransactionMst
+                .OrderByDescending(x => x.TransactionDate)
+                .Take(count)
+                .Select(x => new TransactionSummaryData
+                {
+                    TransactionId = x.Id,
+                    TransactionType = x.TransactionType,
+                    TotalAmount = x.TransactionDetails.Sum(d => (d.UnitPrice ?? 0) * d.Quantity),
+                    Discount = x.TransactionDetails.Sum(d => d.Discount ?? 0),
+                    NetAmount = x.TransactionDetails.Sum(d =>
+                        ((d.UnitPrice ?? 0) * d.Quantity) - (d.Discount ?? 0)),
+                    TransactionDate = x.TransactionDate ?? DateTime.Now
+                })
+                .ToListAsync();
+        }
     }
 }

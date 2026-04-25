@@ -12,5 +12,6 @@ namespace Service.IService
         Task<ProcessTransactionsModel> GetTransactionByIdAsync(int transactionId);
         Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request);
         Task<BaseResponse<bool>> RevertTransaction(int transactionId);
+        Task<BaseResponse<DashboardResponse>> GetDashboardAsync(DateTime? from, DateTime? to); 
     }
 }

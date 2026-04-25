@@ -362,8 +362,12 @@
             return;
 
         }
+        if (isReturn.HasValue && isReturn.Value)
+            ProcessTransactionsModel.TransactionType = "Return";
+
         BaseResponse<int?> response;
-        var fasfs = isReturn;
+       
+            
         if(ProcessTransactionsModel.TransactionType=="Sell")
             response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
         else

@@ -1,3 +1,113 @@
 ﻿@page "/home"
+@using Common.Models.ResponseModel
+@using Service.IService
+@inject ITransactionService DashboardService
 
-<h1 style="font-family:'Segoe UI',sans-serif;">Welcome to home page</h1>
+<RadzenStack Gap="16px">
+
+    <!-- Filters -->
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="10px">
+        <RadzenDatePicker @bind-Value="fromDate" />
+        <RadzenDatePicker @bind-Value="toDate" />
+        <RadzenButton Text="Load" Click="@LoadData" />
+    </RadzenStack>
+
+    <!-- Summary Cards -->
+    <RadzenRow Gap="12px">
+        <RadzenColumn Size="3">
+            <RadzenCard Style="background:#e3f2fd">
+                <h4>Sales</h4>
+                <h2>@summary.TotalSales.ToString("N2")</h2>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="3">
+            <RadzenCard Style="background:#e8f5e9">
+                <h4>Purchases</h4>
+                <h2>@summary.TotalPurchases.ToString("N2")</h2>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="3">
+            <RadzenCard Style="background:#fff3e0">
+                <h4>Returns</h4>
+                <h2>@summary.TotalReturns.ToString("N2")</h2>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="3">
+            <RadzenCard Style="background:#fce4ec">
+                <h4>Net Revenue</h4>
+                <h2>@summary.NetRevenue.ToString("N2")</h2>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <!-- Chart -->
+    <RadzenCard>
+        <RadzenChart>
+            <RadzenColumnSeries Data="@chartData"
+                                CategoryProperty="Label"
+                                ValueProperty="Value" />
+        </RadzenChart>
+    </RadzenCard>
+
+    <!-- Recent Transactions -->
+    <RadzenCard>
+        <h4>Recent Transactions</h4>
+
+        <RadzenDataGrid Data="@transactions" TItem="TransactionSummaryData">
+            <Columns>
+                <RadzenDataGridColumn Property="TransactionId" Title="ID" />
+                <RadzenDataGridColumn Property="TransactionType" Title="Type" />
+                <RadzenDataGridColumn Property="TotalAmount" Title="Total" />
+                <RadzenDataGridColumn Property="Discount" Title="Discount" />
+                <RadzenDataGridColumn Property="NetAmount" Title="Net" />
+                <RadzenDataGridColumn Property="TransactionDate" Title="Date" />
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+
+</RadzenStack>
+
+@code {
+    DashboardSummary summary = new();
+    List<TransactionSummaryData> transactions = new();
+    List<ChartItem> chartData = new();
+
+    DateTime? fromDate = DateTime.Now.AddDays(-7);
+    DateTime? toDate = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        try
+        {
+            var result = await DashboardService.GetDashboardAsync(fromDate, toDate);
+
+            if (result.Success)
+            {
+                summary = result.Data.Summary;
+                transactions = result.Data.RecentTransactions;
+                chartData = new List<ChartItem>
+{
+    new ChartItem { Label = "Sales", Value = summary.TotalSales },
+    new ChartItem { Label = "Purchases", Value = summary.TotalPurchases },
+    new ChartItem { Label = "Returns", Value = summary.TotalReturns }
+};
+            }
+            else
+            {
+                // Handle error (e.g., show notification)
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle exception (e.g., log error, show notification)
+        }
+    }
+}
