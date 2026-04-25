@@ -26,5 +26,7 @@ namespace Domain.IRepositories
     int createdBy);
 
         Task<BaseResponse<bool>> RevertTransaction(int id);
+        Task<DashboardSummary> GetSummaryAsync(DateTime? from, DateTime? to);
+        Task<List<TransactionSummaryData>> GetRecentTransactionsAsync(int count);
     }
 }

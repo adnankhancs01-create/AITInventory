@@ -371,5 +371,26 @@ namespace Service.Service
                 );
             }
         }
+        public async Task<BaseResponse<DashboardResponse>> GetDashboardAsync(DateTime? from, DateTime? to)
+        {
+            try
+            {
+                var summary = await _transactionRepo.GetSummaryAsync(from, to);
+                var recent = await _transactionRepo.GetRecentTransactionsAsync(10);
+
+                var response = new DashboardResponse
+                {
+                    Summary = summary,
+                    RecentTransactions = recent
+                };
+
+                return BaseResponse<DashboardResponse>.SuccessResponse(response, "Success");
+            }
+            catch (Exception ex)
+            {
+                return BaseResponse<DashboardResponse>.FailureResponse(
+                    new List<string> { ex.Message }, "Error");
+            }
+        }
     }
 }
