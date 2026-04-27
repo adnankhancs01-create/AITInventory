@@ -202,7 +202,7 @@ namespace Data.Repositories
         public async Task<TransactionDetails?> GetTransactionDetailByProduct(int transactionId, int productId)
         {
             return await _dbContext.TransactionDetails.Include(x => x.TransMst).AsNoTracking()
-                .FirstOrDefaultAsync(x => x.TransMstId == transactionId && x.ProductId == productId);
+                .FirstOrDefaultAsync(x =>  x.TransMstId == transactionId && x.TransMst.IsActive==true && x.ProductId == productId);
         }
         public async Task<BaseResponse<bool>> RevertTransaction(int id)
         {

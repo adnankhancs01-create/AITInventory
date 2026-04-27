@@ -48,5 +48,10 @@ namespace Common.Contants
             public const string Api= "AIT_Inventory"; 
             public const string Desktop= "AIT_Inventory_Desktop"; 
         }
+        public struct TransactionTypeStruct
+        {
+            public const string Sell= "Sell"; 
+            public const string Return= "Return"; 
+        }
     }
 }

@@ -111,7 +111,7 @@
         int pageIndex = (args.Skip ?? 0) / (args.Top ?? 10) + 1;
         int pageSize = args.Top ?? 10;
 
-        var result = await _stockService.GetFifoStocksReportAsync(null, null, null, pageIndex, pageSize);
+        var result = await _stockService.GetFifoStocksReportAsync(null, fromDate, toDate, pageIndex, pageSize);
         if (result.Success)
         {
             Stocks = result.Data.Item1.ToList();

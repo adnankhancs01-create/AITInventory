@@ -22,5 +22,7 @@ namespace Domain.Entities
 
         public DateTime? CreatedOn { get; set; }
         public int? CreatedBy { get; set; }
+        [ForeignKey("TransactionDetailId")]
+        public TransactionDetails TransactionDetail { get; set; }
     }
 }

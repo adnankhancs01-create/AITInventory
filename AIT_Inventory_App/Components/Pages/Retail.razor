@@ -1,4 +1,4 @@
-﻿@page "/order/{transactionId:int?}/{isReturn:bool?}"
+﻿@page "/retail/{transactionId:int?}/{isReturn:bool?}"
 @using AIT_Inventory_App.C_.Models
 @using Common
 @using Common.Models
@@ -7,6 +7,7 @@
 @using Microsoft.Extensions.Options
 @using Service.IService
 @using Service.Service
+@using static Common.Contants.Enums
 @inject IProductService _ProductService
 @inject DialogService DialogService
 @inject ITransactionService _transactionService
@@ -124,12 +125,12 @@
 
         </div>
         <RadzenLabel Text=$"Total Discount : {@(CurrentTransaction.TotalDiscount ?? 0)}" />
-        <RadzenLabel Text="Transaction Type" />
-        <RadzenDropDown @bind-Value="CurrentTransaction.TransactionType"
+        @* <RadzenLabel Text="Transaction Type" /> *@
+        @* <RadzenDropDown @bind-Value="CurrentTransaction.TransactionType"
                         Data="@transactionOptions"
                         TextProperty="Text"
                         ValueProperty="Value"
-                        Style="width:100%" />
+                        Style="width:100%" /> *@
 
         <RadzenLabel Text="Transaction Date & Time" />
         <RadzenDatePicker @bind-Value="CurrentTransaction.TransactionDate"
@@ -185,13 +186,25 @@
                         <tr>
                             <td style="border:1px solid #ccc; font-weight:600; color:#333;">Quantity</td>
                             <td style="border:1px solid #ccc;">
-                                <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
+                                @* <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
                                               Disabled="@(@product.Quantity == 0)"
                                               Click="() => UpdateTransaction(product, product.Quantity - 1)" />
                                 <RadzenNumeric @bind-Value="product.Quantity" Min="0"
-                                               Style="margin:0 8px; width:60px;" />
+                                               Style="margin:0 8px; width:60px;" /> 
                                 <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
-                                              Click="() => UpdateTransaction(product, product.Quantity + 1)" />
+                                              Click="() => UpdateTransaction(product, product.Quantity + 1)" /> *@
+                                <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
+                                              Disabled="@(product.Quantity == 0)"
+                                              Click="@(() => UpdateTransaction(product, product.Quantity - 1))" />
+
+                                <RadzenTextBox Value="@product.Quantity.ToString()"
+                                               Style="margin:0 8px; width:60px;"
+                                               Change="@((string args) => OnQuantityChanged(product, args))" />
+
+
+                                <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
+                                              Click="@(() => UpdateTransaction(product, product.Quantity + 1))" />
+
                             </td>
                         </tr>
                         <tr>
@@ -215,33 +228,31 @@
     [Parameter] public bool? isReturn { get; set; }
     private List<ProductWidgetModel> widgetProducts = new();
     private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
+    private ProcessTransactionsModel coreTransaction = new ProcessTransactionsModel();
     private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
     private List<ProductCategoryModel> categories = new List<ProductCategoryModel>();
     private List<int> ReturnProductIds = new List<int>();
     private List<dynamic> transactionOptions = new List<dynamic>();
     int categoryId;
     int currentStock;
+    private void OnQuantityChanged(ProductWidgetModel product, string value)
+    {
+        if (int.TryParse(value, out int newQty))
+        {
+            // Rule: if return and newQty > original quantity, block
+            var coreProductTrans = coreTransaction.Products.FirstOrDefault(x => x.ProductId == product.ProductId);
+            if (isReturn == true && coreProductTrans != null && newQty > coreProductTrans.Quantity)
+            {
+                // Reset back to current quantity
+                return;
+            }
+
+            UpdateTransaction(product, newQty);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        if (isReturn.HasValue && isReturn.Value)
-        {
-            CurrentTransaction.TransactionType = "Return";
-            transactionOptions = new List<dynamic>
-            {
-                new { Text = "Return", Value = "Return" }
-            };
-        }
-        else
-        {
-            CurrentTransaction.TransactionType = "Sell";
-            transactionOptions = new List<dynamic>
-            {
-                new { Text = "Sell", Value = "Sell" },
-                new { Text = "Return", Value = "Return" }
-            };
-        }
-
         var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
         if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
             categories = getCategories.Data.Item1;
@@ -257,7 +268,7 @@
             return;
         }
 
-        if (transactionId.HasValue)
+        if (transactionId.HasValue )
         {
             var data = await _transactionService.GetTransactionByIdAsync(transactionId.Value);
             if (data!=null)
@@ -276,6 +287,7 @@
                 }).ToList();
 
                 widgetProducts = CurrentTransaction.Products;
+                coreTransaction = CurrentTransaction;
             }
         }
         else
@@ -291,13 +303,13 @@
         }
         existingProducts = result.Data.Item1.ToList();
 
-        foreach (var product in widgetProducts)
-        {
-            var folder = _Paths.Value.ProductImagePath;
-            var filePath = Path.Combine(folder, $"{product.ProductId}.png");
+        await Task.WhenAll(widgetProducts.Select(async product =>
+{
+    var folder = _Paths.Value.ProductImagePath;
+    var filePath = Path.Combine(folder, $"{product.ProductId}.png");
 
-            product.ImageUrl = await GetImageBase64(filePath);
-        }
+    product.ImageUrl = await GetImageBase64(filePath);
+}));
         widgetProducts = widgetProducts.OrderBy(p => p.Name).ToList();
     }
 
@@ -363,12 +375,13 @@
 
         }
         if (isReturn.HasValue && isReturn.Value)
-            ProcessTransactionsModel.TransactionType = "Return";
-
+            ProcessTransactionsModel.TransactionType = TransactionTypeStruct.Return;
+        else
+            ProcessTransactionsModel.TransactionType = TransactionTypeStruct.Sell;
         BaseResponse<int?> response;
        
             
-        if(ProcessTransactionsModel.TransactionType=="Sell")
+        if(ProcessTransactionsModel.TransactionType==TransactionTypeStruct.Sell)
             response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
         else
         {
@@ -390,22 +403,17 @@
         {
             await DialogService.Alert("Transaction saved successfully!", "Success");
             CurrentTransaction = new ProcessTransactionsModel(); // Reset form
+            coreTransaction = new ProcessTransactionsModel(); // Reset form
             widgetProducts.ForEach(p => { p.Quantity = 0; p.Discount = 0; p.DiscountPercentValue = 0; }); // Reset quantities and discounts
         }
         else
         {
-            await DialogService.Alert(response.Message, "Error");
+            await DialogService.Alert(string.Join(", ", response.Errors), "Error");
         }
     }
 
     private void AddToTransaction(ProductWidgetModel product)
     {
-        if(isReturn.HasValue && isReturn.Value)
-        {
-            if (!ReturnProductIds.Contains(product.ProductId))
-                ReturnProductIds.Add(product.ProductId);
-        }
-
         product.Quantity++;
         var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
         if (existing != null)
@@ -430,6 +438,13 @@
     {
         if (transactionId > 0)
         {
+            var coreProduct = coreTransaction.Products.FirstOrDefault(x=>x.ProductId==product.ProductId);
+            if (isReturn == true && coreProduct != null && coreProduct.Quantity < newQuantity)
+            {
+                DialogService.Alert($"Requested quantity exceeds purchased quantity {coreProduct.Quantity}", "Error");
+                return;
+            }
+            
             if (isReturn.HasValue && isReturn.Value)
             {
                 if (!ReturnProductIds.Contains(product.ProductId))
@@ -438,7 +453,6 @@
 
             var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
             if (existing == null) return;
-
             int oldQuantity = product.Quantity;
             int difference = newQuantity - oldQuantity;
 
