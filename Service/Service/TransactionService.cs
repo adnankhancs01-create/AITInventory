@@ -291,7 +291,7 @@ namespace Service.Service
                     Id = d.Id,
                     ProductId = d.ProductId,
                     Name = d.Product.Name,
-                    Quantity = d.Quantity,
+                    Quantity = d.Quantity-(d.ReturnedQuantity??0),
                     UnitPrice = d.UnitPrice.Value,
                     Discount = d.Discount
                 }).ToList()

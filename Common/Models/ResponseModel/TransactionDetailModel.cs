@@ -10,6 +10,8 @@ namespace Common.Models.ResponseModel
         public int ProductId { get; set; }
         public string ProductName { get; set; }
         public int Quantity { get; set; }
+        public int? ReturnedQuantity { get; set; }
+        public decimal? ReturnedAmount { get; set; }
         public decimal? UnitPrice { get; set; }
         public decimal? Total { get; set; }
         public decimal? Discount { get; set; }
@@ -27,6 +29,8 @@ namespace Common.Models.ResponseModel
         public int TotalItemSold { get; set; }
         public decimal? TotalAmountGenerated { get; set; }
         public decimal? TotalDiscount { get; set; }
+        public int? TotalReturnedQuantity { get; set; }
+        public decimal? TotalReturnedAmount { get; set; }
         public decimal? TotalReceivedAmount { get; set; }
         public DateTime? TransactionDate { get; set; }
     }
@@ -40,6 +44,8 @@ namespace Common.Models.ResponseModel
         public decimal? TotalAmount { get; set; }
         public decimal? TotalDiscount { get; set; }
         public decimal? NetAmount { get; set; }
+        //public int? TotalReturnedQuantity { get; set; }
+        //public decimal? TotalReturnedAmount { get; set; }
     }
 
 
