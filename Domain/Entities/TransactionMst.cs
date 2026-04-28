@@ -27,5 +27,6 @@ namespace Domain.Entities
         public bool? IsActive { get; set; }
         public DateTime? RevertedOn { get; set; }
         public int? RevertedBy { get; set; }
+        public long? ReferenceNumber { get; set; }
     }
 }

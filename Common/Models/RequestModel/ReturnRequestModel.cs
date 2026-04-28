@@ -8,7 +8,7 @@ namespace Common.Models.RequestModel
     {
         public int TransactionId { get; set; }
         public int? CreatedBy { get; set; }
-        public List<ReturnProductModel> Products { get; set; } = new();
+        public List<ReturnProductModel> ReturnProducts { get; set; } = new();
     }
 
     public class ReturnProductModel

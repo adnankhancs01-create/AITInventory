@@ -1,4 +1,4 @@
-﻿@page "/retail/{transactionId:int?}"
+﻿@page "/return/{transactionId:int?}"
 @using AIT_Inventory_App.C_.Models
 @using Common
 @using Common.Models
@@ -185,16 +185,7 @@
                                 <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
                                               Disabled="@(@product.Discount < 0)"
                                               Click="() => ChangeDiscount(product, false)" />
-                                @* <span style="margin:0 8px;">@product.Discount % | @product.Discount?.ToString("N2") PKR</span> *@
-                               @*  <span style="margin:0 8px;">
-                                    @product.Discount?.ToString("N2")% |
-                                    @((product.Quantity * product.UnitPrice * (product.Discount / 100))?.ToString("N2")) PKR
-                                </span> *@
-                                <span style="margin:0 8px;">
-                                    @product.Discount?.ToString("N2")% |
-                                    @((product.Quantity * product.UnitPrice * (product.Discount / 100))?.ToString("N2")) PKR
-                                </span>
-
+                                <span style="margin:0 8px;">@product.Discount % | @product.Discount?.ToString("N2") PKR</span>
                                 <RadzenButton Text="+" ButtonStyle="ButtonStyle.Secondary"
                                               Click="() => ChangeDiscount(product, true)" />
                             </td>
@@ -241,13 +232,15 @@
 
                     @code {
     [Parameter] public int? transactionId { get; set; }
+    [Parameter] public bool? isReturn { get; set; }
     private List<ProductWidgetModel> widgetProducts = new();
     private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
-    // private ProcessTransactionsModel coreTransaction = new ProcessTkransactionsModel();
+    private ProcessTransactionsModel coreTransaction = new ProcessTransactionsModel();
     private List<GetProductResponseModel> existingProducts = new List<GetProductResponseModel>();
     private List<ProductCategoryModel> categories = new List<ProductCategoryModel>();
-    // private List<int> ReturnProductIds = new List<int>();
+    private List<int> ReturnProductIds = new List<int>();
     private List<dynamic> transactionOptions = new List<dynamic>();
+    private List<(int,int)> oldQuanities = new List<(int,int)>();
     int categoryId;
     int currentStock;
 
@@ -255,6 +248,13 @@
     {
         if (int.TryParse(value, out int newQty))
         {
+            // Rule: if return and newQty > original quantity, block
+            var coreProductTrans = coreTransaction.Products.FirstOrDefault(x => x.ProductId == product.ProductId);
+            if (isReturn == true && coreProductTrans != null && newQty > coreProductTrans.Quantity)
+            {
+                // Reset back to current quantity
+                return;
+            }
 
             UpdateTransaction(product, newQty);
         }
@@ -262,6 +262,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if(!transactionId.HasValue)
+            return;
         var getCategories = await _ProductService.GetProductCategoriesAsync(0, 1, int.MaxValue, string.Empty);
         if (getCategories != null && getCategories.Success && getCategories.Data.Item1 != null && getCategories.Data.Item1.Count > 0)
             categories = getCategories.Data.Item1;
@@ -270,47 +272,27 @@
 
     private async Task LoadPageAsync(string? filter = null)
     {
-        var result = await _ProductService.GetProductsReportAsync(0, 1, int.MaxValue, filter);
-        if(!result.Success)
-        {
-            await DialogService.Alert(result.Message, "Error");
-            return;
-        }
 
-        if (transactionId.HasValue )
+        var data = await _transactionService.GetTransactionByIdAsync(transactionId.Value);
+        if (data != null)
         {
-            var data = await _transactionService.GetTransactionByIdAsync(transactionId.Value);
-            if (data!=null)
+            CurrentTransaction = data;
+            CurrentTransaction.Products = data.Products.Select(p => new ProductWidgetModel
             {
-                CurrentTransaction = data;
-                CurrentTransaction.Products=data.Products.Select(p => new ProductWidgetModel
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    UnitPrice = p.UnitPrice,
-                    Description = p.Description,
-                    ProductId = p.ProductId,
-                    Quantity = p.Quantity,
-                    Discount = p.Discount,
-                    //DiscountPercentValue = p.Discount > 0 && p.Quantity > 0 ? Math.Round(((p.Discount / (p.Quantity * p.UnitPrice)) * 100) ?? 0) : 0
-                }).ToList();
-
-                widgetProducts = CurrentTransaction.Products;
-
-            }
-        }
-        else
-        {
-            widgetProducts = result.Data.Item1.Select(p => new ProductWidgetModel
-            {
-                Id = 0,
+                Id = p.Id,
                 Name = p.Name,
-                UnitPrice = p?.PricingModel?.UnitPrice ?? 0,
-                Description = p?.Description??string.Empty,
-                ProductId = p?.Id ?? 0,
+                UnitPrice = p.UnitPrice,
+                Description = p.Description,
+                ProductId = p.ProductId,
+                Quantity = p.Quantity,
+                Discount = p.Discount,
+                // DiscountPercentValue = p.Discount > 0 && p.Quantity > 0 ? Math.Round(((p.Discount / (p.Quantity * p.UnitPrice)) * 100) ?? 0) : 0
             }).ToList();
+
+            widgetProducts = CurrentTransaction.Products;
+            coreTransaction = CurrentTransaction;
+            CurrentTransaction.Products.ForEach(wp => { oldQuanities.Add((wp.ProductId, wp.Quantity)); });
         }
-        existingProducts = result.Data.Item1.ToList();
 
         await Task.WhenAll(widgetProducts.Select(async product =>
 {
@@ -375,13 +357,22 @@
         {
             await DialogService.Alert("No product selected", "Error");
             return;
+
         }
-        ProcessTransactionsModel.TransactionType = TransactionTypeStruct.Sell;
-        var response = await _transactionService.ProcessTransactions(ProcessTransactionsModel);
+        if(string.IsNullOrEmpty(ProcessTransactionsModel.TransactionType))
+        {
+            await DialogService.Alert("Transaction Type required", "Error");
+            return;
+
+        }
+
+        ProcessTransactionsModel.Products = ProcessTransactionsModel.Products.Where(x => ReturnProductIds.Contains(x.ProductId)).ToList();
+        var response = await _transactionService.CreateReturnTransaction(ProcessTransactionsModel);
         if (response.Success)
         {
             await DialogService.Alert("Transaction saved successfully!", "Success");
             CurrentTransaction = new ProcessTransactionsModel(); // Reset form
+            coreTransaction = new ProcessTransactionsModel(); // Reset form
             widgetProducts.ForEach(p => { p.Quantity = 0; p.Discount = 0; }); // Reset quantities and discounts
         }
         else
@@ -417,43 +408,23 @@
     }
     private void UpdateTransaction(ProductWidgetModel product, int newQuantity)
     {
-        if (transactionId > 0)
+        if (newQuantity == 0)
+            ReturnProductIds.Remove(product.ProductId);
+
+        var oldEntry = oldQuanities.FirstOrDefault(x => x.Item1 == product.ProductId);
+        if (oldEntry != default && oldEntry.Item2 < newQuantity)
         {
-            
-            var existing = existingProducts.FirstOrDefault(p => p.Id == product.ProductId);
-            if (existing == null) return;
-            int oldQuantity = product.Quantity;
-            int difference = newQuantity - oldQuantity;
-
-            // If increasing, check stock availability
-            if (difference > 0 && existing.TotalStock < difference)
-            {
-                DialogService.Alert($"Requested quantity exceeds stock {existing.TotalStock}", "Error");
-                return;
-            }
-
-            // Adjust stock
-            existing.TotalStock -= difference;
-
-
-            // Replace product in transaction
-            if (transactionId.HasValue)
-                CurrentTransaction.Products.Remove(product);
-
-            if (!CurrentTransaction.Products.Any(p => p.ProductId == product.ProductId))
-                CurrentTransaction.Products.Add(product);
-            // Update transaction quantity
-            product.Quantity = newQuantity;
+            DialogService.Alert($"Requested quantity exceeds purchased quantity {oldEntry.Item2}", "Error");
+            return;
         }
-        else
-        {
-            if (newQuantity > 0 && newQuantity>=product.Quantity)
-                AddToTransaction(product);
-            else
-            {
-                DecreaseQuantity(product);
-            }
-        }
+        if (!ReturnProductIds.Contains(product.ProductId))
+            ReturnProductIds.Add(product.ProductId);
+
+        product.Quantity = newQuantity;
+        CurrentTransaction.Products.Remove(product);
+
+        if (!CurrentTransaction.Products.Any(p => p.ProductId == product.ProductId))
+            CurrentTransaction.Products.Add(product);
     }
 
     private void DecreaseQuantity(ProductWidgetModel product)
@@ -469,20 +440,20 @@
             DialogService.Alert("Invalid entry.", "Error");
         }
     }
-    private void ChangeDiscount(ProductWidgetModel product, bool isPositive)
+
+    private void ChangeDiscount(ProductWidgetModel product,bool isPositive)
     {
-        if (isPositive)
+        if (!isPositive)
         {
-            product.Discount += 1; // increase by 1%
+            if (product.Discount > 0)
+            {
+                product.Discount--;
+            }
         }
         else
         {
-            if (product.Discount > 0)
-                product.Discount -= 1; // decrease by 1%
+            product.Discount++;
         }
-
-        // Recalculate discount amount for display
-        // product.DiscountAmount = product.Quantity * product.UnitPrice * (product.Discount / 100);
     }
 
 }

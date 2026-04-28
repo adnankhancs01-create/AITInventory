@@ -286,6 +286,7 @@ namespace Service.Service
                 TransactionType = getTransaction.TransactionType,
                 TransactionDate = getTransaction.TransactionDate,
                 Remarks = getTransaction.Remarks,
+                TransactionNumber = getTransaction.TransactionNumber,
                 Products = getTransaction.TransactionDetails.Select(d => new ProductWidgetModel
                 {
                     Id = d.Id,
@@ -299,58 +300,181 @@ namespace Service.Service
 
             return model;
         }
-        public async Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request)
+        //public async Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request)
+        //{
+        //    try
+        //    {
+        //        if (request == null || request.ReturnProducts == null || !request.ReturnProducts.Any())
+        //            return BaseResponse<int?>.FailureResponse(new List<string> { "Invalid request" }, "Error");
+        //        StringBuilder stringBuilder = new StringBuilder();
+        //        foreach (var returnItem in request.ReturnProducts)
+        //        {
+        //            if (returnItem.Quantity < 1)
+        //            {
+        //                stringBuilder.AppendLine($"Return quantity for product {returnItem.ProductId} cannot be negative or zero.");
+        //                continue;
+        //            }
+        //            var getTransaction = await _transactionRepo.GetTransactionDetailByProduct(request.TransactionId, returnItem.ProductId);
+        //            if (getTransaction == null)
+        //            {
+        //                stringBuilder.AppendLine($"Product {returnItem.ProductId} not found.");
+        //                continue;
+        //            }
+
+        //            int requestedReturnQuantity = returnItem.Quantity == 0 ? getTransaction.Quantity : returnItem.Quantity;
+        //            //if (getTransaction?.Quantity == returnItem.Quantity)
+        //            //    continue;
+
+        //            int alreadyReturned = getTransaction.ReturnedQuantity ?? 0;
+        //            int availableQty = getTransaction.Quantity - alreadyReturned;
+
+        //            if (returnItem.Quantity > availableQty)
+        //            {
+        //                stringBuilder.AppendLine($"Only {availableQty} available for return.");
+        //                continue;
+        //            }
+
+        //            decimal unitPrice = getTransaction.UnitPrice ?? 0;
+        //            decimal discount = getTransaction.Discount ?? 0;
+        //            decimal amount = (unitPrice * requestedReturnQuantity) - discount;
+
+        //            int stockQty = getTransaction.TransMst.TransactionType == "Sell"
+        //                ? returnItem.Quantity
+        //                : -returnItem.Quantity;
+
+        //            // 🔁 Call data layer
+        //            var resp = await _transactionRepo.CreateReturnTransaction(
+        //                request.TransactionId,
+        //                returnItem.ProductId,
+        //                returnItem.Quantity==0?getTransaction.Quantity:returnItem.Quantity,
+        //                amount,
+        //                stockQty,
+        //                request.CreatedBy??0
+        //            );
+
+        //            if (!resp.Success)
+        //            {
+        //                stringBuilder.AppendLine(string.Join(", ", resp.Errors));
+        //                continue;
+        //            }
+        //        }
+
+        //        if (stringBuilder.Length > 0)
+        //        {
+        //            return BaseResponse<int?>.FailureResponse(new List<string> { stringBuilder.ToString() }, "Error occurred");
+        //        }
+
+        //        return BaseResponse<int?>.SuccessResponse(request.TransactionId, "Return successful");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BaseResponse<int?>.FailureResponse(new List<string> { ex.Message }, "Error occurred");
+        //    }
+        //}
+        public async Task<BaseResponse<List<PreparedReturnProduct>>> ValidateReturnRequest(ReturnRequestModel request)
         {
-            try
+            if (request == null || request.ReturnProducts == null || !request.ReturnProducts.Any())
+                return BaseResponse<List<PreparedReturnProduct>>.FailureResponse(
+                    new List<string> { "Invalid request" }, "Error");
+
+            var errors = new List<string>();
+            var preparedList = new List<PreparedReturnProduct>();
+
+            foreach (var returnItem in request.ReturnProducts)
             {
-                if (request == null || request.Products == null || !request.Products.Any())
-                    return BaseResponse<int?>.FailureResponse(new List<string> { "Invalid request" }, "Error");
-
-                foreach (var product in request.Products)
+                if (returnItem.Quantity < 1)
                 {
-                    var item = await _transactionRepo.GetTransactionDetailByProduct(request.TransactionId, product.ProductId);
-                    if (item == null)
-                        return BaseResponse<int?>.FailureResponse(new List<string> { $"Product {product.ProductId} not found" }, "Error");
-
-                    int requestedReturnQuantity = product.Quantity == 0 ? item.Quantity : product.Quantity;
-                    if (item?.Quantity == product.Quantity)
-                        continue;
-
-                    int alreadyReturned = item.ReturnedQuantity ?? 0;
-                    int availableQty = item.Quantity - alreadyReturned;
-
-                    if (product.Quantity > availableQty)
-                        return BaseResponse<int?>.FailureResponse(new List<string> { $"Only {availableQty} available for return" }, "Error");
-
-                    decimal unitPrice = item.UnitPrice ?? 0;
-                    decimal discount = item.Discount ?? 0;
-                    decimal amount = (unitPrice * requestedReturnQuantity) - discount;
-
-                    int stockQty = item.TransMst.TransactionType == "Sell"
-                        ? product.Quantity
-                        : -product.Quantity;
-
-                    // 🔁 Call data layer
-                    var resp = await _transactionRepo.CreateReturnTransaction(
-                        request.TransactionId,
-                        product.ProductId,
-                        product.Quantity==0?item.Quantity:product.Quantity,
-                        amount,
-                        stockQty,
-                        request.CreatedBy??0
-                    );
-
-                    if (!resp.Success)
-                        return resp;
+                    errors.Add($"Return quantity for product {returnItem.ProductId} cannot be negative or zero.");
+                    continue;
                 }
 
-                return BaseResponse<int?>.SuccessResponse(request.TransactionId, "Return successful");
+                var getTransaction = await _transactionRepo.GetTransactionDetailByProduct(request.TransactionId, returnItem.ProductId);
+                if (getTransaction == null)
+                {
+                    errors.Add($"Product {returnItem.ProductId} not found.");
+                    continue;
+                }
+
+                int alreadyReturned = getTransaction.ReturnedQuantity ?? 0;
+                int availableQty = getTransaction.Quantity - alreadyReturned;
+
+                if (returnItem.Quantity > availableQty)
+                {
+                    errors.Add($"Only {availableQty} available for return for product {returnItem.ProductId}.");
+                    continue;
+                }
+
+                // ✅ Correct discount calculation (percentage)
+                decimal unitPrice = getTransaction.UnitPrice ?? 0;
+                decimal discountPercent = getTransaction.Discount ?? 0;
+                decimal grossAmount = unitPrice * returnItem.Quantity;
+                decimal discountAmount = grossAmount * (discountPercent / 100);
+                decimal amount = grossAmount - discountAmount;
+
+                int stockQty = getTransaction.TransMst.TransactionType == "Sell"
+                    ? returnItem.Quantity
+                    : -returnItem.Quantity;
+
+                preparedList.Add(new PreparedReturnProduct
+                {
+                    TransactionId = request.TransactionId,
+                    ProductId = returnItem.ProductId,
+                    Quantity = returnItem.Quantity,
+                    Amount = amount,
+                    Discount = discountPercent,
+                    //DiscountAmount = discountAmount,
+                    StockQty = stockQty,
+                    CreatedBy = request.CreatedBy ?? 0
+                });
             }
-            catch (Exception ex)
-            {
-                return BaseResponse<int?>.FailureResponse(new List<string> { ex.Message }, "Error occurred");
-            }
+
+            if (errors.Any())
+                return BaseResponse<List<PreparedReturnProduct>>.FailureResponse(errors, "Validation errors");
+
+            return BaseResponse<List<PreparedReturnProduct>>.SuccessResponse(preparedList, "Validation successful");
         }
+
+        public async Task<BaseResponse<int?>> CreateReturnTransaction(ProcessTransactionsModel request)
+        {
+            // Step 1: Validate and prepare
+            var validationResult = await ValidateReturnRequest(
+                new ReturnRequestModel {TransactionId= request.TransactionId.Value, ReturnProducts = request.Products
+                .Select(p => new ReturnProductModel { ProductId = p.ProductId, Quantity = p.Quantity }).ToList() });
+
+            if (!validationResult.Success)
+                return BaseResponse<int?>.FailureResponse(validationResult.Errors, "Validation failed");
+
+            var preparedList = validationResult.Data;
+
+            // Step 2: Build TransactionMst for Return
+            var transactionEntity = new TransactionMst
+            {
+                ClientId = request.ClientId,
+                ClientName = request.ClientName,
+                ClientAddress = request.ClientAddress,
+                TransactionType = "Return", // 🔑
+                TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
+                ReferenceNumber = request.TransactionNumber, // 🔑 link to original
+                TransactionDate = DateTime.Now,
+                IsActive = true,
+                Remarks = request.Remarks,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = request.CreatedBy,
+                TransactionDetails = preparedList.Select(p => new TransactionDetails
+                {
+                    ProductId = p.ProductId,
+                    Quantity = p.Quantity,
+                    UnitPrice = p.Amount / p.Quantity, // net unit price after discount
+                    Discount = p.Discount,
+                    CreatedOn = DateTime.UtcNow,
+                    CreatedBy = request.CreatedBy
+                }).ToList()
+            };
+
+            // Step 3: Persist
+            return await _transactionRepo.ProcessTransactions(transactionEntity);
+        }
+
         public async Task<BaseResponse<bool>> RevertTransaction(int transactionId)
         {
             try
