@@ -131,8 +131,9 @@
     <Columns>
 
         <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TransactionId" Title="ID" />
+        <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TransactionType" Title="Type" />
         <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TotalQuantity" Title="Qty" />
-        <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TotalAmount" Title="Total Amount Generated" />
+        <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TotalAmount" Title="Total Amount" />
         <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TotalDiscount" Title="Discount" />
         <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="NetAmount" Title="Received" />
         <RadzenDataGridColumn TItem="TransactionSummaryDataModel" Property="TransactionDate" Title="Date" />
@@ -160,10 +161,11 @@
 @code {
 
     RadzenDataGrid<TransactionSummaryDataModel> grid;
-    private string transactionType = TransactionType.Sell.ToString(); // default
+    private string? transactionType = null; // default
     private List<ProductModel> Products;
     private List<dynamic> transactionOptions = new()
     {
+        new { Text = "All", Value = (string?)null },
         new { Text = TransactionTypeStruct.Sell, Value = TransactionTypeStruct.Sell },
         new { Text =TransactionTypeStruct.Return, Value = TransactionTypeStruct.Return }
     };
@@ -267,7 +269,7 @@
 
     void Return(TransactionSummaryDataModel item)
     {
-        NavigationManager.NavigateTo($"/retail/{item.TransactionId}/{true}");
+        NavigationManager.NavigateTo($"/return/{item.TransactionId}");
     }
 
     async Task RevertTransaction(int id)

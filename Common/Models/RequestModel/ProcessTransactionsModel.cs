@@ -9,7 +9,8 @@ namespace Common.Models.RequestModel
     {
         public List<ProductWidgetModel> Products { get; set; } = new();
         public decimal? TotalAmount { get => Math.Round(Products.Sum(x => x.Quantity * x.UnitPrice)); }
-        public decimal? TotalDiscount { get => Math.Round(Products.Sum(x => x.Discount ?? 0)); }
+        public decimal? TotalDiscount { get => Math.Round(Products.Sum(x => (x.Quantity * x.UnitPrice * (x.Discount / 100)))??0); }
+        //public decimal? GrossAmount { get => TotalAmount- TotalDiscount; }
         public string? Remarks { get; set; }
         public int? CreatedBy { get; set; }
         public string? ClientAddress { get; set; }
@@ -20,5 +21,6 @@ namespace Common.Models.RequestModel
         public decimal? NetAmount { get => Math.Round((TotalAmount - (TotalDiscount ?? 0))??0); }
         public DateTime? TransactionDate { get; set; }
         public int? TransactionId { get; set; }
+        public long? TransactionNumber { get; set; }
     }
 }

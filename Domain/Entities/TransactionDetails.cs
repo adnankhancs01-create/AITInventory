@@ -28,7 +28,7 @@ namespace Domain.Entities
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public int? ModifiedBy { get; set; }
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "decimal(5,2)")]
         public decimal? Discount { get; set; }
         //public ICollection<VendorStock> Stocks{ get; set; }
     }

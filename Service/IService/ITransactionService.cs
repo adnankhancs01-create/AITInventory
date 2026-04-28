@@ -10,7 +10,7 @@ namespace Service.IService
         Task<BaseResponse<int?>> ProcessTransactions(ProcessTransactionsModel transactionModel);
         Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request);
         Task<ProcessTransactionsModel> GetTransactionByIdAsync(int transactionId);
-        Task<BaseResponse<int?>> CreateReturnTransaction(ReturnRequestModel request);
+        Task<BaseResponse<int?>> CreateReturnTransaction(ProcessTransactionsModel ProcessTransactionsModel);
         Task<BaseResponse<bool>> RevertTransaction(int transactionId);
         Task<BaseResponse<DashboardResponse>> GetDashboardAsync(DateTime? from, DateTime? to); 
     }

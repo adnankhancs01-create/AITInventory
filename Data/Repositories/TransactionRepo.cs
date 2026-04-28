@@ -47,44 +47,110 @@ namespace Data.Repositories
                 _dbContext.Update(transactionMst);
             }
             else
+            {
                 await _dbContext.AddAsync(transactionMst);
+            }
+
             await _dbContext.SaveChangesAsync();
 
             var stocks = new List<VendorStock>();
-            var listTransactionDetailId = transactionMst.TransactionDetails.ToList().Select(x => x.Id).ToList();
+            var listTransactionDetailId = transactionMst.TransactionDetails.Select(x => x.Id).ToList();
             var getStocks = await _dbContext.VendorStock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
-            transactionMst.TransactionDetails.ToList().ForEach(detail =>
+
+            foreach (var detail in transactionMst.TransactionDetails)
             {
-                // inactive recent stock
-                if (getStocks != null && getStocks.Count > 0)
+                // Inactivate old stock
+                if (getStocks?.Count > 0)
                 {
                     var stocksToUpdate = getStocks.Where(s => s.TransactionId == detail.Id).ToList();
-                    if (stocksToUpdate != null && stocksToUpdate.Count > 0)
-                    {
-                        stocksToUpdate.ForEach(s => s.IsActive = false);
-                    }
+                    stocksToUpdate.ForEach(s => s.IsActive = false);
                 }
 
-                // add new stock record
+                // 🔑 Stock logic
+                int stockQty;
+                if (transactionMst.TransactionType == "Return")
+                {
+                    // Return of Sell → stock increases
+                    // Return of Purchase → stock decreases
+                    stockQty = detail.Quantity; // assume original was Sell
+                }
+                else
+                {
+                    stockQty = transactionMst.TransactionType == "Purchase"
+                        ? detail.Quantity
+                        : -detail.Quantity;
+                }
+
                 var stock = new VendorStock
                 {
                     ProductId = detail.ProductId,
-                    Quantity = transactionMst.TransactionType == "Purchase" ? detail.Quantity : -detail.Quantity,
+                    Quantity = stockQty,
                     TransactionId = detail.Id,
                     CreatedOn = DateTime.UtcNow,
                     CreatedBy = transactionMst.CreatedBy,
                     IsActive = true
                 };
                 stocks.Add(stock);
-            });
+            }
 
             if (stocks.Count > 0)
             {
                 await _dbContext.AddRangeAsync(stocks);
             }
+
             await _dbContext.SaveChangesAsync();
             return BaseResponse<int?>.SuccessResponse(transactionMst.Id, "Transaction processed successfully");
         }
+
+        //public async Task<BaseResponse<int?>> ProcessTransactions(TransactionMst transactionMst)
+        //{
+        //    if (transactionMst.Id < 0)
+        //        return BaseResponse<int?>.FailureResponse(new List<string> { "Failed to save transaction" }, "Transaction processing failed");
+
+        //    if (transactionMst.Id > 0)
+        //    {
+        //        _dbContext.ChangeTracker.Clear();
+        //        _dbContext.Update(transactionMst);
+        //    }
+        //    else
+        //        await _dbContext.AddAsync(transactionMst);
+        //    await _dbContext.SaveChangesAsync();
+
+        //    var stocks = new List<VendorStock>();
+        //    var listTransactionDetailId = transactionMst.TransactionDetails.ToList().Select(x => x.Id).ToList();
+        //    var getStocks = await _dbContext.VendorStock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
+        //    transactionMst.TransactionDetails.ToList().ForEach(detail =>
+        //    {
+        //        // inactive recent stock
+        //        if (getStocks != null && getStocks.Count > 0)
+        //        {
+        //            var stocksToUpdate = getStocks.Where(s => s.TransactionId == detail.Id).ToList();
+        //            if (stocksToUpdate != null && stocksToUpdate.Count > 0)
+        //            {
+        //                stocksToUpdate.ForEach(s => s.IsActive = false);
+        //            }
+        //        }
+
+        //        // add new stock record
+        //        var stock = new VendorStock
+        //        {
+        //            ProductId = detail.ProductId,
+        //            Quantity = transactionMst.TransactionType == "Purchase" ? detail.Quantity : -detail.Quantity,
+        //            TransactionId = detail.Id,
+        //            CreatedOn = DateTime.UtcNow,
+        //            CreatedBy = transactionMst.CreatedBy,
+        //            IsActive = true
+        //        };
+        //        stocks.Add(stock);
+        //    });
+
+        //    if (stocks.Count > 0)
+        //    {
+        //        await _dbContext.AddRangeAsync(stocks);
+        //    }
+        //    await _dbContext.SaveChangesAsync();
+        //    return BaseResponse<int?>.SuccessResponse(transactionMst.Id, "Transaction processed successfully");
+        //}
         public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
         {
             using var con = new SqlConnection(_connectionString);
