@@ -8,6 +8,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Data;
+using static Common.Contants.Enums;
 using static Dapper.SqlMapper;
 
 namespace Data.Repositories
@@ -51,6 +52,18 @@ namespace Data.Repositories
                 await _dbContext.AddAsync(transactionMst);
             }
 
+
+            if (transactionMst.Id<1 && transactionMst.TransactionType == TransactionTypeStruct.Return)
+            {
+                var parentTrans = await _dbContext.TransactionMst.Include(x => x.TransactionDetails).FirstOrDefaultAsync(x => x.TransactionNumber == transactionMst.ReferenceNumber);
+                var requestedProductIds=transactionMst.TransactionDetails.Select(x => x.ProductId).ToList();
+                var parentDetails = parentTrans.TransactionDetails.Where(x=> requestedProductIds.Contains(x.ProductId)).ToList();
+                foreach (var item in parentDetails)
+                {
+                    var getRequestedreturn = transactionMst.TransactionDetails.FirstOrDefault(x => item.ProductId == x.ProductId);
+                    item.ReturnedQuantity = (item.ReturnedQuantity??0)+ getRequestedreturn.Quantity;
+                }
+            }
             await _dbContext.SaveChangesAsync();
 
             var stocks = new List<VendorStock>();
@@ -153,43 +166,52 @@ namespace Data.Repositories
         //}
         public async Task<PagedTransactionResponse> GetTransactionsAsync(TransactionFilterRequest request)
         {
-            using var con = new SqlConnection(_connectionString);
-
-            var multi = await con.QueryMultipleAsync(
-                "sp_GetTransactions",
-                new
-                {
-                    request.FromDate,
-                    request.ToDate,
-                    request.ProductId,
-                    request.CategoryId,
-                    request.ClientId,
-                    request.TransactionType,
-                    request.PageNumber,
-                    request.PageSize
-                },
-                commandType: CommandType.StoredProcedure
-            );
-
-            // 1. Detail records
-            var data = (await multi.ReadAsync<TransactionDetailModel>()).ToList();
-
-            // 2. Summary per transaction
-            var summaryData = (await multi.ReadAsync<TransactionSummaryDataModel>()).ToList();
-
-            // 3. Total count
-            var totalCount = await multi.ReadFirstAsync<int>();
-
-            // 4. Dashboard summary
-            var summary = await multi.ReadFirstAsync<TransactionSummaryModel>();
-
-            return new PagedTransactionResponse
+            try
             {
-                Data = data,
-                SummaryData = summaryData,
-                TotalCount = totalCount,
-                Summary = summary
-            };
+                using var con = new SqlConnection(_connectionString);
+
+                var multi = await con.QueryMultipleAsync(
+                    "sp_GetTransactions",
+                    new
+                    {
+                        request.FromDate,
+                        request.ToDate,
+                        request.ProductId,
+                        request.CategoryId,
+                        request.ClientId,
+                        request.TransactionType,
+                        request.PageNumber,
+                        request.PageSize
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                // 1. Detail records
+                var data = (await multi.ReadAsync<TransactionDetailModel>()).ToList();
+
+                // 2. Summary per transaction
+                var summaryData = (await multi.ReadAsync<TransactionSummaryDataModel>()).ToList();
+
+                // 3. Total count
+                var totalCount = await multi.ReadFirstAsync<int>();
+
+                // 4. Dashboard summary
+                var summary = await multi.ReadFirstAsync<TransactionSummaryModel>();
+
+                return new PagedTransactionResponse
+                {
+                    Data = data,
+                    SummaryData = summaryData,
+                    TotalCount = totalCount,
+                    Summary = summary
+                };
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error ProcessTransactions}");
+
+                return new PagedTransactionResponse();
+            }
         }
 
 
@@ -306,6 +328,20 @@ namespace Data.Repositories
                     }
 
                     await _dbContext.SaveChangesAsync();
+
+                    if(freshTransaction.TransactionType==TransactionTypeStruct.Return)
+                    {
+                        var parentTrans = await _dbContext.TransactionMst.Include(x => x.TransactionDetails).FirstOrDefaultAsync(x => x.TransactionNumber == freshTransaction.ReferenceNumber);
+                        var requestedProductIds = freshTransaction.TransactionDetails.Select(x => x.ProductId).ToList();
+                        var parentDetails = parentTrans.TransactionDetails.Where(x => requestedProductIds.Contains(x.ProductId)).ToList();
+                        foreach (var item in parentDetails)
+                        {
+                            var getRequestedreturn = freshTransaction.TransactionDetails.FirstOrDefault(x => item.ProductId == x.ProductId);
+                            item.ReturnedQuantity = null;
+                        }
+                    }
+                    await _dbContext.SaveChangesAsync();
+
                     await transaction.CommitAsync();
 
                     return BaseResponse<bool>.SuccessResponse(true, "Transaction reverted successfully");

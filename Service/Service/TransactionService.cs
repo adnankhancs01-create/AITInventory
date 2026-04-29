@@ -420,7 +420,7 @@ namespace Service.Service
                     TransactionId = request.TransactionId,
                     ProductId = returnItem.ProductId,
                     Quantity = returnItem.Quantity,
-                    Amount = amount,
+                    Amount = unitPrice,
                     Discount = discountPercent,
                     //DiscountAmount = discountAmount,
                     StockQty = stockQty,
