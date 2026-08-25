@@ -176,7 +176,12 @@
                         <tr>
                             <td style="border:1px solid #ccc; font-weight:600; color:#333;">Price</td>
                             <td style="border:1px solid #ccc; color:#28a745; font-weight:bold;">
-                                $@product.UnitPrice
+                                @* $@product.UnitPrice *@
+
+                                <RadzenTextBox Value="@product.UnitPrice.ToString()"
+                                               Style="margin:0 8px; width:160px;"
+                                               Change="@((string args) => OnUnitePriceChanged(product, args))" />
+
                             </td>
                         </tr>
                         <tr>
@@ -202,13 +207,6 @@
                         <tr>
                             <td style="border:1px solid #ccc; font-weight:600; color:#333;">Quantity</td>
                             <td style="border:1px solid #ccc;">
-                                @* <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
-                                              Disabled="@(@product.Quantity == 0)"
-                                              Click="() => UpdateTransaction(product, product.Quantity - 1)" />
-                                <RadzenNumeric @bind-Value="product.Quantity" Min="0"
-                                               Style="margin:0 8px; width:60px;" /> 
-                                <RadzenButton Text="+" ButtonStyle="ButtonStyle.Primary"
-                                              Click="() => UpdateTransaction(product, product.Quantity + 1)" /> *@
                                 <RadzenButton Text="-" ButtonStyle="ButtonStyle.Secondary"
                                               Disabled="@(product.Quantity == 0)"
                                               Click="@(() => UpdateTransaction(product, product.Quantity - 1))" />
@@ -257,6 +255,15 @@
         {
 
             UpdateTransaction(product, newQty);
+        }
+    }
+
+    private void OnUnitePriceChanged(ProductWidgetModel product, string value)
+    {
+        if (decimal.TryParse(value, out decimal newQty))
+        {
+            product.UnitPrice = newQty;
+            // UpdateTransaction(product, newQty);
         }
     }
 
