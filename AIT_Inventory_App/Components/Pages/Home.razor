@@ -215,7 +215,7 @@
             transactions = result.Data;
             totalCount = result.TotalCount;
             summaryData = result.SummaryData;
-            
+
             summary = result.Summary;
         }
         finally
@@ -267,22 +267,51 @@
         NavigationManager.NavigateTo($"/retail/{item.TransactionId}");
     }
 
-    void Return(TransactionSummaryDataModel item)
+    async Task Return(TransactionSummaryDataModel item)
     {
-        NavigationManager.NavigateTo($"/return/{item.TransactionId}");
+        if (item.TransactionType == TransactionTypeStruct.Return)
+        {
+            await DialogService.Alert("This transaction is already a return transaction.", "Return Not Allowed", new AlertOptions() { OkButtonText = "OK" });
+            return;
+        }
+        var confirmed = await DialogService.Confirm(
+        "Are you sure you want to Return this transaction?",
+        "Confirm Return",
+        new ConfirmOptions
+        {
+            OkButtonText = "Yes, Return",
+            CancelButtonText = "Cancel"
+        });
+
+        if (confirmed == true)
+        {
+            NavigationManager.NavigateTo($"/return/{item.TransactionId}");
+        }
     }
 
     async Task RevertTransaction(int id)
     {
-        var result = await TransactionService.RevertTransaction(id);
-        if(result.Success)
+        var confirmed = await DialogService.Confirm(
+        "Are you sure you want to revert this transaction?",
+        "Confirm Revert",
+        new ConfirmOptions
         {
-            DialogService.Alert("Transaction reverted successfully", "Success", new AlertOptions() { OkButtonText = "OK"});
-            await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
-        }
-        else
+            OkButtonText = "Yes, Revert",
+            CancelButtonText = "Cancel"
+        });
+
+        if (confirmed==true)
         {
-            DialogService.Alert(result.Message ?? "Failed to revert transaction", "Error", new AlertOptions() { OkButtonText = "OK"});
+            var result = await TransactionService.RevertTransaction(id);
+            if (result.Success)
+            {
+                DialogService.Alert("Transaction reverted successfully", "Success", new AlertOptions() { OkButtonText = "OK" });
+                await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+            }
+            else
+            {
+                DialogService.Alert(result.Message ?? "Failed to revert transaction", "Error", new AlertOptions() { OkButtonText = "OK" });
+            }
         }
     }
 }

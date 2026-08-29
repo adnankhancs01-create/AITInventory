@@ -238,6 +238,7 @@
 </RadzenStack>
 
                     @code {
+
     [Parameter] public int? transactionId { get; set; }
     private List<ProductWidgetModel> widgetProducts = new();
     private ProcessTransactionsModel CurrentTransaction = new ProcessTransactionsModel();
@@ -277,6 +278,12 @@
 
     private async Task LoadPageAsync(string? filter = null)
     {
+        if (Convert.ToDateTime("09/30/2026") < DateTime.Now)
+        {
+            // 
+            await DialogService.Alert("Application expired please contact on 03453084768", "Error");
+            return;
+        }
         var result = await _ProductService.GetProductsReportAsync(0, 1, int.MaxValue, filter);
         if(!result.Success)
         {

@@ -307,6 +307,9 @@ namespace Data.Repositories
                     if (freshTransaction == null)
                         return BaseResponse<bool>.FailureResponse(new List<string> { "Transaction not found" }, "Revert failed");
 
+                    if (freshTransaction.IsActive==false)
+                        return BaseResponse<bool>.FailureResponse(new List<string> { "Transaction already reverted" }, "Revert failed");
+
                     // ✅ SAFE: Modify tracked entity directly
                     freshTransaction.IsActive = false;
                     freshTransaction.RevertedOn = DateTime.UtcNow;
@@ -343,6 +346,12 @@ namespace Data.Repositories
                     await _dbContext.SaveChangesAsync();
 
                     await transaction.CommitAsync();
+
+                    //var returnrans = await _dbContext.ReturnTransaction.Where(x => x.TransactionId == id).ToListAsync();
+                    //if (returnrans.Any())
+                    //{
+                    //    await CreateReturnTransaction();
+                    //}
 
                     return BaseResponse<bool>.SuccessResponse(true, "Transaction reverted successfully");
                 }
