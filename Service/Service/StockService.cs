@@ -107,7 +107,7 @@ namespace Service.Service
             }
             catch (Exception ex)
             {
-                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }");
+                await _logRepo.LogExceptionAsync(ex, userId: null, additionalData: "{ \"message\": error while fetching }", MethodName: "GetFifoStocksReportAsync");
 
                 return new BaseResponse<(List<StockFifoDto> Data, int TotalCount)>(
                         new List<string> { ex.Message }, "Error fetching stocks");

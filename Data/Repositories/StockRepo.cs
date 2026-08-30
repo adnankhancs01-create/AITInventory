@@ -29,20 +29,13 @@ namespace Data.Repositories
                 if (!vendorStock.StockNumber.HasValue || vendorStock.StockNumber == 0)
                 {
                     vendorStock.StockNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
-                    await _dbContext.VendorStock.AddAsync(new VendorStock
-                    {
-                        ProductId = vendorStock.ProductId,
-                        Quantity = vendorStock.Quantity,
-                        StockNumber = vendorStock.StockNumber,
-                        TotalPurchasePrice = vendorStock.TotalPurchasePrice,
-                        VendorId = vendorStock.VendorId,
-                        CreatedOn = DateTime.Now,
-                        IsActive = vendorStock.IsActive
-                    });
+                    vendorStock.CreatedOn = DateTime.Now;
+                    vendorStock.IsActive = true;
+                    await _dbContext.VendorStock.AddAsync(vendorStock);
                 }
                 else
                 {
-                    var stock = await _dbContext.VendorStock
+                    var stock = await _dbContext.VendorStock.AsNoTracking()
                         .FirstOrDefaultAsync(x => x.StockNumber == vendorStock.StockNumber);
 
                     if (stock == null)

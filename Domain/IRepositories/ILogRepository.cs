@@ -7,6 +7,6 @@ namespace Domain.IRepositories
     public interface ILogRepository
     {
         Task LogExceptionAsync(Exception ex, string applicationName = "AITInventory", int? userId = null,
-            string additionalData = null, string? request = null);
+            string additionalData = null, string? request = null, string MethodName = null);
     }
 }

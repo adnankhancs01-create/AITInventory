@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Data.Repositories
@@ -19,7 +20,7 @@ namespace Data.Repositories
         }
 
         public async Task LogExceptionAsync(Exception ex, string applicationName = "AITInventory", int? userId = null,
-            string additionalData = null, string? request = null)
+            string additionalData = null, string? request = null, string MethodName=null)
         {
             try
             {
@@ -35,7 +36,7 @@ namespace Data.Repositories
                     StackTrace = ex.StackTrace,
                     InnerException = ex.InnerException?.ToString(),
                     Source = ex.Source,
-                    MethodName = ex.TargetSite?.Name,
+                    MethodName = MethodName,
                     UserId = userId,
                     AdditionalData = additionalData,
                     CreatedAt = DateTime.UtcNow,
