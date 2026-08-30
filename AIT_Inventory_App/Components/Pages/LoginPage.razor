@@ -1,4 +1,4 @@
-﻿@page "/login"
+﻿@page "/"
 @using System.ComponentModel.DataAnnotations
 @using Service.IService
 @layout LoginLayout
@@ -6,12 +6,28 @@
 @inject IUserService _userService
 <h1>Login</h1>
 
-<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+@* <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
     <InputText @bind-Value="loginModel.Email" placeholder="Email" />
     <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
     <button type="submit">Login</button>
 </EditForm>
+ *@
+<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
 
+    <DataAnnotationsValidator />
+
+    <InputText @bind-Value="loginModel.Email"
+               placeholder="Email" />
+
+    <InputText @bind-Value="loginModel.Password"
+               type="password"
+               placeholder="Password" />
+
+    <button type="submit">
+        Login
+    </button>
+
+</EditForm>
 <button @onclick="HandleSignUp">SignUp</button>
 
 @if (!string.IsNullOrEmpty(errorMessage))
