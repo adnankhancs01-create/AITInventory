@@ -69,7 +69,7 @@ namespace Data.Repositories
         public async Task<(List<VendorStock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter)
         {
             var query = _dbContext.VendorStock
-    .AsNoTracking().Include(x => x.Product).ThenInclude(x => x.Category)
+    .AsNoTracking().Include(x => x.Product).ThenInclude(x => x.Category).AsNoTracking()
                 .Where(x => ((productId.HasValue || productId == 0) || x.ProductId == productId) && x.IsActive==true && x.StockNumber.HasValue);
 
             if (!string.IsNullOrEmpty(filter))
