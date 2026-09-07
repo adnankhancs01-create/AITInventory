@@ -1,8 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Common.Models.RequestModel;
+using Common.Models.ResponseModel;
 using Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Data.Repositories
 {
@@ -26,14 +28,16 @@ namespace Data.Repositories
             return new AuthResponse { Success = true, Message = "Login success" };
         }
 
-        public async Task<object> RegisterAsync(string? userName, string email, string password,string mobileNo=null)
+        public async Task<object> RegisterAsync(SignUpModel signUpModel)
         {
             await _inventoryDbContext.UserMst.AddAsync(new Domain.Entities.UserMst
             {
-                Password = password,
-                Email = email,
-                mobileNo = mobileNo,
-                UserName = userName
+                Password = signUpModel.Password,
+                Email = signUpModel.Email,
+                mobileNo = signUpModel.MobileNo,
+                UserName = signUpModel.UserName,
+                BusinessName = signUpModel.BusinessName,
+                BusinessAddress= signUpModel.BusinessAddress
             });
             await _inventoryDbContext.SaveChangesAsync();
             return new AuthResponse { Success = true, Message = "Registered" };
@@ -42,7 +46,22 @@ namespace Data.Repositories
         {
            //await _signInManager.SignOutAsync();
         }
+        public async Task<GetUserInformationModel> GetKeyUserInformationAsync()
+        {
+            var user = await _inventoryDbContext.UserMst
+                .FirstOrDefaultAsync(x => !string.IsNullOrEmpty(x.BusinessName));
 
+            if (user == null)
+                return null;
+
+            return new GetUserInformationModel
+            {
+                BusinessName = user.BusinessName,
+                BusinessAddress = user.BusinessAddress,
+                Email = user.Email,
+                Mobile = user.mobileNo
+            };
+        }
     }
     public class AuthResponse
     {

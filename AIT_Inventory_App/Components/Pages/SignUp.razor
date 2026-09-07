@@ -22,7 +22,7 @@
 
 <EditForm Model="@signUpModel" OnValidSubmit="HandleSignUp">
     <DataAnnotationsValidator />
-    @* <ValidationSummary /> *@
+    <ValidationSummary />
 
     <div>
         <InputText @bind-Value="signUpModel.UserName" placeholder="UserName" />
@@ -37,9 +37,16 @@
         <InputText @bind-Value="signUpModel.Password" type="password" placeholder="Password" />
         <ValidationMessage For="@(() => signUpModel.Password)" />
     </div>
-
     <div>
         <InputText @bind-Value="signUpModel.MobileNo" type="tel" placeholder="MobileNo" />
+    </div>
+
+    <div>
+        <InputText @bind-Value="signUpModel.BusinessName" type="tel" placeholder="Business Name" />
+    </div>
+
+    <div>
+        <InputText @bind-Value="signUpModel.BusinessAddress" type="tel" placeholder="Business Address" />
     </div>
 
     <button type="submit">Sign Up</button>
@@ -61,7 +68,7 @@
 
     private async Task HandleSignUp()
     {
-        var result = await _userService.RegisterAsync(signUpModel.UserName, signUpModel.Email, signUpModel.Password, signUpModel.MobileNo);
+        var result = await _userService.RegisterAsync(signUpModel);
         if (result.Success)
         {
             Navigation.NavigateTo("/");

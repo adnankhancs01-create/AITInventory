@@ -1,5 +1,6 @@
 ﻿using Common;
 using Common.Helpers;
+using Common.Models.RequestModel;
 using Data.Repositories;
 using Domain.Entities;
 using Domain.IRepositories;
@@ -37,15 +38,33 @@ namespace Service.Services
                 "Login successful"
             );
         }
-        public async Task<BaseResponse<object>> RegisterAsync(string userName, string email, string password,string mobileNo=null)
+        public async Task<BaseResponse<object>> RegisterAsync(SignUpModel signUpModel)
         {
-            if(!email.IsValidEmail())
+            if(!signUpModel.Email.IsValidEmail())
                 return BaseResponse<object>.FailureResponse(
                     new List<string> { "Invalid email"},
                     "Unable to register user"
                 );
 
-            var result = await _userRepo.RegisterAsync(userName,email, password, mobileNo);
+            if(string.IsNullOrWhiteSpace(signUpModel.BusinessName))
+                return BaseResponse<object>.FailureResponse(
+                    new List<string> { "Invalid business name" },
+                    "Unable to register user"
+                );
+
+            if(string.IsNullOrWhiteSpace(signUpModel.BusinessAddress))
+                return BaseResponse<object>.FailureResponse(
+                    new List<string> { "Invalid business address" },
+                    "Unable to register user"
+                );
+
+            if(string.IsNullOrWhiteSpace(signUpModel.MobileNo))
+                return BaseResponse<object>.FailureResponse(
+                    new List<string> { "Invalid mobile number" },
+                    "Unable to register user"
+                );
+
+            var result = await _userRepo.RegisterAsync(signUpModel);
             var response = (AuthResponse)result;
             if (response is null || !response.Success)
                 return BaseResponse<object>.FailureResponse(

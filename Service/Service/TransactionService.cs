@@ -25,6 +25,7 @@ namespace Service.Service
         private readonly IClientRepository _clientRepo;
         private readonly ISlipPrinter _slipPrinter;
         private readonly IStockRepo _stockRepo;
+        private readonly IUserRepo _userRepo;
         public TransactionService(
             ITransactionRepo transactionRepo,
             IMapper mapper,
@@ -32,6 +33,7 @@ namespace Service.Service
             ISlipPrinter slipPrinter,
             IProductRepo productRepo,
             IClientRepository clientRepo,
+            IUserRepo userRepo,
             IStockRepo stockRepo)
         {
             _transactionRepo = transactionRepo;
@@ -41,6 +43,7 @@ namespace Service.Service
             _productRepo = productRepo;
             _clientRepo = clientRepo;
             _stockRepo = stockRepo;
+            _userRepo = userRepo;
         }
 
         private async Task<BaseResponse<AddEditTransactionResponseModel>> ValidateTransactionAsync
@@ -214,8 +217,11 @@ namespace Service.Service
                     if (!transactionModel.TransactionId.HasValue || transactionModel.TransactionId==0)
                     {
                         transactionModel.TransactionDate = transactionModel.TransactionDate ?? transactionEntity.TransactionDate;
+                        
+                        var getKeyUserInfo = await _userRepo.GetKeyUserInformationAsync();
                         // Generate slip
-                        string slip = GenerateSlip(transactionModel, transactionModel.ClientName, transactionEntity.TransactionNumber.ToString());
+                        string slip = GenerateSlip(transactionModel, transactionModel.ClientName,
+                            transactionEntity.TransactionNumber.ToString(), getKeyUserInfo);
 
                         await _transactionRepo.AddEditTransactionSlipAsync(new TransactionSlip
                         {
@@ -238,7 +244,7 @@ namespace Service.Service
                 );
             }
         }
-        private string GenerateSlip(ProcessTransactionsModel transaction, string? clientName, string? transactionNumber)
+        private string GenerateSlip(ProcessTransactionsModel transaction, string? clientName, string? transactionNumber, GetUserInformationModel? keyUser)
         {
             var sb = new StringBuilder();
             sb.AppendLine("========== Invoice ==========");
@@ -262,6 +268,19 @@ namespace Service.Service
             sb.AppendLine($"Net Amount: {transaction.NetAmount:C}");
             sb.AppendLine("--------------------------------------");
             sb.AppendLine($"Remarks: {transaction.Remarks}");
+
+            // Business footer
+            sb.AppendLine();
+            sb.AppendLine("======================================");
+            sb.AppendLine(keyUser?.BusinessName ?? "");
+            sb.AppendLine(keyUser?.BusinessAddress ?? "");
+
+            if (!string.IsNullOrWhiteSpace(keyUser?.Mobile))
+                sb.AppendLine($"Mobile: {keyUser.Mobile}");
+
+            //if (!string.IsNullOrWhiteSpace(keyUser?.Email))
+            //    sb.AppendLine($"Email: {keyUser.Email}");
+
             sb.AppendLine("======================================");
 
             return sb.ToString();

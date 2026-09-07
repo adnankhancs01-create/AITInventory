@@ -24,6 +24,10 @@ namespace Common.Models.RequestModel
     {
         public string UserName { get; set; }
         public string? MobileNo { get; set; }
+        [Required(ErrorMessage = "BusinessName required")]
+        public string? BusinessName { get; set; }
+        [Required(ErrorMessage = "BusinessAddress required")]
+        public string? BusinessAddress { get; set; }
 
     }
 }

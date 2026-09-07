@@ -17,5 +17,7 @@ namespace Domain.Entities
         public string Password { get; set; }
         public string? mobileNo { get; set; }
         public string? PasswordHash { get; set; }
+        public string? BusinessName { get; set; }
+        public string? BusinessAddress { get; set; }
     }
 }
