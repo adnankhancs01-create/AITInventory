@@ -241,8 +241,8 @@ namespace Service.Service
         private string GenerateSlip(ProcessTransactionsModel transaction, string? clientName, string? transactionNumber)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("========== Transaction Slip ==========");
-            sb.AppendLine($"Slip No: {transactionNumber}");
+            sb.AppendLine("========== Invoice ==========");
+            sb.AppendLine($"Invoice No: {transactionNumber}");
             sb.AppendLine($"Date   : {transaction.TransactionDate?.ToString("dd-MMM-yyyy HH:mm")}");
             sb.AppendLine($"Client : {clientName}");
             sb.AppendLine($"Type   : {transaction.TransactionType}");

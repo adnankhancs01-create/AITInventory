@@ -9,7 +9,18 @@ namespace Common.Models.RequestModel
     {
         public List<ProductWidgetModel> Products { get; set; } = new();
         public decimal? TotalAmount { get => Math.Round(Products.Sum(x => x.Quantity * x.UnitPrice)); }
-        public decimal? TotalDiscount { get => Math.Round(Products.Sum(x => (x.Quantity * x.UnitPrice * (x.Discount / 100)))??0); }
+        //public decimal? TotalDiscount { get => Math.Round(Products.Sum(x => (x.Quantity * x.UnitPrice * (x.Discount / 100)))??0); }
+
+        public decimal? TotalDiscount
+        {
+            get => Math.Round(
+                Products.Sum(x =>
+                    x.UnitPriceChangeValue.HasValue && x.UnitPriceChangeValue.Value > 0
+                        ? x.Quantity * (x.UnitPrice - x.UnitPriceChangeValue.Value)
+                        : x.Quantity * x.UnitPrice * (x.Discount / 100)
+                ) ?? 0
+            );
+        }
         //public decimal? GrossAmount { get => TotalAmount- TotalDiscount; }
         public string? Remarks { get; set; }
         public int? CreatedBy { get; set; }
