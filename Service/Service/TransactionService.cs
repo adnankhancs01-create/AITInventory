@@ -178,7 +178,9 @@ namespace Service.Service
                     ClientId = transactionModel.ClientId,
                     ClientName = transactionModel.ClientName,
                     TransactionType = transactionModel.TransactionType,
-                    TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
+                    TransactionNumber = (transactionModel.TransactionId ?? 0) > 0
+    ? transactionModel.TransactionNumber
+    : Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),//TransactionNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff")),
                     TransactionDate = transactionModel.TransactionDate ?? DateTime.Now,
                     IsActive= true,
                     Remarks = transactionModel.Remarks,
