@@ -184,8 +184,8 @@ namespace Service.Service
                     TransactionDate = transactionModel.TransactionDate ?? DateTime.Now,
                     IsActive= true,
                     Remarks = transactionModel.Remarks,
-                    CreatedOn = DateTime.UtcNow,
-                    CreatedBy = transactionModel.CreatedBy,
+                    CreatedOn = (transactionModel.TransactionId ?? 0) > 0 ? transactionModel.CreatedOn:DateTime.UtcNow,
+                    CreatedBy = (transactionModel.TransactionId ?? 0) > 0 ? transactionModel.CreatedBy:1,
                     TransactionDetails = transactionModel?.Products?.Select(td => new TransactionDetails
                     {
                         Id=td.Id,
@@ -193,8 +193,8 @@ namespace Service.Service
                         Quantity = td.Quantity,
                         UnitPrice = td.UnitPrice,
                         Discount = td.Discount,
-                        CreatedOn = DateTime.UtcNow,
-                        CreatedBy = transactionModel.CreatedBy
+                        CreatedOn = (transactionModel.TransactionId ?? 0) > 0 ? td.CreatedOn :DateTime.UtcNow,
+                        CreatedBy = (transactionModel.TransactionId ?? 0) > 0 ?td.CreatedBy:1
                     }).ToList()
                 };
 
