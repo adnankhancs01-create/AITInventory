@@ -1,0 +1,108 @@
+@page "/stock2"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Dashboard</h3>
+    <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" Disabled="@loading" />
+</div>
+
+@if (dashboard == null)
+{
+    <p>@(loading ? "Loading..." : "No data.")</p>
+}
+else
+{
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:20px;">
+        @Card("Products", dashboard.ProductCount.ToString(), "/stock2/overview")
+        @Card("Units on hand", dashboard.TotalUnitsOnHand.ToString("N0"), "/stock2/overview")
+        @Card("Stock value", dashboard.TotalStockValue.ToString("N2"), "/stock2/reports/valuation")
+        @Card("Low stock", dashboard.LowStockCount.ToString(), "/stock2/reorder")
+        @Card("Out of stock", dashboard.OutOfStockCount.ToString(), "/stock2/overview")
+        @Card("Negative stock", dashboard.NegativeStockCount.ToString(), "/stock2/reports/reconciliation")
+        @Card("Expiring soon", dashboard.ExpiringSoonBatches.ToString(), "/stock2/reports/expiry")
+        @Card("Expired batches", dashboard.ExpiredBatches.ToString(), "/stock2/reports/expiry")
+        @Card("Open purchase orders", dashboard.OpenPurchaseOrders.ToString(), "/stock2/purchase-orders")
+        @Card("Transfers in transit", dashboard.InTransitTransfers.ToString(), "/stock2/transfers")
+        @Card("Movements today", dashboard.MovementsToday.ToString(), "/stock2/reports/movements")
+    </div>
+
+    <RadzenRow Gap="16px">
+        <RadzenColumn Size="12" SizeMD="6">
+            <h5>Low stock</h5>
+            <RadzenDataGrid TItem="StockOverviewRowDto2" Data="@dashboard.LowStock" AllowPaging="true" PageSize="8">
+                <Columns>
+                    <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductCode" Title="Code" />
+                    <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductName" Title="Product" />
+                    <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="OnHand" Title="On hand" />
+                    <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ReorderLevel" Title="Reorder level" />
+                    <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="StockStatus" Title="Status" />
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="6">
+            <h5>Expiring batches</h5>
+            <RadzenDataGrid TItem="StockExpiryRowDto2" Data="@dashboard.ExpiringBatches" AllowPaging="true" PageSize="8">
+                <Columns>
+                    <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ProductName" Title="Product" />
+                    <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="BatchNumber" Title="Batch" />
+                    <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ExpiryDate" Title="Expiry" FormatString="{0:MM/dd/yyyy}" />
+                    <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="RemainingQuantity" Title="Qty" />
+                    <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="Status" Title="Status" />
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="6">
+            <h5>Recent movements</h5>
+            <RadzenDataGrid TItem="StockMovementRowDto2" Data="@dashboard.RecentMovements" AllowPaging="true" PageSize="8">
+                <Columns>
+                    <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="MovementDate" Title="Date" FormatString="{0:MM/dd/yyyy HH:mm}" />
+                    <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="ProductName" Title="Product" />
+                    <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="MovementType" Title="Type" />
+                    <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="Quantity" Title="Qty" />
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="6">
+            <h5>Stock value by category</h5>
+            <RadzenDataGrid TItem="KeyValuePair<string, decimal>" Data="@dashboard.ValueByCategory" AllowPaging="true" PageSize="8">
+                <Columns>
+                    <RadzenDataGridColumn TItem="KeyValuePair<string, decimal>" Property="Key" Title="Category" />
+                    <RadzenDataGridColumn TItem="KeyValuePair<string, decimal>" Property="Value" Title="Value" FormatString="{0:N2}" />
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn>
+    </RadzenRow>
+}
+
+@code {
+    private StockDashboardDto2? dashboard;
+    private bool loading;
+
+    private RenderFragment Card(string title, string value, string href) => __builder =>
+    {
+        <div style="background:#fff; border:1px solid #e3e6ea; border-radius:8px; padding:12px 14px; cursor:pointer;"
+             @onclick="@(() => Navigation.NavigateTo(href))">
+            <div style="font-size:12px; color:#6c757d;">@title</div>
+            <div style="font-size:22px; font-weight:600;">@value</div>
+        </div>
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        var result = await StockQuery.GetDashboardAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            dashboard = result.Data;
+        loading = false;
+    }
+}

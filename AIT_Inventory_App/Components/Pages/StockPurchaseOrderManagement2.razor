@@ -1,0 +1,206 @@
+@page "/stock2/purchase-orders"
+@using Common.Stock2
+@using Service.IService
+@inject IStockReceivingService2 Receiving
+@inject IStockMasterService2 StockMaster
+@inject IStockQueryService2 StockQuery
+@inject NavigationManager Navigation
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Purchase Orders</h3>
+    <div style="display:flex; gap:8px;">
+        <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+        <RadzenButton Text="New purchase order" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="NewOrder" />
+    </div>
+</div>
+
+@if (request != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5>New purchase order</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Supplier</label>
+                <RadzenDropDown TValue="int?" Data="@suppliers" TextProperty="Name" ValueProperty="Id"
+                                @bind-Value="request.VendorId" AllowClear="true" AllowFiltering="true"
+                                Placeholder="Choose a supplier" Style="width:240px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">...or supplier name</label>
+                <RadzenTextBox @bind-Value="request.SupplierName" MaxLength="100" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Order date</label>
+                <RadzenDatePicker TValue="DateTime?" @bind-Value="request.DocumentDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Expected date</label>
+                <RadzenDatePicker TValue="DateTime?" @bind-Value="request.ExpectedDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Remarks</label>
+                <RadzenTextBox @bind-Value="request.Remarks" MaxLength="500" Style="width:240px" />
+            </div>
+        </RadzenStack>
+
+        <StockLineEditor2 Lines="@request.Lines" Products="@products" ShowCost="true" QuantityTitle="Ordered qty" />
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <RadzenButton Text="Save order" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => request = null)" />
+        </div>
+    </RadzenCard>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="PO number or supplier" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Status</label>
+        <RadzenDropDown TValue="string" Data="@StockConstants2.PurchaseOrderStatuses" @bind-Value="filter.Status"
+                        AllowClear="true" Placeholder="Any" Style="width:170px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.FromDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.ToDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Number" Title="PO number" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Date" Title="Date" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Party" Title="Supplier" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Status" Title="Status" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="LineCount" Title="Lines" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalQuantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalValue" Title="Value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() => ViewAsync(row))" />
+                @if (row.Status == StockConstants2.StatusOpen || row.Status == StockConstants2.StatusPartiallyReceived)
+                {
+                    <RadzenButton Text="Receive" Icon="inventory" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success"
+                                  Click="@(() => Navigation.NavigateTo($"/stock2/receiving?po={row.Id}"))" />
+                }
+                @if (row.Status == StockConstants2.StatusOpen)
+                {
+                    <RadzenButton Icon="cancel" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
+                                  Click="@(() => CancelAsync(row))" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@if (selected != null)
+{
+    <h5 style="margin-top:16px;">Lines of @selected.Number</h5>
+    <RadzenDataGrid TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
+        <Columns>
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductCode" Title="Code" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductName" Title="Product" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="Quantity" Title="Ordered" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProcessedQuantity" Title="Received" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="LineValue" Title="Value" FormatString="{0:N2}" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private RadzenDataGrid<DocumentRowDto2>? grid;
+    private List<DocumentRowDto2> rows = new();
+    private List<DocumentLineDto2> lines = new();
+    private List<StockSupplierDto2> suppliers = new();
+    private List<ProductLookupDto2> products = new();
+    private DocumentRowDto2? selected;
+    private PurchaseOrderRequestDto2? request;
+    private int count;
+    private bool saving;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var s = await StockMaster.GetSuppliersAsync(false);
+        if (s.Success) suppliers = s.Data;
+        var p = await StockQuery.GetProductLookupAsync();
+        if (p.Success) products = p.Data;
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await Receiving.GetPurchaseOrdersAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private void NewOrder()
+    {
+        request = new PurchaseOrderRequestDto2 { DocumentDate = DateTime.Today };
+        request.Lines.Add(new DocumentLineRequestDto2());
+    }
+
+    private async Task SaveAsync()
+    {
+        if (request == null) return;
+        saving = true;
+        var result = await Receiving.CreatePurchaseOrderAsync(request);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            request = null;
+            await grid!.Reload();
+        }
+    }
+
+    private async Task ViewAsync(DocumentRowDto2 row)
+    {
+        var result = await Receiving.GetPurchaseOrderLinesAsync(row.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            selected = row;
+            lines = result.Data;
+        }
+    }
+
+    private async Task CancelAsync(DocumentRowDto2 row)
+    {
+        var confirmed = await DialogService.Confirm($"Cancel purchase order {row.Number}?", "Cancel purchase order",
+            new ConfirmOptions { OkButtonText = "Yes, cancel it", CancelButtonText = "No" });
+        if (confirmed != true) return;
+
+        var result = await Receiving.CancelPurchaseOrderAsync(row.Id, null);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await grid!.Reload();
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await Receiving.GetPurchaseOrdersAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "PurchaseOrders", result.Data.Items);
+    }
+}

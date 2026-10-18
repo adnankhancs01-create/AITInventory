@@ -1,0 +1,254 @@
+@page "/stock2/adjustments"
+@using Common.Stock2
+@using Service.IService
+@inject IStockAdjustmentService2 AdjustmentService
+@inject IStockMasterService2 StockMaster
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Adjustments and Physical Count</h3>
+    <div style="display:flex; gap:8px;">
+        <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+        <RadzenButton Text="New count / adjustment" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="@(() => counting = true)" />
+    </div>
+</div>
+
+@if (counting)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5>Count sheet</h5>
+        <p style="color:#6c757d; margin-top:0;">
+            Load the sheet for a location, type the quantity you physically counted, and post. Only lines whose counted
+            quantity differs from the system quantity change stock.
+        </p>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Location</label>
+                <RadzenDropDown TValue="int" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                                @bind-Value="locationId" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Search products</label>
+                <RadzenTextBox @bind-Value="sheetSearch" Placeholder="Code or name" Style="width:180px" />
+            </div>
+            <RadzenButton Text="Load count sheet" Icon="list_alt" ButtonStyle="ButtonStyle.Secondary" Click="LoadSheetAsync" />
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reason</label>
+                <RadzenDropDown TValue="string" Data="@StockConstants2.AdjustmentReasons" @bind-Value="reason"
+                                Placeholder="Choose a reason" Style="width:180px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Remarks</label>
+                <RadzenTextBox @bind-Value="remarks" MaxLength="500" Style="width:220px" />
+            </div>
+        </RadzenStack>
+
+        @if (sheet.Count > 0)
+        {
+            <div style="overflow-x:auto;">
+                <table class="table table-sm" style="min-width:560px;">
+                    <thead>
+                        <tr>
+                            <th>Code</th><th>Product</th><th style="width:100px;">System</th>
+                            <th style="width:120px;">Counted</th><th style="width:90px;">Difference</th><th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in sheet)
+                        {
+                            <tr style="@(line.Quantity != line.ProcessedQuantity ? "background:#fff8e1;" : "")">
+                                <td>@line.ProductCode</td>
+                                <td>@line.ProductName</td>
+                                <td>@line.ProcessedQuantity</td>
+                                <td><RadzenNumeric TValue="int" @bind-Value="line.Quantity" Min="0" Style="width:100%" /></td>
+                                <td>@(line.Quantity - line.ProcessedQuantity)</td>
+                                <td><RadzenTextBox @bind-Value="line.Note" MaxLength="250" Style="width:100%" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin:6px 0; font-weight:600;">Lines with a difference: @sheet.Count(x => x.Quantity != x.ProcessedQuantity)</div>
+        }
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <RadzenButton Text="Post adjustment" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="PostAsync"
+                          Disabled="@(saving || sheet.Count == 0)" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="ResetForm" />
+        </div>
+    </RadzenCard>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Number or reason" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Reason</label>
+        <RadzenDropDown TValue="string" Data="@StockConstants2.AdjustmentReasons" @bind-Value="filter.Status"
+                        AllowClear="true" Placeholder="Any" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Location</label>
+        <RadzenDropDown TValue="int?" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                        @bind-Value="filter.LocationId" AllowClear="true" Placeholder="All" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.FromDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.ToDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Number" Title="Adjustment" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Date" Title="Date" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Party" Title="Location" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Reason" Title="Reason" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="LineCount" Title="Lines" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalQuantity" Title="Net qty" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalValue" Title="Net value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() => ViewAsync(row))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Net value of filtered adjustments: @totalValue.ToString("N2")</div>
+
+@if (selected != null)
+{
+    <h5 style="margin-top:16px;">Lines of @selected.Number</h5>
+    <RadzenDataGrid TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
+        <Columns>
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductCode" Title="Code" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductName" Title="Product" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProcessedQuantity" Title="System" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="Quantity" Title="Counted" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="Note" Title="Note" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private RadzenDataGrid<DocumentRowDto2>? grid;
+    private List<DocumentRowDto2> rows = new();
+    private List<DocumentLineDto2> lines = new();
+    private List<DocumentLineDto2> sheet = new();
+    private List<StockLocationDto2> locations = new();
+    private DocumentRowDto2? selected;
+    private bool counting;
+    private bool saving;
+    private int locationId;
+    private string? sheetSearch;
+    private string? reason;
+    private string? remarks;
+    private int count;
+    private decimal totalValue;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var l = await StockMaster.GetLocationsAsync(false);
+        if (l.Success)
+        {
+            locations = l.Data;
+            locationId = (locations.FirstOrDefault(x => x.IsDefault) ?? locations.FirstOrDefault())?.Id ?? 0;
+        }
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await AdjustmentService.GetAdjustmentsAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+            totalValue = result.Data.Total("TotalValue");
+        }
+        else
+        {
+            rows = new();
+            count = 0;
+            totalValue = 0;
+        }
+    }
+
+    private async Task LoadSheetAsync()
+    {
+        var result = await AdjustmentService.GetCountSheetAsync(locationId, null, sheetSearch);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            sheet = result.Data;
+    }
+
+    private async Task PostAsync()
+    {
+        var request = new AdjustmentRequestDto2
+        {
+            LocationId = locationId,
+            Reason = reason ?? string.Empty,
+            Remarks = remarks,
+            DocumentDate = DateTime.Now
+        };
+
+        foreach (var line in sheet.Where(x => x.Quantity != x.ProcessedQuantity))
+        {
+            request.Lines.Add(new DocumentLineRequestDto2
+            {
+                ProductId = line.ProductId,
+                CountedQuantity = line.Quantity,
+                Remarks = line.Note
+            });
+        }
+
+        saving = true;
+        var result = await AdjustmentService.PostAdjustmentAsync(request);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            ResetForm();
+            await grid!.Reload();
+        }
+    }
+
+    private void ResetForm()
+    {
+        counting = false;
+        sheet = new();
+        reason = null;
+        remarks = null;
+        sheetSearch = null;
+    }
+
+    private async Task ViewAsync(DocumentRowDto2 row)
+    {
+        var result = await AdjustmentService.GetAdjustmentLinesAsync(row.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            selected = row;
+            lines = result.Data;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await AdjustmentService.GetAdjustmentsAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockAdjustments", result.Data.Items);
+    }
+}

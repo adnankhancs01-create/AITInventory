@@ -1,0 +1,73 @@
+@page "/stock2/reports/valuation"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Valuation (FIFO)</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <RadzenCheckBox TValue="bool" @bind-Value="filter.IncludeZero" Name="zero" />
+    <RadzenLabel Text="Include zero stock" Component="zero" />
+
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockValuationRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="CategoryName" Title="Category" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="OnHand" Title="On hand" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="AverageUnitCost" Title="Avg cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="StockValue" Title="Value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockValuationRowDto2" Property="HasEstimatedCost" Title="Estimated cost" />
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Total stock value (all filtered products): @lastPage.Total("StockValue").ToString("N2")</div>
+
+@code {
+    private RadzenDataGrid<StockValuationRowDto2>? grid;
+    private List<StockValuationRowDto2> rows = new();
+    private int count;
+    private PagedResult2<StockValuationRowDto2> lastPage = new();
+    private readonly StockQueryFilter2 filter = new();
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetValuationAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            lastPage = result.Data;
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            lastPage = new();
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetValuationAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockValuation", result.Data.Items);
+    }
+}

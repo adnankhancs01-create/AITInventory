@@ -1,0 +1,78 @@
+@page "/stock2/reports/expiry"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Batch and Expiry Report</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Expiring within (days)</label>
+        <RadzenNumeric TValue="int" @bind-Value="filter.DaysAhead" Min="0" Max="3650" Style="width:140px" />
+    </div>
+    <RadzenCheckBox TValue="bool" @bind-Value="filter.IncludeZero" Name="allBatches" />
+    <RadzenLabel Text="Show all batches with stock" Component="allBatches" />
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockExpiryRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="BatchNumber" Title="Batch" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ExpiryDate" Title="Expiry" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="DaysToExpiry" Title="Days left" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="RemainingQuantity" Title="Remaining qty" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ValueAtRisk" Title="Value at risk" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="Status" Title="Status" />
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Value at risk (all filtered batches): @lastPage.Total("ValueAtRisk").ToString("N2")</div>
+
+@code {
+    private RadzenDataGrid<StockExpiryRowDto2>? grid;
+    private List<StockExpiryRowDto2> rows = new();
+    private int count;
+    private PagedResult2<StockExpiryRowDto2> lastPage = new();
+    private readonly StockQueryFilter2 filter = new();
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetExpiryAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            lastPage = result.Data;
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            lastPage = new();
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetExpiryAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockExpiry", result.Data.Items);
+    }
+}

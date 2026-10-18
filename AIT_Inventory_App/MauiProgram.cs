@@ -1,4 +1,4 @@
-﻿//using Android.Renderscripts;
+//using Android.Renderscripts;
 using AIT_Inventory_App.C_.Models;
 using Common.Helpers;
 using Data;
@@ -8,6 +8,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Radzen;
 using Service;
+using Service.Service;
 using System.Drawing.Printing;
 namespace AIT_Inventory_App
 {
@@ -41,6 +42,8 @@ namespace AIT_Inventory_App
             builder.Services.AddRepositoryResolution(cs);
             // Service layer
             builder.Services.AddServiceResolution();
+            // Stock Management module (Stock2)
+            builder.Services.AddStockServices2();
             builder.Services.AddRadzenComponents();
             builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
             builder.Services.AddScoped<ISlipPrinter, SlipPrinter>();

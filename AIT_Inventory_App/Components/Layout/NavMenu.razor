@@ -1,4 +1,4 @@
-﻿@* <div class="sidebar-header">
+@* <div class="sidebar-header">
     AIT Inventory
 </div> *@
 
@@ -30,9 +30,67 @@
         <i class="bi bi-stack"></i> <span class="menu-text">Stock</span>
     </NavLink>
 
+    <div class="menu-item" style="cursor:pointer;" @onclick="ToggleStock2">
+        <i class="bi bi-diagram-3"></i> <span class="menu-text">Stock Management @(stock2Open ? "▾" : "▸")</span>
+    </div>
+    @if (stock2Open)
+    {
+        <NavLink href="stock2" Match="NavLinkMatch.All" class="menu-item">
+            <i class="bi bi-speedometer2"></i> <span class="menu-text">Stock Dashboard</span>
+        </NavLink>
+        <NavLink href="stock2/overview" class="menu-item">
+            <i class="bi bi-boxes"></i> <span class="menu-text">Stock Overview</span>
+        </NavLink>
+        <NavLink href="stock2/purchase-orders" class="menu-item">
+            <i class="bi bi-clipboard-check"></i> <span class="menu-text">Purchase Orders</span>
+        </NavLink>
+        <NavLink href="stock2/receiving" class="menu-item">
+            <i class="bi bi-box-arrow-in-down"></i> <span class="menu-text">Receiving</span>
+        </NavLink>
+        <NavLink href="stock2/issues" class="menu-item">
+            <i class="bi bi-box-arrow-up"></i> <span class="menu-text">Issues</span>
+        </NavLink>
+        <NavLink href="stock2/transfers" class="menu-item">
+            <i class="bi bi-arrow-left-right"></i> <span class="menu-text">Transfers</span>
+        </NavLink>
+        <NavLink href="stock2/adjustments" class="menu-item">
+            <i class="bi bi-sliders"></i> <span class="menu-text">Adjustments / Count</span>
+        </NavLink>
+        <NavLink href="stock2/reorder" class="menu-item">
+            <i class="bi bi-exclamation-triangle"></i> <span class="menu-text">Low Stock / Reorder</span>
+        </NavLink>
+        <NavLink href="stock2/locations" class="menu-item">
+            <i class="bi bi-building"></i> <span class="menu-text">Locations</span>
+        </NavLink>
+        <NavLink href="stock2/suppliers" class="menu-item">
+            <i class="bi bi-truck"></i> <span class="menu-text">Suppliers</span>
+        </NavLink>
+        <NavLink href="stock2/reports/movements" class="menu-item">
+            <i class="bi bi-clock-history"></i> <span class="menu-text">Movement Report</span>
+        </NavLink>
+        <NavLink href="stock2/reports/valuation" class="menu-item">
+            <i class="bi bi-currency-dollar"></i> <span class="menu-text">Valuation Report</span>
+        </NavLink>
+        <NavLink href="stock2/reports/aging" class="menu-item">
+            <i class="bi bi-hourglass-split"></i> <span class="menu-text">Aging Report</span>
+        </NavLink>
+        <NavLink href="stock2/reports/expiry" class="menu-item">
+            <i class="bi bi-calendar-x"></i> <span class="menu-text">Expiry Report</span>
+        </NavLink>
+        <NavLink href="stock2/reports/reconciliation" class="menu-item">
+            <i class="bi bi-check2-square"></i> <span class="menu-text">Reconciliation</span>
+        </NavLink>
+    }
+
     <NavLink href="Category" class="menu-item">
         <i class="bi bi-tags"></i> <span class="menu-text">Category</span>
     </NavLink>
 </nav>
 @code {
+    private bool stock2Open = true;
+
+    private void ToggleStock2()
+    {
+        stock2Open = !stock2Open;
+    }
 }

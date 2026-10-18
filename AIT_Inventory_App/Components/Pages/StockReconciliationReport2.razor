@@ -1,0 +1,71 @@
+@page "/stock2/reports/reconciliation"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Reconciliation</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <RadzenCheckBox TValue="bool" @bind-Value="filter.IncludeZero" Name="allRows" />
+    <RadzenLabel Text="Also show rows without an issue" Component="allRows" />
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockReconciliationRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="LedgerOnHand" Title="Ledger on hand" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="DefaultLocationQty" Title="Default location" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="OtherLocationsQty" Title="Other locations" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="InTransitQty" Title="In transit" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="LayerRemaining" Title="FIFO layers left" />
+        <RadzenDataGridColumn TItem="StockReconciliationRowDto2" Property="Issue" Title="Issue" />
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private RadzenDataGrid<StockReconciliationRowDto2>? grid;
+    private List<StockReconciliationRowDto2> rows = new();
+    private int count;
+    private PagedResult2<StockReconciliationRowDto2> lastPage = new();
+    private readonly StockQueryFilter2 filter = new();
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetReconciliationAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            lastPage = result.Data;
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            lastPage = new();
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetReconciliationAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockReconciliation", result.Data.Items);
+    }
+}

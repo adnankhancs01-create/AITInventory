@@ -1,0 +1,262 @@
+@page "/stock2/receiving"
+@using Common.Stock2
+@using Service.IService
+@inject IStockReceivingService2 Receiving
+@inject IStockMasterService2 StockMaster
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Receiving</h3>
+    <div style="display:flex; gap:8px;">
+        <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+        <RadzenButton Text="New receipt" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="@(() => NewReceipt(null))" />
+    </div>
+</div>
+
+@if (request != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5>@(request.PurchaseOrderId.HasValue ? "Receive against purchase order " + poNumber : "New receipt (no purchase order)")</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Location</label>
+                <RadzenDropDown TValue="int" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                                @bind-Value="request.LocationId" Style="width:200px" />
+            </div>
+            @if (!request.PurchaseOrderId.HasValue)
+            {
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Supplier</label>
+                    <RadzenDropDown TValue="int?" Data="@suppliers" TextProperty="Name" ValueProperty="Id"
+                                    @bind-Value="request.VendorId" AllowClear="true" AllowFiltering="true"
+                                    Placeholder="Choose a supplier" Style="width:220px" />
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">...or supplier name</label>
+                    <RadzenTextBox @bind-Value="request.SupplierName" MaxLength="100" Style="width:180px" />
+                </div>
+            }
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Supplier invoice no.</label>
+                <RadzenTextBox @bind-Value="request.SupplierInvoiceNo" MaxLength="50" Style="width:160px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Receipt date</label>
+                <RadzenDatePicker TValue="DateTime?" @bind-Value="request.DocumentDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Remarks</label>
+                <RadzenTextBox @bind-Value="request.Remarks" MaxLength="500" Style="width:220px" />
+            </div>
+        </RadzenStack>
+
+        <StockLineEditor2 Lines="@request.Lines" Products="@products" ShowCost="true" ShowBatch="true" QuantityTitle="Received qty" />
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <RadzenButton Text="Post receipt" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="PostAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => request = null)" />
+        </div>
+    </RadzenCard>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Receipt number or supplier" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Status</label>
+        <RadzenDropDown TValue="string" Data="@receiptStatuses" @bind-Value="filter.Status" AllowClear="true"
+                        Placeholder="Any" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.FromDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.ToDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Number" Title="Receipt" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Date" Title="Date" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Party" Title="Supplier" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Status" Title="Status" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="LineCount" Title="Lines" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalQuantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalValue" Title="Value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() => ViewAsync(row))" />
+                @if (row.Status == StockConstants2.StatusPosted)
+                {
+                    <RadzenButton Icon="undo" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
+                                  Click="@(() => CancelAsync(row))" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@if (selected != null)
+{
+    <h5 style="margin-top:16px;">Lines of @selected.Number</h5>
+    <RadzenDataGrid TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
+        <Columns>
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductCode" Title="Code" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductName" Title="Product" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="Quantity" Title="Qty" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="LineValue" Title="Value" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="BatchNumber" Title="Batch" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ExpiryDate" Title="Expiry" FormatString="{0:MM/dd/yyyy}" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "po")]
+    public int? PurchaseOrderId { get; set; }
+
+    private RadzenDataGrid<DocumentRowDto2>? grid;
+    private List<DocumentRowDto2> rows = new();
+    private List<DocumentLineDto2> lines = new();
+    private List<StockLocationDto2> locations = new();
+    private List<StockSupplierDto2> suppliers = new();
+    private List<ProductLookupDto2> products = new();
+    private readonly string[] receiptStatuses = { StockConstants2.StatusPosted, StockConstants2.StatusCancelled };
+    private DocumentRowDto2? selected;
+    private ReceiptRequestDto2? request;
+    private string poNumber = string.Empty;
+    private int count;
+    private bool saving;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var l = await StockMaster.GetLocationsAsync(false);
+        if (l.Success) locations = l.Data;
+        var s = await StockMaster.GetSuppliersAsync(false);
+        if (s.Success) suppliers = s.Data;
+        var p = await StockQuery.GetProductLookupAsync();
+        if (p.Success) products = p.Data;
+
+        if (PurchaseOrderId.HasValue)
+            await NewReceipt(PurchaseOrderId.Value);
+    }
+
+    private async Task NewReceipt(int? purchaseOrderId)
+    {
+        var defaultLocation = locations.FirstOrDefault(x => x.IsDefault) ?? locations.FirstOrDefault();
+        var req = new ReceiptRequestDto2
+        {
+            DocumentDate = DateTime.Today,
+            LocationId = defaultLocation?.Id ?? 0,
+            PurchaseOrderId = purchaseOrderId
+        };
+
+        if (purchaseOrderId.HasValue)
+        {
+            var result = await Receiving.GetPurchaseOrderLinesAsync(purchaseOrderId.Value);
+            if (!await StockUi2.ShowResultAsync(DialogService, result, false)) return;
+
+            var po = await Receiving.GetPurchaseOrdersAsync(new StockQueryFilter2 { Page = 1, PageSize = 1000 });
+            poNumber = po.Success ? po.Data.Items.FirstOrDefault(x => x.Id == purchaseOrderId.Value)?.Number ?? $"#{purchaseOrderId}" : $"#{purchaseOrderId}";
+
+            foreach (var l in result.Data.Where(x => x.Quantity > x.ProcessedQuantity))
+            {
+                req.Lines.Add(new DocumentLineRequestDto2
+                {
+                    ProductId = l.ProductId,
+                    Quantity = l.Quantity - l.ProcessedQuantity,
+                    UnitCost = l.UnitCost,
+                    PurchaseOrderLineId = l.LineId
+                });
+            }
+
+            if (req.Lines.Count == 0)
+            {
+                await StockUi2.AlertAsync(DialogService, "Nothing to receive", "Every line of this purchase order is already fully received.");
+                return;
+            }
+        }
+        else
+        {
+            req.Lines.Add(new DocumentLineRequestDto2());
+        }
+
+        request = req;
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await Receiving.GetReceiptsAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task PostAsync()
+    {
+        if (request == null) return;
+        saving = true;
+        var result = await Receiving.PostReceiptAsync(request);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            request = null;
+            var p = await StockQuery.GetProductLookupAsync();
+            if (p.Success) products = p.Data;
+            await grid!.Reload();
+        }
+    }
+
+    private async Task ViewAsync(DocumentRowDto2 row)
+    {
+        var result = await Receiving.GetReceiptLinesAsync(row.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            selected = row;
+            lines = result.Data;
+        }
+    }
+
+    private async Task CancelAsync(DocumentRowDto2 row)
+    {
+        var confirmed = await DialogService.Confirm(
+            $"Cancel receipt {row.Number}? The received stock is removed again (only possible if none of it was sold, issued or moved).",
+            "Cancel receipt",
+            new ConfirmOptions { OkButtonText = "Yes, cancel it", CancelButtonText = "No" });
+        if (confirmed != true) return;
+
+        var result = await Receiving.CancelReceiptAsync(row.Id, null);
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+            await grid!.Reload();
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await Receiving.GetReceiptsAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockReceipts", result.Data.Items);
+    }
+}

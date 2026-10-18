@@ -1,0 +1,93 @@
+@using Common.Stock2
+
+<div style="overflow-x:auto;">
+    <table class="table table-sm" style="min-width:640px;">
+        <thead>
+            <tr>
+                <th style="min-width:260px;">Product</th>
+                <th style="width:110px;">@QuantityTitle</th>
+                @if (ShowCost)
+                {
+                    <th style="width:130px;">Unit cost</th>
+                }
+                @if (ShowBatch)
+                {
+                    <th style="width:150px;">Batch no.</th>
+                    <th style="width:160px;">Expiry</th>
+                }
+                <th style="width:50px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Lines)
+            {
+                <tr>
+                    <td>
+                        <RadzenDropDown TValue="int"
+                                        Data="@Products"
+                                        TextProperty="DisplayName"
+                                        ValueProperty="ProductId"
+                                        Value="@line.ProductId"
+                                        ValueChanged="@((int v) => OnProductChanged(line, v))"
+                                        AllowFiltering="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Placeholder="Choose a product"
+                                        Style="width:100%" />
+                        @if (line.ProductId > 0)
+                        {
+                            <small style="color:#6c757d;">On hand: @OnHandOf(line.ProductId)</small>
+                        }
+                    </td>
+                    <td><RadzenNumeric TValue="int" @bind-Value="line.Quantity" Min="0" Style="width:100%" /></td>
+                    @if (ShowCost)
+                    {
+                        <td><RadzenNumeric TValue="decimal" @bind-Value="line.UnitCost" Min="0" Format="N2" Style="width:100%" /></td>
+                    }
+                    @if (ShowBatch)
+                    {
+                        <td><RadzenTextBox @bind-Value="line.BatchNumber" MaxLength="50" Style="width:100%" /></td>
+                        <td><RadzenDatePicker TValue="DateTime?" @bind-Value="line.ExpiryDate" DateFormat="MM/dd/yyyy" Style="width:100%" /></td>
+                    }
+                    <td>
+                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
+                                      Click="@(() => RemoveLine(line))" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<RadzenButton Text="Add line" Icon="add" ButtonStyle="ButtonStyle.Light" Click="AddLine" />
+
+@code {
+    [Parameter] public List<DocumentLineRequestDto2> Lines { get; set; } = new();
+    [Parameter] public List<ProductLookupDto2> Products { get; set; } = new();
+    [Parameter] public bool ShowCost { get; set; }
+    [Parameter] public bool ShowBatch { get; set; }
+    [Parameter] public string QuantityTitle { get; set; } = "Quantity";
+
+    private void AddLine()
+    {
+        Lines.Add(new DocumentLineRequestDto2());
+    }
+
+    private void RemoveLine(DocumentLineRequestDto2 line)
+    {
+        Lines.Remove(line);
+    }
+
+    private void OnProductChanged(DocumentLineRequestDto2 line, int productId)
+    {
+        line.ProductId = productId;
+        if (ShowCost && line.UnitCost <= 0)
+        {
+            var p = Products.FirstOrDefault(x => x.ProductId == productId);
+            if (p != null) line.UnitCost = p.LastUnitCost;
+        }
+    }
+
+    private int OnHandOf(int productId)
+    {
+        return Products.FirstOrDefault(x => x.ProductId == productId)?.OnHand ?? 0;
+    }
+}

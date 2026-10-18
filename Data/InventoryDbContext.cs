@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+using Data.Configurations;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,23 @@ namespace Data
         public DbSet<TransactionMst> TransactionMst { get; set; }
         public DbSet<TransactionDetails> TransactionDetails { get; set; }
         public DbSet<ReturnTransaction> ReturnTransaction { get; set; }
+
+        // ---------- Stock management module (all new, all suffixed 2) ----------
+        public DbSet<StockLocation2> StockLocations2 { get; set; }
+        public DbSet<StockLocationBalance2> StockLocationBalances2 { get; set; }
+        public DbSet<StockBatch2> StockBatches2 { get; set; }
+        public DbSet<ProductStockSetting2> ProductStockSettings2 { get; set; }
+        public DbSet<StockMovement2> StockMovements2 { get; set; }
+        public DbSet<PurchaseOrder2> PurchaseOrders2 { get; set; }
+        public DbSet<PurchaseOrderLine2> PurchaseOrderLines2 { get; set; }
+        public DbSet<StockReceipt2> StockReceipts2 { get; set; }
+        public DbSet<StockReceiptLine2> StockReceiptLines2 { get; set; }
+        public DbSet<StockIssue2> StockIssues2 { get; set; }
+        public DbSet<StockIssueLine2> StockIssueLines2 { get; set; }
+        public DbSet<StockTransfer2> StockTransfers2 { get; set; }
+        public DbSet<StockTransferLine2> StockTransferLines2 { get; set; }
+        public DbSet<StockAdjustment2> StockAdjustments2 { get; set; }
+        public DbSet<StockAdjustmentLine2> StockAdjustmentLines2 { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -56,6 +74,8 @@ namespace Data
                 .HasForeignKey(vs => vs.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Stock management module (new tables only; existing tables are not altered)
+            StockModelConfiguration2.Configure(modelBuilder);
         }
     }
 }

@@ -1,0 +1,96 @@
+@page "/stock2/suppliers"
+@using Common.Stock2
+@using Service.IService
+@inject IStockMasterService2 StockMaster
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h3 style="margin:0;">Suppliers</h3>
+    <RadzenButton Text="New supplier" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="NewSupplier" />
+</div>
+
+@if (editing != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div><label style="font-size:12px; color:#6c757d;">Name</label>
+                <RadzenTextBox @bind-Value="editing.Name" MaxLength="100" Style="width:220px" /></div>
+            <div><label style="font-size:12px; color:#6c757d;">Address</label>
+                <RadzenTextBox @bind-Value="editing.Address" MaxLength="200" Style="width:240px" /></div>
+            <div><label style="font-size:12px; color:#6c757d;">City</label>
+                <RadzenTextBox @bind-Value="editing.City" MaxLength="100" Style="width:150px" /></div>
+            <div><label style="font-size:12px; color:#6c757d;">State</label>
+                <RadzenTextBox @bind-Value="editing.State" MaxLength="100" Style="width:130px" /></div>
+            <div><label style="font-size:12px; color:#6c757d;">Postal code</label>
+                <RadzenTextBox @bind-Value="editing.PostalCode" MaxLength="20" Style="width:110px" /></div>
+            <div><label style="font-size:12px; color:#6c757d;">Country</label>
+                <RadzenTextBox @bind-Value="editing.Country" MaxLength="100" Style="width:140px" /></div>
+            <RadzenCheckBox TValue="bool" @bind-Value="editing.IsActive" Name="active" />
+            <RadzenLabel Text="Active" Component="active" />
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => editing = null)" />
+        </RadzenStack>
+    </RadzenCard>
+}
+
+<RadzenDataGrid TItem="StockSupplierDto2" Data="@suppliers" AllowSorting="true" AllowPaging="true" PageSize="20"
+                AllowFiltering="true" FilterMode="FilterMode.Simple">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Property="Name" Title="Name" />
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Property="Address" Title="Address" />
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Property="City" Title="City" />
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Property="Country" Title="Country" />
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Property="IsActive" Title="Active" />
+        <RadzenDataGridColumn TItem="StockSupplierDto2" Title="Actions" Sortable="false" Filterable="false">
+            <Template Context="row">
+                <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => Edit(row))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private List<StockSupplierDto2> suppliers = new();
+    private StockSupplierDto2? editing;
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var result = await StockMaster.GetSuppliersAsync(true);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            suppliers = result.Data;
+    }
+
+    private void NewSupplier()
+    {
+        editing = new StockSupplierDto2 { IsActive = true };
+    }
+
+    private void Edit(StockSupplierDto2 row)
+    {
+        editing = new StockSupplierDto2
+        {
+            Id = row.Id, Name = row.Name, Address = row.Address, City = row.City, State = row.State,
+            PostalCode = row.PostalCode, Country = row.Country, IsActive = row.IsActive
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editing == null) return;
+        saving = true;
+        var result = await StockMaster.SaveSupplierAsync(editing);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            editing = null;
+            await LoadAsync();
+        }
+    }
+}

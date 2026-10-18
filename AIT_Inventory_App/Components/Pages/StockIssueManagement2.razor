@@ -1,0 +1,196 @@
+@page "/stock2/issues"
+@using Common.Stock2
+@using Service.IService
+@inject IStockIssueService2 IssueService
+@inject IStockMasterService2 StockMaster
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Issues</h3>
+    <div style="display:flex; gap:8px;">
+        <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+        <RadzenButton Text="New issue" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="NewIssue" />
+    </div>
+</div>
+
+@if (request != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5>New stock issue (damage, expiry, loss, internal use...)</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Location</label>
+                <RadzenDropDown TValue="int" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                                @bind-Value="request.LocationId" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reason</label>
+                <RadzenDropDown TValue="string" Data="@StockConstants2.IssueReasons" @bind-Value="request.Reason"
+                                Placeholder="Choose a reason" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Date</label>
+                <RadzenDatePicker TValue="DateTime?" @bind-Value="request.DocumentDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Remarks</label>
+                <RadzenTextBox @bind-Value="request.Remarks" MaxLength="500" Style="width:260px" />
+            </div>
+        </RadzenStack>
+
+        <StockLineEditor2 Lines="@request.Lines" Products="@products" QuantityTitle="Issue qty" />
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <RadzenButton Text="Post issue" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="PostAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => request = null)" />
+        </div>
+    </RadzenCard>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Issue number or reason" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Reason</label>
+        <RadzenDropDown TValue="string" Data="@StockConstants2.IssueReasons" @bind-Value="filter.Status"
+                        AllowClear="true" Placeholder="Any" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Location</label>
+        <RadzenDropDown TValue="int?" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                        @bind-Value="filter.LocationId" AllowClear="true" Placeholder="All" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.FromDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.ToDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Number" Title="Issue" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Date" Title="Date" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Party" Title="Location" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="Reason" Title="Reason" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="LineCount" Title="Lines" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalQuantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Property="TotalValue" Title="Cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="DocumentRowDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="visibility" Size="ButtonSize.Small" Click="@(() => ViewAsync(row))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Total cost of filtered issues: @totalValue.ToString("N2")</div>
+
+@if (selected != null)
+{
+    <h5 style="margin-top:16px;">Lines of @selected.Number</h5>
+    <RadzenDataGrid TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
+        <Columns>
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductCode" Title="Code" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductName" Title="Product" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="Quantity" Title="Qty" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="DocumentLineDto2" Property="LineValue" Title="Cost" FormatString="{0:N2}" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private RadzenDataGrid<DocumentRowDto2>? grid;
+    private List<DocumentRowDto2> rows = new();
+    private List<DocumentLineDto2> lines = new();
+    private List<StockLocationDto2> locations = new();
+    private List<ProductLookupDto2> products = new();
+    private DocumentRowDto2? selected;
+    private IssueRequestDto2? request;
+    private int count;
+    private decimal totalValue;
+    private bool saving;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var l = await StockMaster.GetLocationsAsync(false);
+        if (l.Success) locations = l.Data;
+        await RefreshProductsAsync();
+    }
+
+    private async Task RefreshProductsAsync()
+    {
+        var p = await StockQuery.GetProductLookupAsync();
+        if (p.Success) products = p.Data;
+    }
+
+    private void NewIssue()
+    {
+        var def = locations.FirstOrDefault(x => x.IsDefault) ?? locations.FirstOrDefault();
+        request = new IssueRequestDto2 { DocumentDate = DateTime.Now, LocationId = def?.Id ?? 0 };
+        request.Lines.Add(new DocumentLineRequestDto2());
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await IssueService.GetIssuesAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+            totalValue = result.Data.Total("TotalValue");
+        }
+        else
+        {
+            rows = new();
+            count = 0;
+            totalValue = 0;
+        }
+    }
+
+    private async Task PostAsync()
+    {
+        if (request == null) return;
+        saving = true;
+        var result = await IssueService.PostIssueAsync(request);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            request = null;
+            await RefreshProductsAsync();
+            await grid!.Reload();
+        }
+    }
+
+    private async Task ViewAsync(DocumentRowDto2 row)
+    {
+        var result = await IssueService.GetIssueLinesAsync(row.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            selected = row;
+            lines = result.Data;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await IssueService.GetIssuesAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockIssues", result.Data.Items);
+    }
+}

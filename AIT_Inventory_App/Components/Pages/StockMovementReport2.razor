@@ -1,0 +1,93 @@
+@page "/stock2/reports/movements"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Movement History</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Type</label>
+        <RadzenDropDown TValue="string" Data="@movementTypes" @bind-Value="filter.MovementType" AllowClear="true"
+                        Placeholder="All types" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.FromDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="filter.ToDate" DateFormat="MM/dd/yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockMovementRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="MovementDate" Title="Date" FormatString="{0:MM/dd/yyyy HH:mm}" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="MovementType" Title="Type" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="Quantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="UnitCost" Title="Unit cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="LocationName" Title="Location" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="DocumentNumber" Title="Document" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="Reason" Title="Reason" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="IsReversed" Title="Reversed" />
+        <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="Source" Title="Source" />
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Quantity in: @lastPage.Total("QuantityIn").ToString("N0") &nbsp;|&nbsp; Quantity out: @lastPage.Total("QuantityOut").ToString("N0") (reversed rows excluded)</div>
+
+@code {
+    private RadzenDataGrid<StockMovementRowDto2>? grid;
+    private List<StockMovementRowDto2> rows = new();
+    private int count;
+    private PagedResult2<StockMovementRowDto2> lastPage = new();
+    private readonly StockQueryFilter2 filter = new();
+    private readonly string[] movementTypes =
+    {
+        StockConstants2.MoveSale, StockConstants2.MovePurchase, StockConstants2.MoveReturn, StockConstants2.MoveOpening,
+        StockConstants2.MoveReceipt, StockConstants2.MoveIssue, StockConstants2.MoveAdjustmentIn, StockConstants2.MoveAdjustmentOut,
+        StockConstants2.MoveTransferOut, StockConstants2.MoveTransferIn, StockConstants2.MoveTransferCancel, StockConstants2.MoveOther
+    };
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetMovementsAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            lastPage = result.Data;
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            lastPage = new();
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetMovementsAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockMovements", result.Data.Items);
+    }
+}

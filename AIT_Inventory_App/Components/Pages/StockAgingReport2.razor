@@ -1,0 +1,72 @@
+@page "/stock2/reports/aging"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Aging</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockAgingRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="Qty0To30" Title="0-30 days" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="Qty31To60" Title="31-60 days" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="Qty61To90" Title="61-90 days" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="QtyOver90" Title="Over 90 days" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="TotalQty" Title="Total qty" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="ValueOver90" Title="Value over 90" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="TotalValue" Title="Total value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockAgingRowDto2" Property="OldestLayerDate" Title="Oldest layer" FormatString="{0:MM/dd/yyyy}" />
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private RadzenDataGrid<StockAgingRowDto2>? grid;
+    private List<StockAgingRowDto2> rows = new();
+    private int count;
+    private PagedResult2<StockAgingRowDto2> lastPage = new();
+    private readonly StockQueryFilter2 filter = new();
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetAgingAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            lastPage = result.Data;
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+        }
+        else
+        {
+            lastPage = new();
+            rows = new();
+            count = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetAgingAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockAging", result.Data.Items);
+    }
+}

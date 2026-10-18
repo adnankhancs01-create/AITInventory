@@ -1,0 +1,99 @@
+@page "/stock2/overview"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject IStockMasterService2 StockMaster
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0;">Stock Overview</h3>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Location</label>
+        <RadzenDropDown TValue="int?" Data="@locations" TextProperty="Name" ValueProperty="Id"
+                        @bind-Value="filter.LocationId" AllowClear="true" Placeholder="All locations" Style="width:200px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Status</label>
+        <RadzenDropDown TValue="string" Data="@statuses" @bind-Value="filter.Status" AllowClear="true"
+                        Placeholder="Any" Style="width:170px" />
+    </div>
+    <RadzenCheckBox TValue="bool" @bind-Value="filter.IncludeZero" Name="zero" />
+    <RadzenLabel Text="Include zero stock" Component="zero" />
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="grid" TItem="StockOverviewRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+                AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
+                ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="CategoryName" Title="Category" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="OnHand" Title="On hand" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="QuantityAtLocation" Title="At location" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="InTransit" Title="In transit" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ReorderLevel" Title="Reorder level" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="AverageUnitCost" Title="Avg cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="StockValue" Title="Value" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="SellPrice" Title="Sell price" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="LastMovementOn" Title="Last movement" FormatString="{0:MM/dd/yyyy}" />
+        <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="StockStatus" Title="Status" />
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px; font-weight:600;">Total value of filtered products: @totalValue.ToString("N2")</div>
+
+@code {
+    private RadzenDataGrid<StockOverviewRowDto2>? grid;
+    private List<StockOverviewRowDto2> rows = new();
+    private List<StockLocationDto2> locations = new();
+    private readonly string[] statuses =
+    {
+        StockConstants2.StockOk, StockConstants2.StockLow, StockConstants2.StockOut, StockConstants2.StockNegative
+    };
+    private int count;
+    private decimal totalValue;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var loc = await StockMaster.GetLocationsAsync(false);
+        if (loc.Success) locations = loc.Data;
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockQuery.GetOverviewAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            rows = result.Data.Items;
+            count = result.Data.TotalCount;
+            totalValue = result.Data.Total("StockValue");
+        }
+        else
+        {
+            rows = new();
+            count = 0;
+            totalValue = 0;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await StockQuery.GetOverviewAsync(filter.ForExport());
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await StockUi2.ExportAsync(DialogService, "StockOverview", result.Data.Items);
+    }
+}

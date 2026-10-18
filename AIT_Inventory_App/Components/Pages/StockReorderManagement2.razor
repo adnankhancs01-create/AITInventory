@@ -1,0 +1,222 @@
+@page "/stock2/reorder"
+@using Common.Stock2
+@using Service.IService
+@inject IStockQueryService2 StockQuery
+@inject IStockMasterService2 StockMaster
+@inject IStockReceivingService2 Receiving
+@inject DialogService DialogService
+@using AIT_Inventory_App.Components.StockParts2
+
+<h3>Low Stock and Reorder</h3>
+
+<h5>Suggested purchases</h5>
+<p style="color:#6c757d; margin-top:0;">
+    Products at or below their reorder level. Suggested quantity = reorder quantity (or the amount needed to reach the
+    maximum level), less what is already on open purchase orders. Select the lines to order and create purchase orders;
+    one order is created per preferred supplier.
+</p>
+
+<div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+    <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light" Click="LoadSuggestionsAsync" />
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+    <RadzenButton Text="@($"Create purchase order(s) for {picked.Count} product(s)")" Icon="shopping_cart"
+                  ButtonStyle="ButtonStyle.Primary" Click="CreateOrdersAsync" Disabled="@(picked.Count == 0 || creating)" />
+</div>
+
+<RadzenDataGrid TItem="StockReorderSuggestionDto2" Data="@suggestions" AllowSorting="true" AllowPaging="true" PageSize="15"
+                AllowFiltering="true" FilterMode="FilterMode.Simple">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Title="Order" Sortable="false" Filterable="false" Width="90px">
+            <Template Context="row">
+                <RadzenCheckBox TValue="bool" Value="@picked.Contains(row.ProductId)"
+                                Change="@((bool v) => Toggle(row.ProductId, v))" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="OnHand" Title="On hand" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="ReorderLevel" Title="Reorder level" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="OnOrder" Title="On order" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="SuggestedQuantity" Title="Suggested" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="LastUnitCost" Title="Last cost" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Property="PreferredVendorName" Title="Preferred supplier" />
+    </Columns>
+</RadzenDataGrid>
+
+<h5 style="margin-top:28px;">Reorder settings</h5>
+
+@if (editing != null)
+{
+    <RadzenCard Style="margin-bottom:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">@editing.ProductCode - @editing.ProductName (on hand @editing.OnHand)</div>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reorder level</label>
+                <RadzenNumeric TValue="int" @bind-Value="editing.ReorderLevel" Min="0" Style="width:120px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reorder quantity</label>
+                <RadzenNumeric TValue="int" @bind-Value="editing.ReorderQuantity" Min="0" Style="width:120px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Max level</label>
+                <RadzenNumeric TValue="int?" @bind-Value="editing.MaxLevel" Min="0" Style="width:120px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Preferred supplier</label>
+                <RadzenDropDown TValue="int?" Data="@suppliers" TextProperty="Name" ValueProperty="Id"
+                                @bind-Value="editing.PreferredVendorId" AllowClear="true" AllowFiltering="true"
+                                Placeholder="None" Style="width:220px" />
+            </div>
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveSettingAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => editing = null)" />
+        </RadzenStack>
+    </RadzenCard>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="margin-bottom:8px; align-items:flex-end;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="filter.Search" Placeholder="Code or name" Style="width:200px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => settingsGrid.Reload())" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="settingsGrid" TItem="StockSettingDto2" Data="@settings" Count="@settingsCount" LoadData="@LoadSettings"
+                AllowPaging="true" AllowSorting="true" PageSize="15" ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="OnHand" Title="On hand" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="ReorderLevel" Title="Reorder level" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="ReorderQuantity" Title="Reorder qty" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Property="MaxLevel" Title="Max level" />
+        <RadzenDataGridColumn TItem="StockSettingDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => Edit(row))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private RadzenDataGrid<StockSettingDto2>? settingsGrid;
+    private List<StockReorderSuggestionDto2> suggestions = new();
+    private List<StockSettingDto2> settings = new();
+    private List<StockSupplierDto2> suppliers = new();
+    private readonly HashSet<int> picked = new();
+    private StockSettingDto2? editing;
+    private int settingsCount;
+    private bool saving;
+    private bool creating;
+    private readonly StockQueryFilter2 filter = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var s = await StockMaster.GetSuppliersAsync(false);
+        if (s.Success) suppliers = s.Data;
+        await LoadSuggestionsAsync();
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        var result = await StockQuery.GetReorderSuggestionsAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            suggestions = result.Data;
+            picked.RemoveWhere(id => !suggestions.Any(x => x.ProductId == id));
+        }
+    }
+
+    private void Toggle(int productId, bool on)
+    {
+        if (on) picked.Add(productId); else picked.Remove(productId);
+    }
+
+    private async Task CreateOrdersAsync()
+    {
+        creating = true;
+        var messages = new List<string>();
+
+        var groups = suggestions.Where(x => picked.Contains(x.ProductId) && x.SuggestedQuantity > 0)
+            .GroupBy(x => x.PreferredVendorId);
+
+        foreach (var group in groups)
+        {
+            var request = new PurchaseOrderRequestDto2
+            {
+                DocumentDate = DateTime.Today,
+                VendorId = group.Key,
+                Remarks = "Created from reorder suggestions"
+            };
+
+            foreach (var item in group)
+            {
+                request.Lines.Add(new DocumentLineRequestDto2
+                {
+                    ProductId = item.ProductId,
+                    Quantity = item.SuggestedQuantity,
+                    UnitCost = item.LastUnitCost
+                });
+            }
+
+            var result = await Receiving.CreatePurchaseOrderAsync(request);
+            if (result.Success)
+                messages.Add(result.Message);
+            else
+                messages.Add("Failed: " + (result.Errors != null ? string.Join("; ", result.Errors) : result.Message));
+        }
+
+        creating = false;
+        picked.Clear();
+        await StockUi2.AlertAsync(DialogService, "Purchase orders", messages.Count == 0 ? "Nothing to order." : string.Join("  •  ", messages));
+        await LoadSuggestionsAsync();
+    }
+
+    private async Task LoadSettings(LoadDataArgs args)
+    {
+        filter.SetPaging(args.Skip, args.Top);
+        filter.SetOrderBy(args.OrderBy);
+
+        var result = await StockMaster.GetSettingsAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            settings = result.Data.Items;
+            settingsCount = result.Data.TotalCount;
+        }
+        else
+        {
+            settings = new();
+            settingsCount = 0;
+        }
+    }
+
+    private void Edit(StockSettingDto2 row)
+    {
+        editing = new StockSettingDto2
+        {
+            ProductId = row.ProductId, ProductCode = row.ProductCode, ProductName = row.ProductName,
+            OnHand = row.OnHand, ReorderLevel = row.ReorderLevel, ReorderQuantity = row.ReorderQuantity,
+            MaxLevel = row.MaxLevel, PreferredVendorId = row.PreferredVendorId
+        };
+    }
+
+    private async Task SaveSettingAsync()
+    {
+        if (editing == null) return;
+        saving = true;
+        var result = await StockMaster.SaveSettingAsync(editing, null);
+        saving = false;
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            editing = null;
+            await settingsGrid!.Reload();
+            await LoadSuggestionsAsync();
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        await StockUi2.ExportAsync(DialogService, "ReorderSuggestions", suggestions);
+    }
+}
