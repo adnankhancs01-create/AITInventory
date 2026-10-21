@@ -23,7 +23,7 @@ namespace Service
                opt => opt.MapFrom(src => src.CreatedBy))
             .ReverseMap();
             CreateMap<ProductCategory, ProductCategoryModel>();
-            CreateMap<VendorClientDetail, ClientModel>();
+            CreateMap<ClientDetail, ClientModel>();
             CreateMap<Stock, VendorStockModel>();
             CreateMap<Pricing, PricingModel>();
             //CreateMap<VendorTransaction, VendorTransactionModel>();

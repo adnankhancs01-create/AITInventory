@@ -56,7 +56,7 @@ namespace Service.Service
             {
                 var result = await _clientRepository.GetAllClientsAsync(id, pageIndex, pageSize,Filter);
 
-                var data = _mapper.Map<List<VendorClientDetail>, List<ClientModel>>(result.Item1);
+                var data = _mapper.Map<List<ClientDetail>, List<ClientModel>>(result.Item1);
                 var totalCount = result.Item2;
 
                 return BaseResponse<(List<ClientModel>, int)>.SuccessResponse((data, totalCount));

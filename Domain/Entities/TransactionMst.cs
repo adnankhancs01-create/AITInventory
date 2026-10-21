@@ -18,7 +18,7 @@ namespace Domain.Entities
         public string? Remarks { get; set; }
         public int? ClientId { get; set; }   // refers to VendorClient
         [ForeignKey("ClientId")]
-        public VendorClientDetail Client { get; set; }
+        public ClientDetail Client { get; set; }
         public ICollection<TransactionDetails> TransactionDetails { get; set; }
         public DateTime? CreatedOn { get; set; }
         public int? CreatedBy { get; set; }

@@ -11,6 +11,6 @@ namespace Domain.IRepositories
     public interface IClientRepository
     {
         Task<BaseResponse<int>> AddEditClientAsync(AddEditClientDetailRequestModel model);
-        Task<(List<VendorClientDetail>, int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize, string? Filter);
+        Task<(List<ClientDetail>, int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize, string? Filter);
     }
 }

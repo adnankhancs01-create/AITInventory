@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Domain.Entities
 {
-    public class VendorClientDetail
+    public class ClientDetail
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

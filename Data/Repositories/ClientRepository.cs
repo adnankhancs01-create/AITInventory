@@ -20,7 +20,7 @@ namespace Data.Repositories
         }
         public async Task<BaseResponse<int>> AddEditClientAsync(AddEditClientDetailRequestModel model)
         {
-            VendorClientDetail entity;
+            ClientDetail entity;
 
             if (model.Id > 0)
             {
@@ -45,7 +45,7 @@ namespace Data.Repositories
             else
             {
                 // 🔹 INSERT
-                entity = new VendorClientDetail
+                entity = new ClientDetail
                 {
                     FirstName = model.FirstName,
                     LastName = model.LastName,
@@ -79,7 +79,7 @@ namespace Data.Repositories
 
         }
 
-        public async Task<(List<VendorClientDetail>,int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize,string? Filter)
+        public async Task<(List<ClientDetail>,int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize,string? Filter)
         {
             var query = _dbContext.VendorClientDetail.AsNoTracking()
                 .Where(x => x.Id == id || id == 0);
