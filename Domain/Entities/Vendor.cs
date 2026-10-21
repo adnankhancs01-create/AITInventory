@@ -36,8 +36,7 @@ namespace Domain.Entities
         public bool? IsActive { get; set; } 
 
         // Navigation properties
-        public ICollection<VendorStock> VendorStocks { get; set; }
-        public ICollection<VendorClient> VendorClients { get; set; }
+        public ICollection<Stock> VendorStocks { get; set; }
         //public ICollection<VendorTransaction> VendorTransactions { get; set; }
     }
 }

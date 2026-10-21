@@ -330,12 +330,12 @@ namespace Service.Service
                 };
 
                 // ---- lines: one positive ledger row + one batch row per line
-                var created = new List<(DocumentLineRequestDto2 Request, VendorStock Row)>();
+                var created = new List<(DocumentLineRequestDto2 Request, Stock Row)>();
                 foreach (var (req, poLine) in matches)
                 {
                     decimal total = Math.Round(req.Quantity * req.UnitCost, 2);
                     var row = StockLedgerHelper2.NewStockInRow(req.ProductId, req.Quantity, total, vendorId, userId);
-                    db.VendorStock.Add(row);
+                    db.Stock.Add(row);
 
                     db.StockBatches2.Add(new StockBatch2
                     {
@@ -434,7 +434,7 @@ namespace Service.Service
 
                 // ---- deactivate ledger rows (the same convention the existing revert uses)
                 var ledgerIds = receipt.Lines.Where(l => l.VendorStockId.HasValue).Select(l => l.VendorStockId!.Value).ToList();
-                var ledgerRows = await db.VendorStock.Where(v => ledgerIds.Contains(v.Id)).ToListAsync();
+                var ledgerRows = await db.  Stock.Where(v => ledgerIds.Contains(v.Id)).ToListAsync();
                 foreach (var row in ledgerRows)
                 {
                     row.IsActive = false;

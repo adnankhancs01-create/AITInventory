@@ -8,6 +8,7 @@ namespace Common.Models
     public class ProductWidgetModel
     {
         public int Id { get; set; }
+        public int? CreatedBy { get; set; }
         public string Name { get; set; }
         public decimal UnitPrice { get; set; }
         public string Description { get; set; }
@@ -17,5 +18,6 @@ namespace Common.Models
         //public decimal? DiscountPercentValue { get; set; } = 0;
         public decimal? Discount { get; set; } = 0;
         public decimal? UnitPriceChangeValue { get; set; } = 0;
+        public DateTime? CreatedOn { get; set; }
     }
 }

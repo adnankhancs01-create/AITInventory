@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace Domain.Entities
 {
-    public class VendorStock
+    public class Stock
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

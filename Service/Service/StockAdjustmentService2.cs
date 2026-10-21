@@ -98,7 +98,7 @@ namespace Service.Service
                     CreatedOn = DateTime.Now
                 };
 
-                var movements = new List<(StockAdjustmentLine2 Line, VendorStock Row)>();
+                var movements = new List<(StockAdjustmentLine2 Line, Stock Row)>();
 
                 foreach (var input in request.Lines)
                 {
@@ -119,7 +119,7 @@ namespace Service.Service
 
                     if (diff != 0)
                     {
-                        VendorStock row;
+                        Stock row;
                         if (diff > 0)
                         {
                             // Found stock: value it at the last known unit cost.
@@ -133,7 +133,7 @@ namespace Service.Service
                             row = StockLedgerHelper2.NewStockOutRow(input.ProductId, -diff, userId);
                         }
 
-                        db.VendorStock.Add(row);
+                        db.Stock.Add(row);
                         line.VendorStock = row;
                         await StockLedgerHelper2.ChangeBalanceAsync(db, input.ProductId, location, diff);
                         movements.Add((line, row));

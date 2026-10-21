@@ -33,6 +33,6 @@ namespace Domain.Entities
         /// <summary>The VendorStock ledger row created for a non-zero difference.</summary>
         public int? VendorStockId { get; set; }
         [ForeignKey("VendorStockId")]
-        public VendorStock? VendorStock { get; set; }
+        public Stock? VendorStock { get; set; }
     }
 }

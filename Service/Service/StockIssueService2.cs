@@ -104,14 +104,14 @@ namespace Service.Service
                     CreatedOn = DateTime.Now
                 };
 
-                var created = new List<(int ProductId, int Quantity, decimal UnitCost, VendorStock Row)>();
+                var created = new List<(int ProductId, int Quantity, decimal UnitCost, Stock Row)>();
                 foreach (var pair in wanted)
                 {
                     states.TryGetValue(pair.Key, out var state);
                     decimal unitCost = StockLayerCalculator2.EstimateIssueCost(state, pair.Value);
 
                     var row = StockLedgerHelper2.NewStockOutRow(pair.Key, pair.Value, userId);
-                    db.VendorStock.Add(row);
+                    db.Stock.Add(row);
 
                     issue.Lines.Add(new StockIssueLine2
                     {

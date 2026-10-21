@@ -89,7 +89,7 @@ namespace Service.Service
             var priceByCode = priceRows.GroupBy(x => x.ProductCode!)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.Id).First().UnitPrice);
 
-            var lastMoves = await db.VendorStock.AsNoTracking()
+            var lastMoves = await db.Stock.AsNoTracking()
                 .Where(s => s.IsActive == true && s.ProductId != null)
                 .GroupBy(s => s.ProductId)
                 .Select(g => new { ProductId = g.Key, Last = g.Max(x => x.CreatedOn) })
@@ -183,8 +183,8 @@ namespace Service.Service
             DateTime? fromDate = filter.FromDate?.Date;
             DateTime? toExclusive = filter.ToDate?.Date.AddDays(1);
 
-            // ---- A: every VendorStock ledger row (sales, purchases, returns, opening stock and Stock2 documents)
-            var ledgerQuery = db.VendorStock.AsNoTracking().Where(s => s.ProductId != null);
+            // ---- A: every Stock ledger row (sales, purchases, returns, opening stock and Stock2 documents)
+            var ledgerQuery = db.Stock.AsNoTracking().Where(s => s.ProductId != null);
             if (restrict) ledgerQuery = ledgerQuery.Where(s => productIds.Contains(s.ProductId.Value));
             if (fromDate.HasValue) ledgerQuery = ledgerQuery.Where(s => s.CreatedOn >= fromDate.Value);
             if (toExclusive.HasValue) ledgerQuery = ledgerQuery.Where(s => s.CreatedOn < toExclusive.Value);

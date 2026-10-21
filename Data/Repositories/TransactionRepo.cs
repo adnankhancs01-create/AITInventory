@@ -66,9 +66,9 @@ namespace Data.Repositories
             }
             await _dbContext.SaveChangesAsync();
 
-            var stocks = new List<VendorStock>();
+            var stocks = new List<Stock>();
             var listTransactionDetailId = transactionMst.TransactionDetails.Select(x => x.Id).ToList();
-            var getStocks = await _dbContext.VendorStock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
+            var getStocks = await _dbContext.Stock.Where(s => listTransactionDetailId.Contains(s.TransactionId ?? 0)).ToListAsync();
 
             foreach (var detail in transactionMst.TransactionDetails)
             {
@@ -94,7 +94,7 @@ namespace Data.Repositories
                         : -detail.Quantity;
                 }
 
-                var stock = new VendorStock
+                var stock = new Stock
                 {
                     ProductId = detail.ProductId,
                     Quantity = stockQty,
@@ -263,7 +263,7 @@ namespace Data.Repositories
                 item.ReturnedQuantity = (item.ReturnedQuantity ?? 0) + quantity;
 
                 // 📦 Add stock entry
-                var stock = new VendorStock
+                var stock = new Stock
                 {
                     ProductId = productId,
                     Quantity = stockQty,
@@ -273,7 +273,7 @@ namespace Data.Repositories
                     IsActive = true
                 };
 
-                await _dbContext.VendorStock.AddAsync(stock);
+                await _dbContext.Stock.AddAsync(stock);
 
                 await _dbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -319,7 +319,7 @@ namespace Data.Repositories
 
                     // ✅ Stock logic - works with tracked entities
                     var transactionDetailIds = freshTransaction.TransactionDetails.Select(d => d.Id).ToList();
-                    var currentStocks = await _dbContext.VendorStock
+                    var currentStocks = await _dbContext.Stock
                         .Where(s => s.TransactionId.HasValue
                                  && transactionDetailIds.Contains(s.TransactionId.Value)
                                  && s.IsActive == true)

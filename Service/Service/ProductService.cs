@@ -89,7 +89,7 @@ namespace Service.Service
                 if (result.Success && 
                     (requestModel.Quantity.HasValue || requestModel.TotalPurchasePrice.HasValue))
                 {
-                    var stockResult=await _stockRepo.AddEditVendorStockAsync(new VendorStock { 
+                    var stockResult=await _stockRepo.AddEditVendorStockAsync(new Stock { 
                         ProductId=result.Data.Id,
                         Quantity=requestModel.Quantity,
                         StockNumber=requestModel.StockNumber,

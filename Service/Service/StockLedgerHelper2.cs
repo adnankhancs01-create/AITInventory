@@ -63,9 +63,9 @@ namespace Service.Service
         /// <summary>Active ledger rows (optionally for some products only).</summary>
         public static async Task<List<StockLedgerRow2>> LoadActiveLedgerAsync(InventoryDbContext db, ICollection<int>? productIds = null)
         {
-            var query = db.VendorStock.AsNoTracking()
+            var query = db.Stock.AsNoTracking()
                 .Where(s => s.IsActive == true && s.ProductId != null);
-
+                
             if (productIds != null)
                 query = query.Where(s => productIds.Contains(s.ProductId.Value));
 
@@ -169,9 +169,9 @@ namespace Service.Service
         }
 
         /// <summary>Creates a positive ledger row (stock in). TotalPurchasePrice may be null when the cost is unknown.</summary>
-        public static VendorStock NewStockInRow(int productId, int quantity, decimal? totalPrice, int? vendorId, int userId)
+        public static Stock NewStockInRow(int productId, int quantity, decimal? totalPrice, int? vendorId, int userId)
         {
-            return new VendorStock
+            return new Stock
             {
                 ProductId = productId,
                 VendorId = vendorId,
@@ -185,9 +185,9 @@ namespace Service.Service
         }
 
         /// <summary>Creates a negative ledger row (stock out) in the same shape the Retail page uses for sales.</summary>
-        public static VendorStock NewStockOutRow(int productId, int quantity, int userId)
+        public static Stock NewStockOutRow(int productId, int quantity, int userId)
         {
-            return new VendorStock
+            return new Stock
             {
                 ProductId = productId,
                 Quantity = -Math.Abs(quantity),
@@ -198,7 +198,7 @@ namespace Service.Service
         }
 
         public static StockMovement2 NewMovement(int productId, int? locationId, string type, int signedQuantity, decimal? unitCost,
-            string documentType, int? documentId, string documentNumber, VendorStock? ledgerRow, string? reason, string? notes, int userId)
+            string documentType, int? documentId, string documentNumber, Stock? ledgerRow, string? reason, string? notes, int userId)
         {
             return new StockMovement2
             {

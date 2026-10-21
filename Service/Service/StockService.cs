@@ -33,7 +33,7 @@ namespace Service.Service
         {
             try
             {
-                var stockResult = await _stockRepo.AddEditVendorStockAsync(new VendorStock
+                var stockResult = await _stockRepo.AddEditVendorStockAsync(new Stock
                 {
                     ProductId = requestModel.ProductId,
                     Quantity = requestModel.Quantity,
@@ -45,7 +45,7 @@ namespace Service.Service
                     return new BaseResponse<VendorStockModel>(
                         new List<string> { "Error" }, "Something went wrong");
 
-                var data = _mapper.Map<VendorStock, VendorStockModel>(stockResult.Data);
+                var data = _mapper.Map<Stock, VendorStockModel>(stockResult.Data);
                 return BaseResponse<VendorStockModel>.SuccessResponse(data, "Request executed successfully");
             }
             catch (Exception ex)
@@ -67,7 +67,7 @@ namespace Service.Service
         {
             try
             {
-                (List<VendorStock>, int) getStocks = await _stockRepo.GetStockAsync(productId, pageIndex, pageSize, Filter);
+                (List<Stock>, int) getStocks = await _stockRepo.GetStockAsync(productId, pageIndex, pageSize, Filter);
                 return new BaseResponse<(List<GetStockResponseModel>, int)>((getStocks.Item1.Select(s => new GetStockResponseModel
                 {
                     Id = s.Id,

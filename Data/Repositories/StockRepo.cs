@@ -22,7 +22,7 @@ namespace Data.Repositories
             _dbContext = dbContext;
             _logRepo = logRepo;
         }
-        public async Task<BaseResponse<VendorStock>> AddEditVendorStockAsync(VendorStock vendorStock)
+        public async Task<BaseResponse<Stock>> AddEditVendorStockAsync(Stock vendorStock)
         {
             try
             {
@@ -31,15 +31,15 @@ namespace Data.Repositories
                     vendorStock.StockNumber = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmssfff"));
                     vendorStock.CreatedOn = DateTime.Now;
                     vendorStock.IsActive = true;
-                    await _dbContext.VendorStock.AddAsync(vendorStock);
+                    await _dbContext.Stock.AddAsync(vendorStock);
                 }
                 else
                 {
-                    var stock = await _dbContext.VendorStock.AsNoTracking()
+                    var stock = await _dbContext.Stock.AsNoTracking()
                         .FirstOrDefaultAsync(x => x.StockNumber == vendorStock.StockNumber);
 
                     if (stock == null)
-                        return BaseResponse<VendorStock>.FailureResponse(new List<string>() { "Something went wrong" }, "Stock not found");
+                        return BaseResponse<Stock>.FailureResponse(new List<string>() { "Something went wrong" }, "Stock not found");
 
                     stock.Quantity = vendorStock.Quantity;
                     stock.VendorId = vendorStock.VendorId;
@@ -49,7 +49,7 @@ namespace Data.Repositories
                 }
 
                 await _dbContext.SaveChangesAsync();
-                return BaseResponse<VendorStock>.SuccessResponse(vendorStock, "Request executed successfully");
+                return BaseResponse<Stock>.SuccessResponse(vendorStock, "Request executed successfully");
             }
             catch (Exception ex)
             {
@@ -60,15 +60,15 @@ namespace Data.Repositories
                     request: JsonSerializer.Serialize(vendorStock)
                 );
 
-                return BaseResponse<VendorStock>.FailureResponse(
+                return BaseResponse<Stock>.FailureResponse(
                     new() { ex.Message },
                     "Error occurred while processing request"
                 );
             }
         }
-        public async Task<(List<VendorStock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter)
+        public async Task<(List<Stock>, int)> GetStockAsync(int? productId, int pageIndex, int pageSize, string? filter)
         {
-            var query = _dbContext.VendorStock
+            var query = _dbContext.Stock
     .AsNoTracking().Include(x => x.Product).ThenInclude(x => x.Category).AsNoTracking()
                 .Where(x => ((productId.HasValue || productId == 0) || x.ProductId == productId) && x.IsActive==true && x.StockNumber.HasValue);
 
@@ -103,7 +103,7 @@ namespace Data.Repositories
         public async Task<BaseResponse<bool>> DeductStockAsync( int productId, int quantity)
         {
             // Get all stock entries for the product, ordered oldest first
-            var stockList = await _dbContext.VendorStock
+            var stockList = await _dbContext.Stock
                 .Where(x => x.ProductId == productId && x.Quantity > 0)
                 .OrderBy(x => x.CreatedOn)
                 .ToListAsync();
@@ -157,7 +157,7 @@ namespace Data.Repositories
             // =========================
             // 1. BASE QUERY (FILTER)
             // =========================
-            var query = _dbContext.VendorStock.Include(x => x.Product).ThenInclude(x => x.Category)
+            var query = _dbContext.Stock.Include(x => x.Product).ThenInclude(x => x.Category)
                 .AsNoTracking()
                 .Where(x =>
                     x.IsActive == true &&

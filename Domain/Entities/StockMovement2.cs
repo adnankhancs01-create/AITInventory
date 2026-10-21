@@ -39,7 +39,7 @@ namespace Domain.Entities
 
         public int? VendorStockId { get; set; }
         [ForeignKey("VendorStockId")]
-        public VendorStock? VendorStock { get; set; }
+        public Stock? VendorStock { get; set; }
 
         [MaxLength(100)]
         public string? Reason { get; set; }

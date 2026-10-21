@@ -31,6 +31,7 @@ namespace Common.Models.RequestModel
         public string? TransactionType { get; set; } = "Sell";
         public decimal? NetAmount { get => Math.Round((TotalAmount - (TotalDiscount ?? 0))??0); }
         public DateTime? TransactionDate { get; set; }
+        public DateTime? CreatedOn { get; set; }
         public int? TransactionId { get; set; }
         public long? TransactionNumber { get; set; }
     }

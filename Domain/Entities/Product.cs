@@ -25,7 +25,7 @@ public class Product
     public int? CreatedBy { get; set; }
     public DateTime? ModifiedOn { get; set; }
     public int? ModifiedBy { get; set; }
-    public ICollection<VendorStock> Stocks { get; set; }
+    public ICollection<Stock> Stocks { get; set; }
     public bool IsActive { get; set; }
     //public VendorStock Stock{ get; set; }
 }

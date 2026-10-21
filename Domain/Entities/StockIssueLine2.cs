@@ -26,6 +26,6 @@ namespace Domain.Entities
         /// <summary>The negative VendorStock ledger row created for this line.</summary>
         public int? VendorStockId { get; set; }
         [ForeignKey("VendorStockId")]
-        public VendorStock? VendorStock { get; set; }
+        public Stock? VendorStock { get; set; }
     }
 }
