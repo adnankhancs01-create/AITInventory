@@ -176,7 +176,7 @@ namespace Service.Service
                 }
                 else
                 {
-                    entity = new Vendor { CreatedAt = DateTime.Now };
+                    entity = new Vendor { CreatedOn = DateTime.Now };
                     db.Vendor.Add(entity);
                 }
 

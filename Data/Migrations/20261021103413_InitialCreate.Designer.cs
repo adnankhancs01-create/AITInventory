@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20261021093439_DBsetupInOffice")]
-    partial class DBsetupInOffice
+    [Migration("20261021103413_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,75 @@ namespace Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Domain.Entities.ClientDetail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ClientCode")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("State")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VendorClientDetail");
+                });
 
             modelBuilder.Entity("Domain.Entities.ExceptionLog", b =>
                 {
@@ -262,6 +331,61 @@ namespace Data.Migrations
                     b.HasIndex("TransactionDetailId");
 
                     b.ToTable("ReturnTransaction");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Stock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RevertTransactionId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("StockNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("TotalPurchasePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("TransactionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VendorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("VendorId");
+
+                    b.ToTable("Stock");
                 });
 
             modelBuilder.Entity("Domain.Entities.StockAdjustment2", b =>
@@ -1042,80 +1166,8 @@ namespace Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Country")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool?>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("PostalCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("State")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Vendor");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorClient", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("ClientId")
-                        .HasColumnType("int");
-
-                    b.Property<bool?>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("VendorClient");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorClientDetail", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ClientCode")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                    b.Property<string>("Code")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
                         .HasMaxLength(50)
@@ -1127,26 +1179,19 @@ namespace Data.Migrations
                     b.Property<DateTime?>("CreatedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Email")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("FirstName")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<bool?>("IsActive")
                         .HasColumnType("bit");
-
-                    b.Property<string>("LastName")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
@@ -1162,62 +1207,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VendorClientDetail");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorStock", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool?>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModifiedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RevertTransactionId")
-                        .HasColumnType("int");
-
-                    b.Property<long?>("StockNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<decimal?>("TotalPurchasePrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("TransactionId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("TransactionId");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("VendorStock");
+                    b.ToTable("Vendor");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -1357,6 +1347,28 @@ namespace Data.Migrations
                     b.Navigation("TransactionDetail");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Stock", b =>
+                {
+                    b.HasOne("Product", "Product")
+                        .WithMany("Stocks")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Domain.Entities.TransactionDetails", "TransactionDetails")
+                        .WithMany()
+                        .HasForeignKey("TransactionId");
+
+                    b.HasOne("Domain.Entities.Vendor", "Vendor")
+                        .WithMany("VendorStocks")
+                        .HasForeignKey("VendorId");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("TransactionDetails");
+
+                    b.Navigation("Vendor");
+                });
+
             modelBuilder.Entity("Domain.Entities.StockAdjustment2", b =>
                 {
                     b.HasOne("Domain.Entities.StockLocation2", "Location")
@@ -1382,7 +1394,7 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.VendorStock", "VendorStock")
+                    b.HasOne("Domain.Entities.Stock", "VendorStock")
                         .WithMany()
                         .HasForeignKey("VendorStockId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1407,7 +1419,7 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.VendorStock", "VendorStock")
+                    b.HasOne("Domain.Entities.Stock", "VendorStock")
                         .WithMany()
                         .HasForeignKey("VendorStockId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1445,7 +1457,7 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.VendorStock", "VendorStock")
+                    b.HasOne("Domain.Entities.Stock", "VendorStock")
                         .WithMany()
                         .HasForeignKey("VendorStockId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1489,7 +1501,7 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.VendorStock", "VendorStock")
+                    b.HasOne("Domain.Entities.Stock", "VendorStock")
                         .WithMany()
                         .HasForeignKey("VendorStockId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1545,7 +1557,7 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.VendorStock", "VendorStock")
+                    b.HasOne("Domain.Entities.Stock", "VendorStock")
                         .WithMany()
                         .HasForeignKey("VendorStockId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1616,7 +1628,7 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
                 {
-                    b.HasOne("Domain.Entities.VendorClientDetail", "Client")
+                    b.HasOne("Domain.Entities.ClientDetail", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId");
 
@@ -1630,43 +1642,6 @@ namespace Data.Migrations
                         .HasForeignKey("TransactionId");
 
                     b.Navigation("Transaction");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorClient", b =>
-                {
-                    b.HasOne("Domain.Entities.VendorClientDetail", "ClientDetail")
-                        .WithMany()
-                        .HasForeignKey("ClientId");
-
-                    b.HasOne("Domain.Entities.Vendor", "Vendor")
-                        .WithMany("VendorClients")
-                        .HasForeignKey("VendorId");
-
-                    b.Navigation("ClientDetail");
-
-                    b.Navigation("Vendor");
-                });
-
-            modelBuilder.Entity("Domain.Entities.VendorStock", b =>
-                {
-                    b.HasOne("Product", "Product")
-                        .WithMany("Stocks")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("Domain.Entities.TransactionDetails", "TransactionDetails")
-                        .WithMany()
-                        .HasForeignKey("TransactionId");
-
-                    b.HasOne("Domain.Entities.Vendor", "Vendor")
-                        .WithMany("VendorStocks")
-                        .HasForeignKey("VendorId");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("TransactionDetails");
-
-                    b.Navigation("Vendor");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -1712,8 +1687,6 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.Entities.Vendor", b =>
                 {
-                    b.Navigation("VendorClients");
-
                     b.Navigation("VendorStocks");
                 });
 

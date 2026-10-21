@@ -19,6 +19,9 @@ namespace Domain.Entities
 
         [MaxLength(250)]
         public string? Address { get; set; }
+        [MaxLength(20)]
+        public string? Phone { get; set; }
+        public string? Code { get; set; }//Auto Generated Vendor Code
 
         [MaxLength(50)]
         public string? City { get; set; }
@@ -32,7 +35,11 @@ namespace Domain.Entities
         [MaxLength(50)]
         public string? Country { get; set; }
 
-        public DateTime? CreatedAt { get; set; } = DateTime.Now;
+        public DateTime? CreatedOn { get; set; } = DateTime.Now;
+        public int? CreatedBy { get; set; }
+
+        public DateTime? ModifiedOn { get; set; } 
+        public int? ModifiedBy { get; set; }
         public bool? IsActive { get; set; } 
 
         // Navigation properties
