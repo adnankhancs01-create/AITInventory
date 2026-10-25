@@ -43,6 +43,7 @@ namespace AIT_Inventory_App
             // Service layer
             builder.Services.AddServiceResolution();
             // Stock Management module (Stock2)
+            builder.Services.AddStockRepositories2();
             builder.Services.AddStockServices2();
             builder.Services.AddRadzenComponents();
             builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));

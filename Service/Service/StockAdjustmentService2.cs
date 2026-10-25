@@ -1,10 +1,8 @@
 using Common;
 using Common.Stock2;
-using Data;
 using Domain.Entities;
 using Domain.IRepositories;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Domain.Stock2;
 using Service.IService;
 
 namespace Service.Service
@@ -12,16 +10,16 @@ namespace Service.Service
     /// <summary>
     /// Stock adjustments and physical-count reconciliation. The user enters the counted quantity per product;
     /// the service compares it with the system quantity at the location (read inside the transaction)
-    /// and posts only the difference to the VendorStock ledger.
+    /// and posts only the difference to the Stock ledger.
     /// </summary>
     public class StockAdjustmentService2 : IStockAdjustmentService2
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
 
-        public StockAdjustmentService2(IServiceScopeFactory scopeFactory, ILogRepository logRepo)
+        public StockAdjustmentService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
         {
-            _scopeFactory = scopeFactory;
+            _uowFactory = uowFactory;
             _logRepo = logRepo;
         }
 
@@ -66,29 +64,28 @@ namespace Service.Service
                 }
                 if (errors.Count > 0) return StockResult2.Fail<int>(errors);
 
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-                await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
+                await using var uow = _uowFactory.Create();
+                await uow.Ledger.EnsureDefaultLocationAsync();
 
-                var location = await db.StockLocations2.FirstOrDefaultAsync(l => l.Id == request.LocationId && l.IsActive);
+                var location = await uow.Ledger.GetLocationAsync(request.LocationId, true);
                 if (location == null) return StockResult2.Fail<int>("Location not found or inactive.");
 
                 var productIds = request.Lines.Select(l => l.ProductId).ToList();
-                var names = await StockLedgerHelper2.LoadActiveProductNamesAsync(db, productIds);
+                var names = await uow.Ledger.GetActiveProductNamesAsync(productIds);
                 foreach (var pid in productIds.Where(pid => !names.ContainsKey(pid)))
                     errors.Add($"Product {pid} was not found or is inactive.");
                 if (errors.Count > 0) return StockResult2.Fail<int>(errors);
 
-                await using var tx = await db.Database.BeginTransactionAsync();
+                await uow.BeginTransactionAsync();
 
-                var states = await StockLedgerHelper2.LoadStatesAsync(db, productIds);
+                var states = await uow.Ledger.GetStatesAsync(productIds);
 
-                string prefix = $"ADJ-{date:yyyyMMdd}-";
-                int existing = await db.StockAdjustments2.CountAsync(a => a.AdjustmentNumber.StartsWith(prefix));
+                string prefix = StockLedgerRules2.DocumentPrefix("ADJ", date);
+                int existing = await uow.Adjustments.CountAdjustmentsWithPrefixAsync(prefix);
 
                 var adjustment = new StockAdjustment2
                 {
-                    AdjustmentNumber = StockLedgerHelper2.BuildDocumentNumber("ADJ", date, existing),
+                    AdjustmentNumber = StockLedgerRules2.BuildDocumentNumber("ADJ", date, existing),
                     AdjustmentDate = date,
                     LocationId = location.Id,
                     Reason = StockConstants2.AdjustmentReasons.First(r => r.Equals(reason, StringComparison.OrdinalIgnoreCase)),
@@ -103,7 +100,7 @@ namespace Service.Service
                 foreach (var input in request.Lines)
                 {
                     int counted = input.CountedQuantity!.Value;
-                    int system = await StockLedgerHelper2.GetQuantityAtLocationAsync(db, input.ProductId, location);
+                    int system = await uow.Ledger.GetQuantityAtLocationAsync(input.ProductId, location);
                     int diff = counted - system;
 
                     states.TryGetValue(input.ProductId, out var state);
@@ -125,17 +122,17 @@ namespace Service.Service
                             // Found stock: value it at the last known unit cost.
                             decimal cost = state?.LastUnitCost ?? 0m;
                             line.UnitCost = cost;
-                            row = StockLedgerHelper2.NewStockInRow(input.ProductId, diff, Math.Round(cost * diff, 2), null, userId);
+                            row = StockLedgerRules2.NewStockInRow(input.ProductId, diff, Math.Round(cost * diff, 2), null, userId);
                         }
                         else
                         {
                             line.UnitCost = StockLayerCalculator2.EstimateIssueCost(state, -diff);
-                            row = StockLedgerHelper2.NewStockOutRow(input.ProductId, -diff, userId);
+                            row = StockLedgerRules2.NewStockOutRow(input.ProductId, -diff, userId);
                         }
 
-                        db.Stock.Add(row);
+                        uow.Ledger.AddLedgerRow(row);
                         line.VendorStock = row;
-                        await StockLedgerHelper2.ChangeBalanceAsync(db, input.ProductId, location, diff);
+                        await uow.Ledger.ChangeBalanceAsync(input.ProductId, location, diff);
                         movements.Add((line, row));
                     }
                     else
@@ -149,12 +146,12 @@ namespace Service.Service
                 if (movements.Count == 0)
                     return StockResult2.Fail<int>("Every counted quantity equals the system quantity. There is nothing to adjust.");
 
-                db.StockAdjustments2.Add(adjustment);
-                await db.SaveChangesAsync();
+                uow.Adjustments.AddAdjustment(adjustment);
+                await uow.SaveChangesAsync();
 
                 foreach (var m in movements)
                 {
-                    db.StockMovements2.Add(StockLedgerHelper2.NewMovement(
+                    uow.Ledger.AddMovement(StockLedgerRules2.NewMovement(
                         m.Line.ProductId, location.Id,
                         m.Line.Difference > 0 ? StockConstants2.MoveAdjustmentIn : StockConstants2.MoveAdjustmentOut,
                         m.Line.Difference, m.Line.UnitCost,
@@ -162,8 +159,8 @@ namespace Service.Service
                         adjustment.Reason, adjustment.Remarks, userId));
                 }
 
-                await db.SaveChangesAsync();
-                await tx.CommitAsync();
+                await uow.SaveChangesAsync();
+                await uow.CommitAsync();
 
                 return StockResult2.Ok(adjustment.Id, $"Adjustment {adjustment.AdjustmentNumber} posted.");
             }, _logRepo, nameof(PostAdjustmentAsync), userId, request);
@@ -173,33 +170,8 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                var query = db.StockAdjustments2.AsNoTracking().AsQueryable();
-                if (filter.LocationId.HasValue) query = query.Where(a => a.LocationId == filter.LocationId.Value);
-                if (!string.IsNullOrWhiteSpace(filter.Status)) query = query.Where(a => a.Reason == filter.Status);
-                if (filter.FromDate.HasValue) { var f = filter.FromDate.Value.Date; query = query.Where(a => a.AdjustmentDate >= f); }
-                if (filter.ToDate.HasValue) { var e = filter.ToDate.Value.Date.AddDays(1); query = query.Where(a => a.AdjustmentDate < e); }
-                if (!string.IsNullOrWhiteSpace(filter.Search))
-                {
-                    string s = filter.Search.Trim();
-                    query = query.Where(a => a.AdjustmentNumber.Contains(s) || a.Reason.Contains(s));
-                }
-
-                var rows = await query.Select(a => new DocumentRowDto2
-                {
-                    Id = a.Id,
-                    Number = a.AdjustmentNumber,
-                    Date = a.AdjustmentDate,
-                    Status = a.Status,
-                    Party = a.Location!.Name,
-                    Reason = a.Reason,
-                    LineCount = a.Lines.Count,
-                    TotalQuantity = a.Lines.Sum(l => l.Difference),
-                    TotalValue = a.Lines.Sum(l => l.Difference * l.UnitCost),
-                    Remarks = a.Remarks ?? string.Empty
-                }).ToListAsync();
+                await using var uow = _uowFactory.Create();
+                var rows = await uow.Adjustments.GetAdjustmentRowsAsync(filter);
 
                 var page = StockPaging2.ToPage(rows, filter, nameof(DocumentRowDto2.Date), true);
                 page.Totals["TotalValue"] = rows.Sum(r => r.TotalValue);
@@ -211,24 +183,8 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                var lines = await db.StockAdjustmentLines2.AsNoTracking()
-                    .Where(l => l.AdjustmentId == adjustmentId)
-                    .OrderBy(l => l.Id)
-                    .Select(l => new DocumentLineDto2
-                    {
-                        LineId = l.Id,
-                        ProductId = l.ProductId,
-                        ProductCode = l.Product!.ProductCode,
-                        ProductName = l.Product!.Name ?? string.Empty,
-                        Quantity = l.CountedQuantity,
-                        ProcessedQuantity = l.SystemQuantity,
-                        UnitCost = l.UnitCost,
-                        Note = l.Remarks ?? string.Empty
-                    }).ToListAsync();
-
+                await using var uow = _uowFactory.Create();
+                var lines = await uow.Adjustments.GetAdjustmentLinesAsync(adjustmentId);
                 return StockResult2.Ok(lines);
             }, _logRepo, nameof(GetAdjustmentLinesAsync), null, new { adjustmentId });
         }
@@ -237,54 +193,42 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-                await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
+                await using var uow = _uowFactory.Create();
+                await uow.Ledger.EnsureDefaultLocationAsync();
 
-                var location = await db.StockLocations2.AsNoTracking().FirstOrDefaultAsync(l => l.Id == locationId && l.IsActive);
+                var location = await uow.Ledger.GetLocationAsync(locationId, true);
                 if (location == null) return StockResult2.Fail<List<DocumentLineDto2>>("Location not found or inactive.");
 
-                var products = db.Products.AsNoTracking().Where(p => p.IsActive);
-                if (categoryId.HasValue) products = products.Where(p => p.CategoryId == categoryId.Value);
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    string s = search.Trim();
-                    products = products.Where(p => p.ProductCode.Contains(s) || (p.Name != null && p.Name.Contains(s)));
-                }
+                var productFilter = new StockQueryFilter2 { CategoryId = categoryId, Search = search };
+                var list = (await uow.Reports.GetProductsAsync(productFilter, false))
+                    .OrderBy(p => p.Code, StringComparer.Ordinal)
+                    .ToList();
 
-                var list = await products.OrderBy(p => p.ProductCode)
-                    .Select(p => new { p.Id, p.ProductCode, Name = p.Name ?? p.ProductCode })
-                    .ToListAsync();
-
-                var ids = list.Select(p => p.Id).ToList();
-                var onHandRows = await StockLedgerHelper2.LoadActiveLedgerAsync(db);
-                var onHand = onHandRows.GroupBy(r => r.ProductId).ToDictionary(g => g.Key, g => g.Sum(r => r.Quantity));
-                var balances = await StockLedgerHelper2.LoadBalanceTotalsAsync(db);
-                var transit = await StockLedgerHelper2.LoadInTransitAsync(db);
+                var states = await uow.Ledger.GetStatesAsync();
+                var balances = await uow.Ledger.GetBalanceTotalsAsync();
+                var transit = await uow.Ledger.GetInTransitAsync();
 
                 Dictionary<int, int> atLocation = new();
                 if (!location.IsDefault)
-                {
-                    atLocation = await db.StockLocationBalances2.AsNoTracking()
-                        .Where(b => b.LocationId == locationId)
-                        .ToDictionaryAsync(b => b.ProductId, b => b.Quantity);
-                }
+                    atLocation = await uow.Ledger.GetLocationBalancesAsync(locationId);
 
                 var result = new List<DocumentLineDto2>();
                 foreach (var p in list)
                 {
-                    int qty = StockLedgerHelper2.QuantityAtLocation(
-                        StockLedgerHelper2.Get(onHand, p.Id),
-                        StockLedgerHelper2.Get(balances, p.Id),
-                        StockLedgerHelper2.Get(transit, p.Id),
+                    states.TryGetValue(p.Id, out var state);
+
+                    int qty = StockLedgerRules2.QuantityAtLocation(
+                        state?.OnHand ?? 0,
+                        StockLedgerRules2.Get(balances, p.Id),
+                        StockLedgerRules2.Get(transit, p.Id),
                         location.IsDefault,
-                        StockLedgerHelper2.Get(atLocation, p.Id));
+                        StockLedgerRules2.Get(atLocation, p.Id));
 
                     result.Add(new DocumentLineDto2
                     {
                         ProductId = p.Id,
-                        ProductCode = p.ProductCode,
-                        ProductName = p.Name,
+                        ProductCode = p.Code,
+                        ProductName = string.IsNullOrEmpty(p.Name) ? p.Code : p.Name,
                         ProcessedQuantity = qty,
                         Quantity = qty
                     });

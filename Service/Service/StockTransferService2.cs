@@ -1,10 +1,8 @@
 using Common;
 using Common.Stock2;
-using Data;
 using Domain.Entities;
 using Domain.IRepositories;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Domain.Stock2;
 using Service.IService;
 
 namespace Service.Service
@@ -12,16 +10,16 @@ namespace Service.Service
     /// <summary>
     /// Transfers between locations with in-transit tracking. A transfer is dispatched when created (status InTransit);
     /// the quantity leaves the source immediately and arrives at the destination when the transfer is received.
-    /// The total on-hand quantity in the VendorStock ledger never changes.
+    /// The total on-hand quantity in the Stock ledger never changes.
     /// </summary>
     public class StockTransferService2 : IStockTransferService2
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
 
-        public StockTransferService2(IServiceScopeFactory scopeFactory, ILogRepository logRepo)
+        public StockTransferService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
         {
-            _scopeFactory = scopeFactory;
+            _uowFactory = uowFactory;
             _logRepo = logRepo;
         }
 
@@ -66,37 +64,36 @@ namespace Service.Service
                 var wanted = request.Lines.GroupBy(l => l.ProductId)
                     .ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
 
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-                await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
+                await using var uow = _uowFactory.Create();
+                await uow.Ledger.EnsureDefaultLocationAsync();
 
-                var from = await db.StockLocations2.FirstOrDefaultAsync(l => l.Id == request.FromLocationId && l.IsActive);
-                var to = await db.StockLocations2.FirstOrDefaultAsync(l => l.Id == request.ToLocationId && l.IsActive);
+                var from = await uow.Ledger.GetLocationAsync(request.FromLocationId, true);
+                var to = await uow.Ledger.GetLocationAsync(request.ToLocationId, true);
                 if (from == null) return StockResult2.Fail<int>("Source location not found or inactive.");
                 if (to == null) return StockResult2.Fail<int>("Destination location not found or inactive.");
 
                 var productIds = wanted.Keys.ToList();
-                var names = await StockLedgerHelper2.LoadActiveProductNamesAsync(db, productIds);
+                var names = await uow.Ledger.GetActiveProductNamesAsync(productIds);
                 foreach (var pid in productIds.Where(pid => !names.ContainsKey(pid)))
                     errors.Add($"Product {pid} was not found or is inactive.");
                 if (errors.Count > 0) return StockResult2.Fail<int>(errors);
 
-                await using var tx = await db.Database.BeginTransactionAsync();
+                await uow.BeginTransactionAsync();
 
                 foreach (var pair in wanted)
                 {
-                    int available = await StockLedgerHelper2.GetQuantityAtLocationAsync(db, pair.Key, from);
+                    int available = await uow.Ledger.GetQuantityAtLocationAsync(pair.Key, from);
                     if (pair.Value > available)
                         errors.Add($"'{names[pair.Key]}': only {Math.Max(available, 0)} available at {from.Name}, but {pair.Value} requested.");
                 }
                 if (errors.Count > 0) return StockResult2.Fail<int>(errors);
 
-                string prefix = $"TRF-{date:yyyyMMdd}-";
-                int existing = await db.StockTransfers2.CountAsync(t => t.TransferNumber.StartsWith(prefix));
+                string prefix = StockLedgerRules2.DocumentPrefix("TRF", date);
+                int existing = await uow.Transfers.CountTransfersWithPrefixAsync(prefix);
 
                 var transfer = new StockTransfer2
                 {
-                    TransferNumber = StockLedgerHelper2.BuildDocumentNumber("TRF", date, existing),
+                    TransferNumber = StockLedgerRules2.BuildDocumentNumber("TRF", date, existing),
                     TransferDate = date,
                     FromLocationId = from.Id,
                     ToLocationId = to.Id,
@@ -110,22 +107,22 @@ namespace Service.Service
                 {
                     transfer.Lines.Add(new StockTransferLine2 { ProductId = pair.Key, Quantity = pair.Value });
                     // A default source is reduced automatically (it is derived: on hand - balances - in transit).
-                    await StockLedgerHelper2.ChangeBalanceAsync(db, pair.Key, from, -pair.Value);
+                    await uow.Ledger.ChangeBalanceAsync(pair.Key, from, -pair.Value);
                 }
 
-                db.StockTransfers2.Add(transfer);
-                await db.SaveChangesAsync();
+                uow.Transfers.AddTransfer(transfer);
+                await uow.SaveChangesAsync();
 
                 foreach (var pair in wanted)
                 {
-                    db.StockMovements2.Add(StockLedgerHelper2.NewMovement(
+                    uow.Ledger.AddMovement(StockLedgerRules2.NewMovement(
                         pair.Key, from.Id, StockConstants2.MoveTransferOut, -pair.Value, null,
                         StockConstants2.DocTransfer, transfer.Id, transfer.TransferNumber, null,
                         $"To {to.Name}", transfer.Remarks, userId));
                 }
 
-                await db.SaveChangesAsync();
-                await tx.CommitAsync();
+                await uow.SaveChangesAsync();
+                await uow.CommitAsync();
 
                 return StockResult2.Ok(transfer.Id, $"Transfer {transfer.TransferNumber} dispatched.");
             }, _logRepo, nameof(CreateTransferAsync), userId, request);
@@ -137,15 +134,10 @@ namespace Service.Service
 
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
+                await uow.BeginTransactionAsync();
 
-                await using var tx = await db.Database.BeginTransactionAsync();
-
-                var transfer = await db.StockTransfers2
-                    .Include(t => t.Lines)
-                    .Include(t => t.ToLocation)
-                    .FirstOrDefaultAsync(t => t.Id == transferId);
+                var transfer = await uow.Transfers.GetTransferWithLinesAsync(transferId);
 
                 if (transfer == null) return StockResult2.Fail<bool>("Transfer not found.");
                 if (transfer.Status != StockConstants2.StatusInTransit)
@@ -155,7 +147,7 @@ namespace Service.Service
                 foreach (var line in transfer.Lines)
                 {
                     // A default destination receives automatically once the line is no longer in transit.
-                    await StockLedgerHelper2.ChangeBalanceAsync(db, line.ProductId, to, line.Quantity);
+                    await uow.Ledger.ChangeBalanceAsync(line.ProductId, to, line.Quantity);
                 }
 
                 transfer.Status = StockConstants2.StatusReceived;
@@ -164,14 +156,14 @@ namespace Service.Service
 
                 foreach (var line in transfer.Lines)
                 {
-                    db.StockMovements2.Add(StockLedgerHelper2.NewMovement(
+                    uow.Ledger.AddMovement(StockLedgerRules2.NewMovement(
                         line.ProductId, to.Id, StockConstants2.MoveTransferIn, line.Quantity, null,
                         StockConstants2.DocTransfer, transfer.Id, transfer.TransferNumber, null,
                         null, transfer.Remarks, uid));
                 }
 
-                await db.SaveChangesAsync();
-                await tx.CommitAsync();
+                await uow.SaveChangesAsync();
+                await uow.CommitAsync();
 
                 return StockResult2.Ok(true, $"Transfer {transfer.TransferNumber} received.");
             }, _logRepo, nameof(ReceiveTransferAsync), uid, new { transferId });
@@ -183,15 +175,10 @@ namespace Service.Service
 
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
+                await uow.BeginTransactionAsync();
 
-                await using var tx = await db.Database.BeginTransactionAsync();
-
-                var transfer = await db.StockTransfers2
-                    .Include(t => t.Lines)
-                    .Include(t => t.FromLocation)
-                    .FirstOrDefaultAsync(t => t.Id == transferId);
+                var transfer = await uow.Transfers.GetTransferWithLinesAsync(transferId);
 
                 if (transfer == null) return StockResult2.Fail<bool>("Transfer not found.");
                 if (transfer.Status != StockConstants2.StatusInTransit)
@@ -201,7 +188,7 @@ namespace Service.Service
                 foreach (var line in transfer.Lines)
                 {
                     // The quantity goes back to the source location.
-                    await StockLedgerHelper2.ChangeBalanceAsync(db, line.ProductId, from, line.Quantity);
+                    await uow.Ledger.ChangeBalanceAsync(line.ProductId, from, line.Quantity);
                 }
 
                 transfer.Status = StockConstants2.StatusCancelled;
@@ -210,14 +197,14 @@ namespace Service.Service
 
                 foreach (var line in transfer.Lines)
                 {
-                    db.StockMovements2.Add(StockLedgerHelper2.NewMovement(
+                    uow.Ledger.AddMovement(StockLedgerRules2.NewMovement(
                         line.ProductId, from.Id, StockConstants2.MoveTransferCancel, line.Quantity, null,
                         StockConstants2.DocTransfer, transfer.Id, transfer.TransferNumber, null,
                         "Cancelled", transfer.Remarks, uid));
                 }
 
-                await db.SaveChangesAsync();
-                await tx.CommitAsync();
+                await uow.SaveChangesAsync();
+                await uow.CommitAsync();
 
                 return StockResult2.Ok(true, $"Transfer {transfer.TransferNumber} cancelled.");
             }, _logRepo, nameof(CancelTransferAsync), uid, new { transferId });
@@ -227,34 +214,8 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                var query = db.StockTransfers2.AsNoTracking().AsQueryable();
-                if (filter.LocationId.HasValue)
-                    query = query.Where(t => t.FromLocationId == filter.LocationId.Value || t.ToLocationId == filter.LocationId.Value);
-                if (!string.IsNullOrWhiteSpace(filter.Status)) query = query.Where(t => t.Status == filter.Status);
-                if (filter.FromDate.HasValue) { var f = filter.FromDate.Value.Date; query = query.Where(t => t.TransferDate >= f); }
-                if (filter.ToDate.HasValue) { var e = filter.ToDate.Value.Date.AddDays(1); query = query.Where(t => t.TransferDate < e); }
-                if (!string.IsNullOrWhiteSpace(filter.Search))
-                {
-                    string s = filter.Search.Trim();
-                    query = query.Where(t => t.TransferNumber.Contains(s)
-                        || t.FromLocation!.Name.Contains(s) || t.ToLocation!.Name.Contains(s));
-                }
-
-                var rows = await query.Select(t => new DocumentRowDto2
-                {
-                    Id = t.Id,
-                    Number = t.TransferNumber,
-                    Date = t.TransferDate,
-                    Status = t.Status,
-                    Party = t.FromLocation!.Name + " -> " + t.ToLocation!.Name,
-                    LineCount = t.Lines.Count,
-                    TotalQuantity = t.Lines.Sum(l => l.Quantity),
-                    Remarks = t.Remarks ?? string.Empty
-                }).ToListAsync();
-
+                await using var uow = _uowFactory.Create();
+                var rows = await uow.Transfers.GetTransferRowsAsync(filter);
                 return StockResult2.Ok(StockPaging2.ToPage(rows, filter, nameof(DocumentRowDto2.Date), true));
             }, _logRepo, nameof(GetTransfersAsync), null, filter);
         }
@@ -263,21 +224,8 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                var lines = await db.StockTransferLines2.AsNoTracking()
-                    .Where(l => l.TransferId == transferId)
-                    .OrderBy(l => l.Id)
-                    .Select(l => new DocumentLineDto2
-                    {
-                        LineId = l.Id,
-                        ProductId = l.ProductId,
-                        ProductCode = l.Product!.ProductCode,
-                        ProductName = l.Product!.Name ?? string.Empty,
-                        Quantity = l.Quantity
-                    }).ToListAsync();
-
+                await using var uow = _uowFactory.Create();
+                var lines = await uow.Transfers.GetTransferLinesAsync(transferId);
                 return StockResult2.Ok(lines);
             }, _logRepo, nameof(GetTransferLinesAsync), null, new { transferId });
         }

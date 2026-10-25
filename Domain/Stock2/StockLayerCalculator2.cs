@@ -1,7 +1,7 @@
-namespace Service.Service
+namespace Domain.Stock2
 {
     /// <summary>
-    /// Builds per-product on-hand quantity and FIFO cost layers from VendorStock ledger rows.
+    /// Builds per-product on-hand quantity and FIFO cost layers from Stock ledger rows.
     /// The rule matches the existing GetFifoStockReport: every negative row consumes the oldest positive rows first.
     /// </summary>
     public static class StockLayerCalculator2

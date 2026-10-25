@@ -1,6 +1,6 @@
 using Common;
 using Domain.IRepositories;
-using Microsoft.EntityFrameworkCore;
+using Domain.Stock2;
 using System.Text.Json;
 
 namespace Service.Service
@@ -35,7 +35,7 @@ namespace Service.Service
             {
                 return await action();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (StockConcurrencyException2)
             {
                 return Fail<T>("Another user changed this record while you were working. Reload and try again.");
             }

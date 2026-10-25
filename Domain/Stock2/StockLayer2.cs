@@ -1,4 +1,4 @@
-namespace Service.Service
+namespace Domain.Stock2
 {
     /// <summary>The remaining part of one positive ledger row after FIFO consumption.</summary>
     public class StockLayer2

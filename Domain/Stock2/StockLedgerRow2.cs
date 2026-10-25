@@ -1,6 +1,6 @@
-namespace Service.Service
+namespace Domain.Stock2
 {
-    /// <summary>Slim projection of an active VendorStock row used by the layer calculator.</summary>
+    /// <summary>Slim projection of an active Stock row used by the layer calculator.</summary>
     public class StockLedgerRow2
     {
         public int Id { get; set; }

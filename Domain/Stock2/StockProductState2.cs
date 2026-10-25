@@ -1,6 +1,6 @@
-namespace Service.Service
+namespace Domain.Stock2
 {
-    /// <summary>On-hand quantity and FIFO cost layers for one product, derived from the VendorStock ledger.</summary>
+    /// <summary>On-hand quantity and FIFO cost layers for one product, derived from the Stock ledger.</summary>
     public class StockProductState2
     {
         public int ProductId { get; set; }

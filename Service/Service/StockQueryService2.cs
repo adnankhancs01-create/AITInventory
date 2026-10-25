@@ -1,33 +1,22 @@
 using Common;
 using Common.Stock2;
-using Data;
 using Domain.Entities;
 using Domain.IRepositories;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Domain.Stock2;
 using Service.IService;
 
 namespace Service.Service
 {
-    /// <summary>Dashboards, inventory overview and reports. Everything is derived from the VendorStock ledger plus the Stock2 tables.</summary>
+    /// <summary>Dashboards, inventory overview and reports. Everything is derived from the Stock ledger plus the Stock2 tables.</summary>
     public class StockQueryService2 : IStockQueryService2
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
 
-        public StockQueryService2(IServiceScopeFactory scopeFactory, ILogRepository logRepo)
+        public StockQueryService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
         {
-            _scopeFactory = scopeFactory;
+            _uowFactory = uowFactory;
             _logRepo = logRepo;
-        }
-
-        private sealed class ProductInfo2
-        {
-            public int Id { get; set; }
-            public string Code { get; set; } = string.Empty;
-            public string Name { get; set; } = string.Empty;
-            public int CategoryId { get; set; }
-            public string Category { get; set; } = string.Empty;
         }
 
         private static bool HasProductFilter(StockQueryFilter2 filter)
@@ -35,67 +24,29 @@ namespace Service.Service
             return filter.ProductId.HasValue || filter.CategoryId.HasValue || !string.IsNullOrWhiteSpace(filter.Search);
         }
 
-        private static async Task<List<ProductInfo2>> LoadProductsAsync(InventoryDbContext db, StockQueryFilter2 filter, bool includeInactive = false)
-        {
-            var query = db.Products.AsNoTracking().AsQueryable();
-            if (!includeInactive) query = query.Where(p => p.IsActive);
-            if (filter.ProductId.HasValue) query = query.Where(p => p.Id == filter.ProductId.Value);
-            if (filter.CategoryId.HasValue) query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
-            if (!string.IsNullOrWhiteSpace(filter.Search))
-            {
-                string s = filter.Search.Trim();
-                query = query.Where(p => p.Name!.Contains(s) || p.ProductCode.Contains(s));
-            }
-
-            return await query.Select(p => new ProductInfo2
-            {
-                Id = p.Id,
-                Code = p.ProductCode,
-                Name = p.Name ?? string.Empty,
-                CategoryId = p.CategoryId,
-                Category = p.Category.Name
-            }).ToListAsync();
-        }
-
         // ================================================================== overview
 
-        private static async Task<List<StockOverviewRowDto2>> BuildOverviewRowsAsync(InventoryDbContext db, StockQueryFilter2 filter)
+        private static async Task<List<StockOverviewRowDto2>> BuildOverviewRowsAsync(IStockUnitOfWork2 uow, StockQueryFilter2 filter)
         {
-            var products = await LoadProductsAsync(db, filter);
+            var products = await uow.Reports.GetProductsAsync(filter, false);
             ICollection<int>? scope = HasProductFilter(filter) ? products.Select(p => p.Id).ToList() : null;
 
-            var states = await StockLedgerHelper2.LoadStatesAsync(db, scope);
-            var balances = await StockLedgerHelper2.LoadBalanceTotalsAsync(db, scope);
-            var transit = await StockLedgerHelper2.LoadInTransitAsync(db, scope);
-            var settings = await db.ProductStockSettings2.AsNoTracking().ToDictionaryAsync(s => s.ProductId);
+            var states = await uow.Ledger.GetStatesAsync(scope);
+            var balances = await uow.Ledger.GetBalanceTotalsAsync(scope);
+            var transit = await uow.Ledger.GetInTransitAsync(scope);
+            var settings = await uow.Master.GetSettingsByProductAsync();
 
             StockLocation2? location = null;
             var locationBalances = new Dictionary<int, int>();
             if (filter.LocationId.HasValue)
             {
-                location = await db.StockLocations2.AsNoTracking().FirstOrDefaultAsync(l => l.Id == filter.LocationId.Value);
+                location = await uow.Reports.FindLocationAsync(filter.LocationId.Value);
                 if (location != null && !location.IsDefault)
-                {
-                    locationBalances = await db.StockLocationBalances2.AsNoTracking()
-                        .Where(b => b.LocationId == location.Id)
-                        .ToDictionaryAsync(b => b.ProductId, b => b.Quantity);
-                }
+                    locationBalances = await uow.Ledger.GetLocationBalancesAsync(location.Id);
             }
 
-            var priceRows = await db.Pricing.AsNoTracking()
-                .Where(x => x.ProductCode != null && x.UnitPrice != null)
-                .Select(x => new { x.Id, x.ProductCode, x.UnitPrice })
-                .ToListAsync();
-            var priceByCode = priceRows.GroupBy(x => x.ProductCode!)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.Id).First().UnitPrice);
-
-            var lastMoves = await db.Stock.AsNoTracking()
-                .Where(s => s.IsActive == true && s.ProductId != null)
-                .GroupBy(s => s.ProductId)
-                .Select(g => new { ProductId = g.Key, Last = g.Max(x => x.CreatedOn) })
-                .ToListAsync();
-            var lastByProduct = lastMoves.Where(x => x.ProductId.HasValue)
-                .ToDictionary(x => x.ProductId!.Value, x => x.Last);
+            var priceByCode = await uow.Reports.GetLatestSellPricesAsync();
+            var lastByProduct = await uow.Reports.GetLastMovementDatesAsync();
 
             var rows = new List<StockOverviewRowDto2>();
             foreach (var p in products)
@@ -104,8 +55,8 @@ namespace Service.Service
                 settings.TryGetValue(p.Id, out var setting);
 
                 int onHand = state?.OnHand ?? 0;
-                int otherBalances = StockLedgerHelper2.Get(balances, p.Id);
-                int inTransit = StockLedgerHelper2.Get(transit, p.Id);
+                int otherBalances = StockLedgerRules2.Get(balances, p.Id);
+                int inTransit = StockLedgerRules2.Get(transit, p.Id);
                 int reorderLevel = setting?.ReorderLevel ?? 0;
                 decimal avgCost = state?.AverageUnitCost ?? 0m;
 
@@ -114,7 +65,7 @@ namespace Service.Service
                 if (location != null)
                 {
                     locationBalances.TryGetValue(p.Id, out var lb);
-                    quantityAtLocation = StockLedgerHelper2.QuantityAtLocation(onHand, otherBalances, inTransit, location.IsDefault, lb);
+                    quantityAtLocation = StockLedgerRules2.QuantityAtLocation(onHand, otherBalances, inTransit, location.IsDefault, lb);
                     value = Math.Max(quantityAtLocation, 0) * avgCost;
                 }
 
@@ -157,10 +108,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var rows = await BuildOverviewRowsAsync(db, filter);
+                var rows = await BuildOverviewRowsAsync(uow, filter);
                 var page = StockPaging2.ToPage(rows, filter, nameof(StockOverviewRowDto2.ProductName));
                 page.Totals["StockValue"] = rows.Sum(r => r.StockValue);
                 page.Totals["Units"] = rows.Sum(r => r.QuantityAtLocation);
@@ -170,44 +120,24 @@ namespace Service.Service
 
         // ================================================================== movements
 
-        private static async Task<List<StockMovementRowDto2>> BuildMovementRowsAsync(InventoryDbContext db, StockQueryFilter2 filter)
+        private static async Task<List<StockMovementRowDto2>> BuildMovementRowsAsync(IStockUnitOfWork2 uow, StockQueryFilter2 filter)
         {
-            var products = await LoadProductsAsync(db, filter, includeInactive: true);
+            var products = await uow.Reports.GetProductsAsync(filter, true);
             var productMap = products.ToDictionary(p => p.Id);
             bool restrict = HasProductFilter(filter);
             List<int> productIds = productMap.Keys.ToList();
 
-            var defaultLocation = await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
-            var locationNames = await db.StockLocations2.AsNoTracking().ToDictionaryAsync(l => l.Id, l => l.Name);
+            var defaultLocation = await uow.Ledger.EnsureDefaultLocationAsync();
+            var locationNames = await uow.Reports.GetLocationNamesAsync();
 
             DateTime? fromDate = filter.FromDate?.Date;
             DateTime? toExclusive = filter.ToDate?.Date.AddDays(1);
 
             // ---- A: every Stock ledger row (sales, purchases, returns, opening stock and Stock2 documents)
-            var ledgerQuery = db.Stock.AsNoTracking().Where(s => s.ProductId != null);
-            if (restrict) ledgerQuery = ledgerQuery.Where(s => productIds.Contains(s.ProductId.Value));
-            if (fromDate.HasValue) ledgerQuery = ledgerQuery.Where(s => s.CreatedOn >= fromDate.Value);
-            if (toExclusive.HasValue) ledgerQuery = ledgerQuery.Where(s => s.CreatedOn < toExclusive.Value);
-
-            var ledger = await ledgerQuery.Select(s => new
-            {
-                s.Id,
-                ProductId = s.ProductId.Value,
-                Quantity = s.Quantity ?? 0,
-                s.TotalPurchasePrice,
-                s.StockNumber,
-                CreatedOn = s.CreatedOn ?? DateTime.MinValue,
-                s.IsActive,
-                TxType = s.TransactionDetails!.TransMst!.TransactionType,
-                TxNumber = s.TransactionDetails!.TransMst!.TransactionNumber
-            }).ToListAsync();
+            var ledger = await uow.Reports.GetLedgerMovementRowsAsync(restrict ? productIds : null, fromDate, toExclusive);
 
             var ledgerIds = ledger.Select(l => l.Id).ToList();
-            var linked = ledgerIds.Count == 0
-                ? new List<StockMovement2>()
-                : await db.StockMovements2.AsNoTracking()
-                    .Where(m => m.VendorStockId != null && ledgerIds.Contains(m.VendorStockId.Value))
-                    .ToListAsync();
+            var linked = await uow.Reports.GetMovementsForLedgerRowsAsync(ledgerIds);
             var linkedByLedger = linked.GroupBy(m => m.VendorStockId!.Value).ToDictionary(g => g.Key, g => g.First());
 
             var result = new List<StockMovementRowDto2>();
@@ -220,9 +150,9 @@ namespace Service.Service
 
                 string type;
                 if (move != null) type = move.MovementType;
-                else if (l.TxType == "Sell") type = StockConstants2.MoveSale;
-                else if (l.TxType == "Purchase") type = StockConstants2.MovePurchase;
-                else if (l.TxType == "Return") type = StockConstants2.MoveReturn;
+                else if (l.TransactionType == "Sell") type = StockConstants2.MoveSale;
+                else if (l.TransactionType == "Purchase") type = StockConstants2.MovePurchase;
+                else if (l.TransactionType == "Return") type = StockConstants2.MoveReturn;
                 else if (l.Quantity > 0) type = StockConstants2.MoveOpening;
                 else type = StockConstants2.MoveOther;
 
@@ -235,7 +165,7 @@ namespace Service.Service
                     unitCost = Math.Round(l.TotalPurchasePrice!.Value / l.Quantity, 4);
 
                 string reference = move?.DocumentNumber
-                    ?? (l.TxNumber.HasValue ? l.TxNumber.Value.ToString() : null)
+                    ?? (l.TransactionNumber.HasValue ? l.TransactionNumber.Value.ToString() : null)
                     ?? (l.StockNumber.HasValue ? $"Stock {l.StockNumber.Value}" : string.Empty);
 
                 result.Add(new StockMovementRowDto2
@@ -256,14 +186,10 @@ namespace Service.Service
             }
 
             // ---- B: location-only movements (transfer dispatch / receive / cancel) that have no ledger row
-            var otherQuery = db.StockMovements2.AsNoTracking().Where(m => m.VendorStockId == null);
-            if (restrict) otherQuery = otherQuery.Where(m => productIds.Contains(m.ProductId));
-            if (fromDate.HasValue) otherQuery = otherQuery.Where(m => m.CreatedOn >= fromDate.Value);
-            if (toExclusive.HasValue) otherQuery = otherQuery.Where(m => m.CreatedOn < toExclusive.Value);
-            if (filter.LocationId.HasValue) otherQuery = otherQuery.Where(m => m.LocationId == filter.LocationId.Value);
-            if (!string.IsNullOrWhiteSpace(filter.MovementType)) otherQuery = otherQuery.Where(m => m.MovementType == filter.MovementType);
+            var others = await uow.Reports.GetLocationOnlyMovementsAsync(
+                restrict ? productIds : null, fromDate, toExclusive, filter.LocationId, filter.MovementType);
 
-            foreach (var m in await otherQuery.ToListAsync())
+            foreach (var m in others)
             {
                 productMap.TryGetValue(m.ProductId, out var product);
                 result.Add(new StockMovementRowDto2
@@ -290,10 +216,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var rows = await BuildMovementRowsAsync(db, filter);
+                var rows = await BuildMovementRowsAsync(uow, filter);
                 var page = StockPaging2.ToPage(rows, filter, nameof(StockMovementRowDto2.MovementDate), true);
                 page.Totals["QuantityIn"] = rows.Where(r => !r.IsReversed && r.Quantity > 0).Sum(r => (decimal)r.Quantity);
                 page.Totals["QuantityOut"] = rows.Where(r => !r.IsReversed && r.Quantity < 0).Sum(r => (decimal)-r.Quantity);
@@ -307,12 +232,11 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var products = await LoadProductsAsync(db, filter);
+                var products = await uow.Reports.GetProductsAsync(filter, false);
                 ICollection<int>? ids = HasProductFilter(filter) ? products.Select(p => p.Id).ToList() : null;
-                var states = await StockLedgerHelper2.LoadStatesAsync(db, ids);
+                var states = await uow.Ledger.GetStatesAsync(ids);
 
                 var rows = new List<StockValuationRowDto2>();
                 foreach (var p in products)
@@ -347,12 +271,11 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var products = await LoadProductsAsync(db, filter);
+                var products = await uow.Reports.GetProductsAsync(filter, false);
                 ICollection<int>? ids = HasProductFilter(filter) ? products.Select(p => p.Id).ToList() : null;
-                var states = await StockLedgerHelper2.LoadStatesAsync(db, ids);
+                var states = await uow.Ledger.GetStatesAsync(ids);
                 DateTime today = DateTime.Today;
 
                 var rows = new List<StockAgingRowDto2>();
@@ -401,25 +324,16 @@ namespace Service.Service
 
         // ================================================================== expiry
 
-        private static async Task<List<StockExpiryRowDto2>> BuildExpiryRowsAsync(InventoryDbContext db, StockQueryFilter2 filter)
+        private static async Task<List<StockExpiryRowDto2>> BuildExpiryRowsAsync(IStockUnitOfWork2 uow, StockQueryFilter2 filter)
         {
-            var products = await LoadProductsAsync(db, filter);
+            var products = await uow.Reports.GetProductsAsync(filter, false);
             var productMap = products.ToDictionary(p => p.Id);
             List<int> productIds = productMap.Keys.ToList();
 
-            var batchQuery = db.StockBatches2.AsNoTracking().Where(b => b.ExpiryDate != null);
-            if (HasProductFilter(filter)) batchQuery = batchQuery.Where(b => productIds.Contains(b.ProductId));
-
-            var batches = await batchQuery.Select(b => new
-            {
-                b.ProductId,
-                b.VendorStockId,
-                b.BatchNumber,
-                ExpiryDate = b.ExpiryDate!.Value
-            }).ToListAsync();
+            var batches = await uow.Reports.GetBatchesWithExpiryAsync(HasProductFilter(filter) ? productIds : null);
 
             var batchProductIds = batches.Select(b => b.ProductId).Distinct().ToList();
-            var states = await StockLedgerHelper2.LoadStatesAsync(db, batchProductIds);
+            var states = await uow.Ledger.GetStatesAsync(batchProductIds);
             DateTime today = DateTime.Today;
 
             var rows = new List<StockExpiryRowDto2>();
@@ -457,10 +371,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var rows = await BuildExpiryRowsAsync(db, filter);
+                var rows = await BuildExpiryRowsAsync(uow, filter);
                 var page = StockPaging2.ToPage(rows, filter, nameof(StockExpiryRowDto2.ExpiryDate));
                 page.Totals["ValueAtRisk"] = rows.Sum(r => r.ValueAtRisk);
                 page.Totals["Units"] = rows.Sum(r => (decimal)r.RemainingQuantity);
@@ -474,23 +387,22 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var products = await LoadProductsAsync(db, filter);
+                var products = await uow.Reports.GetProductsAsync(filter, false);
                 ICollection<int>? ids = HasProductFilter(filter) ? products.Select(p => p.Id).ToList() : null;
-                var states = await StockLedgerHelper2.LoadStatesAsync(db, ids);
-                var balances = await StockLedgerHelper2.LoadBalanceTotalsAsync(db, ids);
-                var transit = await StockLedgerHelper2.LoadInTransitAsync(db, ids);
+                var states = await uow.Ledger.GetStatesAsync(ids);
+                var balances = await uow.Ledger.GetBalanceTotalsAsync(ids);
+                var transit = await uow.Ledger.GetInTransitAsync(ids);
 
                 var rows = new List<StockReconciliationRowDto2>();
                 foreach (var p in products)
                 {
                     states.TryGetValue(p.Id, out var state);
                     int onHand = state?.OnHand ?? 0;
-                    int other = StockLedgerHelper2.Get(balances, p.Id);
-                    int inTransit = StockLedgerHelper2.Get(transit, p.Id);
-                    int defaultQty = StockLedgerHelper2.QuantityAtLocation(onHand, other, inTransit, true, 0);
+                    int other = StockLedgerRules2.Get(balances, p.Id);
+                    int inTransit = StockLedgerRules2.Get(transit, p.Id);
+                    int defaultQty = StockLedgerRules2.QuantityAtLocation(onHand, other, inTransit, true, 0);
                     int layerRemaining = state?.Layers.Sum(l => l.RemainingQuantity) ?? 0;
 
                     var issues = new List<string>();
@@ -530,28 +442,19 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var settings = await db.ProductStockSettings2.AsNoTracking().Where(s => s.ReorderLevel > 0).ToListAsync();
+                var settings = await uow.Master.GetReorderSettingsAsync();
                 var productIds = settings.Select(s => s.ProductId).ToList();
 
-                var products = await db.Products.AsNoTracking()
-                    .Where(p => p.IsActive && productIds.Contains(p.Id))
-                    .Select(p => new { p.Id, p.ProductCode, p.Name })
-                    .ToDictionaryAsync(p => p.Id);
+                var idSet = new HashSet<int>(productIds);
+                var products = (await uow.Reports.GetProductsAsync(new StockQueryFilter2(), false))
+                    .Where(p => idSet.Contains(p.Id))
+                    .ToDictionary(p => p.Id);
 
-                var states = await StockLedgerHelper2.LoadStatesAsync(db, productIds);
-
-                var onOrder = await db.PurchaseOrderLines2.AsNoTracking()
-                    .Where(l => productIds.Contains(l.ProductId)
-                        && (l.PurchaseOrder!.Status == StockConstants2.StatusOpen
-                            || l.PurchaseOrder!.Status == StockConstants2.StatusPartiallyReceived))
-                    .GroupBy(l => l.ProductId)
-                    .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.OrderedQuantity - x.ReceivedQuantity) })
-                    .ToDictionaryAsync(x => x.ProductId, x => x.Qty);
-
-                var vendorNames = await db.Vendor.AsNoTracking().ToDictionaryAsync(v => v.Id, v => v.Name);
+                var states = await uow.Ledger.GetStatesAsync(productIds);
+                var onOrder = await uow.Receiving.GetOnOrderQuantitiesAsync(productIds);
+                var vendorNames = await uow.Master.GetSupplierNamesAsync();
 
                 var result = new List<StockReorderSuggestionDto2>();
                 foreach (var s in settings)
@@ -559,7 +462,7 @@ namespace Service.Service
                     if (!products.TryGetValue(s.ProductId, out var p)) continue;
                     states.TryGetValue(s.ProductId, out var state);
                     int onHand = state?.OnHand ?? 0;
-                    int ordered = Math.Max(0, StockLedgerHelper2.Get(onOrder, s.ProductId));
+                    int ordered = Math.Max(0, StockLedgerRules2.Get(onOrder, s.ProductId));
 
                     // Enough is on hand or already on order.
                     if (onHand + ordered > s.ReorderLevel) continue;
@@ -567,14 +470,14 @@ namespace Service.Service
                     int target = s.MaxLevel ?? (s.ReorderLevel + Math.Max(s.ReorderQuantity, 1));
                     int suggested = s.ReorderQuantity > 0 ? s.ReorderQuantity : Math.Max(1, target - onHand - ordered);
 
-                    string vendorName = string.Empty;
+                    string? vendorName = null;
                     if (s.PreferredVendorId.HasValue) vendorNames.TryGetValue(s.PreferredVendorId.Value, out vendorName);
 
                     result.Add(new StockReorderSuggestionDto2
                     {
                         ProductId = s.ProductId,
-                        ProductCode = p.ProductCode,
-                        ProductName = p.Name ?? string.Empty,
+                        ProductCode = p.Code,
+                        ProductName = p.Name,
                         OnHand = onHand,
                         ReorderLevel = s.ReorderLevel,
                         ReorderQuantity = s.ReorderQuantity,
@@ -595,11 +498,10 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var products = await LoadProductsAsync(db, new StockQueryFilter2());
-                var states = await StockLedgerHelper2.LoadStatesAsync(db);
+                var products = await uow.Reports.GetProductsAsync(new StockQueryFilter2(), false);
+                var states = await uow.Ledger.GetStatesAsync();
 
                 var list = products.OrderBy(p => p.Name).Select(p =>
                 {
@@ -625,10 +527,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var rows = await BuildOverviewRowsAsync(db, new StockQueryFilter2 { IncludeZero = true });
+                var rows = await BuildOverviewRowsAsync(uow, new StockQueryFilter2 { IncludeZero = true });
                 var lowRows = rows.Where(r => r.ReorderLevel > 0 && r.OnHand <= r.ReorderLevel).ToList();
 
                 var dto = new StockDashboardDto2
@@ -646,16 +547,15 @@ namespace Service.Service
                         .ToDictionary(g => g.Key, g => g.Sum(r => r.StockValue))
                 };
 
-                var expiry = await BuildExpiryRowsAsync(db, new StockQueryFilter2 { DaysAhead = StockConstants2.ExpiryWarningDays });
+                var expiry = await BuildExpiryRowsAsync(uow, new StockQueryFilter2 { DaysAhead = StockConstants2.ExpiryWarningDays });
                 dto.ExpiredBatches = expiry.Count(e => e.Status == "Expired");
                 dto.ExpiringSoonBatches = expiry.Count(e => e.Status == "Expiring soon");
                 dto.ExpiringBatches = expiry.OrderBy(e => e.ExpiryDate).Take(10).ToList();
 
-                dto.OpenPurchaseOrders = await db.PurchaseOrders2.CountAsync(p =>
-                    p.Status == StockConstants2.StatusOpen || p.Status == StockConstants2.StatusPartiallyReceived);
-                dto.InTransitTransfers = await db.StockTransfers2.CountAsync(t => t.Status == StockConstants2.StatusInTransit);
+                dto.OpenPurchaseOrders = await uow.Receiving.CountOpenPurchaseOrdersAsync();
+                dto.InTransitTransfers = await uow.Transfers.CountInTransitTransfersAsync();
 
-                var recent = await BuildMovementRowsAsync(db, new StockQueryFilter2 { FromDate = DateTime.Today.AddDays(-30) });
+                var recent = await BuildMovementRowsAsync(uow, new StockQueryFilter2 { FromDate = DateTime.Today.AddDays(-30) });
                 dto.MovementsToday = recent.Count(r => r.MovementDate >= DateTime.Today && !r.IsReversed);
                 dto.RecentMovements = recent.OrderByDescending(r => r.MovementDate).Take(10).ToList();
 

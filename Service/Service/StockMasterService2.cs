@@ -1,22 +1,19 @@
 using Common;
 using Common.Stock2;
-using Data;
 using Domain.Entities;
 using Domain.IRepositories;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Service.IService;
 
 namespace Service.Service
 {
     public class StockMasterService2 : IStockMasterService2
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
 
-        public StockMasterService2(IServiceScopeFactory scopeFactory, ILogRepository logRepo)
+        public StockMasterService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
         {
-            _scopeFactory = scopeFactory;
+            _uowFactory = uowFactory;
             _logRepo = logRepo;
         }
 
@@ -26,26 +23,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
-
-                var query = db.StockLocations2.AsNoTracking().AsQueryable();
-                if (!includeInactive) query = query.Where(l => l.IsActive);
-
-                var list = await query
-                    .OrderByDescending(l => l.IsDefault).ThenBy(l => l.Name)
-                    .Select(l => new StockLocationDto2
-                    {
-                        Id = l.Id,
-                        Code = l.Code,
-                        Name = l.Name,
-                        Address = l.Address,
-                        IsDefault = l.IsDefault,
-                        IsActive = l.IsActive
-                    }).ToListAsync();
-
+                await using var uow = _uowFactory.Create();
+                await uow.Ledger.EnsureDefaultLocationAsync();
+                var list = await uow.Master.GetLocationDtosAsync(includeInactive);
                 return StockResult2.Ok(list);
             }, _logRepo, nameof(GetLocationsAsync));
         }
@@ -63,13 +43,11 @@ namespace Service.Service
                 if (name.Length > 100) errors.Add("Name can be at most 100 characters.");
                 if (errors.Count > 0) return StockResult2.Fail<int>(errors);
 
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-                await StockLedgerHelper2.EnsureDefaultLocationAsync(db);
+                await using var uow = _uowFactory.Create();
+                await uow.Ledger.EnsureDefaultLocationAsync();
+                await uow.BeginTransactionAsync();
 
-                await using var tx = await db.Database.BeginTransactionAsync();
-
-                if (await db.StockLocations2.AnyAsync(l => l.Code == code && l.Id != dto.Id))
+                if (await uow.Master.LocationCodeExistsAsync(code, dto.Id))
                     return StockResult2.Fail<int>($"The code '{code}' is already used by another location.");
 
                 bool isNew = dto.Id <= 0;
@@ -80,7 +58,7 @@ namespace Service.Service
                 }
                 else
                 {
-                    entity = await db.StockLocations2.FirstOrDefaultAsync(l => l.Id == dto.Id);
+                    entity = await uow.Ledger.GetLocationAsync(dto.Id, false);
                     if (entity == null) return StockResult2.Fail<int>("Location not found.");
                 }
 
@@ -92,10 +70,9 @@ namespace Service.Service
 
                 if (!isNew && !dto.IsActive)
                 {
-                    if (await db.StockLocationBalances2.AnyAsync(b => b.LocationId == entity.Id && b.Quantity > 0))
+                    if (await uow.Master.LocationHoldsStockAsync(entity.Id))
                         return StockResult2.Fail<int>("This location still holds stock. Transfer or adjust it first.");
-                    if (await db.StockTransfers2.AnyAsync(t => t.Status == StockConstants2.StatusInTransit
-                            && (t.FromLocationId == entity.Id || t.ToLocationId == entity.Id)))
+                    if (await uow.Master.LocationHasTransfersInTransitAsync(entity.Id))
                         return StockResult2.Fail<int>("This location has transfers in transit.");
                 }
 
@@ -108,20 +85,20 @@ namespace Service.Service
                 {
                     // The default location's quantity is derived, so switching the default is only safe
                     // while nothing is allocated to other locations or travelling between them.
-                    if (await db.StockLocationBalances2.AnyAsync(b => b.Quantity > 0)
-                        || await db.StockTransfers2.AnyAsync(t => t.Status == StockConstants2.StatusInTransit))
+                    if (await uow.Master.AnyStockAllocatedToOtherLocationsAsync()
+                        || await uow.Master.AnyTransferInTransitAsync())
                         return StockResult2.Fail<int>("The default location cannot be changed while stock is allocated to other locations or in transit.");
 
-                    var others = await db.StockLocations2.Where(l => l.IsDefault && l.Id != entity.Id).ToListAsync();
+                    var others = await uow.Master.GetOtherDefaultLocationsAsync(entity.Id);
                     foreach (var other in others) other.IsDefault = false;
-                    await db.SaveChangesAsync(); // clear the old default first (filtered unique index allows only one)
+                    await uow.SaveChangesAsync(); // clear the old default first (filtered unique index allows only one)
                 }
 
-                if (isNew) db.StockLocations2.Add(entity);
+                if (isNew) uow.Master.AddLocation(entity);
                 entity.IsDefault = dto.IsDefault || wasDefault;
 
-                await db.SaveChangesAsync();
-                await tx.CommitAsync();
+                await uow.SaveChangesAsync();
+                await uow.CommitAsync();
                 return StockResult2.Ok(entity.Id, "Location saved.");
             }, _logRepo, nameof(SaveLocationAsync), null, dto);
         }
@@ -132,24 +109,8 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-
-                var query = db.Vendor.AsNoTracking().AsQueryable();
-                if (!includeInactive) query = query.Where(v => v.IsActive != false);
-
-                var list = await query.OrderBy(v => v.Name).Select(v => new StockSupplierDto2
-                {
-                    Id = v.Id,
-                    Name = v.Name,
-                    Address = v.Address,
-                    City = v.City,
-                    State = v.State,
-                    PostalCode = v.PostalCode,
-                    Country = v.Country,
-                    IsActive = v.IsActive != false
-                }).ToListAsync();
-
+                await using var uow = _uowFactory.Create();
+                var list = await uow.Master.GetSupplierDtosAsync(includeInactive);
                 return StockResult2.Ok(list);
             }, _logRepo, nameof(GetSuppliersAsync));
         }
@@ -162,22 +123,21 @@ namespace Service.Service
                 if (name.Length == 0) return StockResult2.Fail<int>("Supplier name is required.");
                 if (name.Length > 100) return StockResult2.Fail<int>("Supplier name can be at most 100 characters.");
 
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                if (await db.Vendor.AnyAsync(v => v.Name == name && v.Id != dto.Id))
+                if (await uow.Master.SupplierNameExistsAsync(name, dto.Id))
                     return StockResult2.Fail<int>("A supplier with this name already exists.");
 
                 Vendor? entity;
                 if (dto.Id > 0)
                 {
-                    entity = await db.Vendor.FirstOrDefaultAsync(v => v.Id == dto.Id);
+                    entity = await uow.Master.GetSupplierAsync(dto.Id);
                     if (entity == null) return StockResult2.Fail<int>("Supplier not found.");
                 }
                 else
                 {
                     entity = new Vendor { CreatedOn = DateTime.Now };
-                    db.Vendor.Add(entity);
+                    uow.Master.AddSupplier(entity);
                 }
 
                 entity.Name = name;
@@ -188,7 +148,7 @@ namespace Service.Service
                 entity.Country = Clean(dto.Country, 50);
                 entity.IsActive = dto.IsActive;
 
-                await db.SaveChangesAsync();
+                await uow.SaveChangesAsync();
                 return StockResult2.Ok(entity.Id, "Supplier saved.");
             }, _logRepo, nameof(SaveSupplierAsync), null, dto);
         }
@@ -206,20 +166,11 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                var products = db.Products.AsNoTracking().Where(p => p.IsActive);
-                if (filter.CategoryId.HasValue) products = products.Where(p => p.CategoryId == filter.CategoryId.Value);
-                if (!string.IsNullOrWhiteSpace(filter.Search))
-                {
-                    string s = filter.Search.Trim();
-                    products = products.Where(p => p.Name!.Contains(s) || p.ProductCode.Contains(s));
-                }
-
-                var productList = await products.Select(p => new { p.Id, p.ProductCode, p.Name }).ToListAsync();
-                var settings = await db.ProductStockSettings2.AsNoTracking().ToDictionaryAsync(s => s.ProductId);
-                var states = await StockLedgerHelper2.LoadStatesAsync(db);
+                var productList = await uow.Reports.GetProductsAsync(filter, false);
+                var settings = await uow.Master.GetSettingsByProductAsync();
+                var states = await uow.Ledger.GetStatesAsync();
 
                 var rows = productList.Select(p =>
                 {
@@ -228,8 +179,8 @@ namespace Service.Service
                     return new StockSettingDto2
                     {
                         ProductId = p.Id,
-                        ProductCode = p.ProductCode,
-                        ProductName = p.Name ?? string.Empty,
+                        ProductCode = p.Code,
+                        ProductName = p.Name,
                         OnHand = state?.OnHand ?? 0,
                         ReorderLevel = st?.ReorderLevel ?? 0,
                         ReorderQuantity = st?.ReorderQuantity ?? 0,
@@ -253,21 +204,20 @@ namespace Service.Service
                     errors.Add("Maximum level cannot be lower than the reorder level.");
                 if (errors.Count > 0) return StockResult2.Fail<bool>(errors);
 
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                await using var uow = _uowFactory.Create();
 
-                if (!await db.Products.AnyAsync(p => p.Id == dto.ProductId && p.IsActive))
+                if (!await uow.Master.ActiveProductExistsAsync(dto.ProductId))
                     return StockResult2.Fail<bool>("Product not found.");
 
                 if (dto.PreferredVendorId.HasValue
-                    && !await db.Vendor.AnyAsync(v => v.Id == dto.PreferredVendorId.Value))
+                    && await uow.Master.FindSupplierAsync(dto.PreferredVendorId.Value) == null)
                     return StockResult2.Fail<bool>("Preferred supplier not found.");
 
-                var entity = await db.ProductStockSettings2.FirstOrDefaultAsync(s => s.ProductId == dto.ProductId);
+                var entity = await uow.Master.GetSettingAsync(dto.ProductId);
                 if (entity == null)
                 {
                     entity = new ProductStockSetting2 { ProductId = dto.ProductId };
-                    db.ProductStockSettings2.Add(entity);
+                    uow.Master.AddSetting(entity);
                 }
 
                 entity.ReorderLevel = dto.ReorderLevel;
@@ -277,7 +227,7 @@ namespace Service.Service
                 entity.ModifiedOn = DateTime.Now;
                 entity.ModifiedBy = userId ?? StockConstants2.SystemUserId;
 
-                await db.SaveChangesAsync();
+                await uow.SaveChangesAsync();
                 return StockResult2.Ok(true, "Reorder settings saved.");
             }, _logRepo, nameof(SaveSettingAsync), userId, dto);
         }

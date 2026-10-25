@@ -1,5 +1,4 @@
 ﻿@page "/retail/{transactionId:int?}"
-@using AIT_Inventory_App.C_.Models
 @using Common
 @using Common.Models
 @using Common.Models.RequestModel
@@ -7,6 +6,7 @@
 @using Microsoft.Extensions.Options
 @using Service.IService
 @using Service.Service
+@using global::AIT_Inventory_App.C_.Models
 @using static Common.Contants.Enums
 @inject IProductService _ProductService
 @inject DialogService DialogService
