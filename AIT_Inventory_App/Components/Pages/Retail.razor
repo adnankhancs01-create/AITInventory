@@ -332,8 +332,11 @@
 {
     var folder = _Paths.Value.ProductImagePath;
     var filePath = Path.Combine(folder, $"{product.ProductId}.png");
-
-    product.ImageUrl = await GetImageBase64(filePath);
+    string? fileSource = await GetImageBase64(filePath);
+    if (!string.IsNullOrEmpty(fileSource))
+    {
+        product.ImageUrl = fileSource;
+    }
 }));
         widgetProducts = widgetProducts.OrderBy(p => p.Name).ToList();
     }
@@ -341,13 +344,23 @@
     private async Task<string> GetImageBase64(string filePath)
     {
         string defaultImgPath = Path.Combine(_Paths?.Value?.ProductImagePath??string.Empty, _Paths?.Value?.DefaultFileName??string.Empty);
-        if (!File.Exists(filePath))
-            return $"data:image/png;base64,{Convert.ToBase64String(await File.ReadAllBytesAsync(defaultImgPath))}";
 
-        var bytes = await File.ReadAllBytesAsync(filePath);
-        var base64 = Convert.ToBase64String(bytes);
+        try
+        {
+            if (!File.Exists(filePath))
+                return $"data:image/png;base64,{Convert.ToBase64String(await File.ReadAllBytesAsync(defaultImgPath))}";
 
-        return $"data:image/png;base64,{base64}";
+            var bytes = await File.ReadAllBytesAsync(filePath);
+            var base64 = Convert.ToBase64String(bytes);
+
+            return $"data:image/png;base64,{base64}";
+        }
+        catch (Exception ex)
+        {
+            
+        }
+        return string.Empty;
+
     }
     private async Task OnAddImage(ProductWidgetModel product)
     {
