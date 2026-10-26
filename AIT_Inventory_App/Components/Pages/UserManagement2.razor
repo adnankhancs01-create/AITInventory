@@ -1,0 +1,233 @@
+@page "/users"
+@using Common.Users2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IUserManagementService2 Users
+@inject DialogService DialogService
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h3 style="margin:0;">Users</h3>
+    <RadzenButton Text="New user" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="NewUser" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="search" Placeholder="Name, email or mobile" Style="width:240px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Role</label>
+        <RadzenDropDown TValue="int?" Data="@roles" TextProperty="Name" ValueProperty="Id" @bind-Value="roleFilter"
+                        AllowClear="true" Placeholder="All roles" Style="width:180px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Status</label>
+        <RadzenDropDown TValue="string" Data="@statusOptions" @bind-Value="statusFilter" Style="width:140px" />
+    </div>
+    <RadzenButton Text="Search" Icon="search" Click="LoadUsersAsync" />
+</RadzenStack>
+
+@if (editing != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5 style="margin-top:0;">@(editing.Id > 0 ? "Edit user" : "New user")</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">User name</label>
+                <RadzenTextBox @bind-Value="editing.UserName" MaxLength="100" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Email</label>
+                <RadzenTextBox @bind-Value="editing.Email" MaxLength="256" Style="width:240px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Mobile</label>
+                <RadzenTextBox @bind-Value="editing.MobileNo" MaxLength="50" Style="width:160px" />
+            </div>
+            @if (!editingIsRoot)
+            {
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Role</label>
+                    <RadzenDropDown TValue="int?" Data="@activeRoles" TextProperty="Name" ValueProperty="Id" @bind-Value="editing.RoleId"
+                                    Placeholder="Select role" Style="width:180px" />
+                </div>
+            }
+            @if (editing.Id <= 0)
+            {
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Password (min 8)</label>
+                    <RadzenPassword @bind-Value="editing.Password" Style="width:180px" />
+                </div>
+            }
+            @if (!editingIsRoot)
+            {
+                <RadzenCheckBox TValue="bool" @bind-Value="editing.IsActive" Name="userActive" />
+                <RadzenLabel Text="Active" Component="userActive" />
+            }
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => editing = null)" />
+        </RadzenStack>
+        @if (editingIsRoot)
+        {
+            <p style="font-size:12px; color:#6c757d; margin:8px 0 0 0;">This is the owner account. It always has access to every screen and cannot be deactivated.</p>
+        }
+    </RadzenCard>
+}
+
+@if (resetTarget != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5 style="margin-top:0;">Reset password for @resetTarget.UserName</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">New password (min 8)</label>
+                <RadzenPassword @bind-Value="newPassword" Style="width:220px" />
+            </div>
+            <RadzenButton Text="Reset" Icon="lock_reset" ButtonStyle="ButtonStyle.Warning" Click="ResetPasswordAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="CancelReset" />
+        </RadzenStack>
+    </RadzenCard>
+}
+
+<RadzenDataGrid TItem="UserListItemDto2" Data="@users" AllowSorting="true" AllowPaging="true" PageSize="20">
+    <Columns>
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="UserName" Title="User name" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="Email" Title="Email" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="MobileNo" Title="Mobile" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="RoleName" Title="Role" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="IsActive" Title="Active" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Property="LastLoginOn" Title="Last login" FormatString="{0:dd MMM yyyy HH:mm}" />
+        <RadzenDataGridColumn TItem="UserListItemDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => Edit(row))" title="Edit" />
+                <RadzenButton Icon="lock_reset" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Warning" Click="@(() => StartReset(row))" title="Reset password" />
+                @if (!row.IsRoot)
+                {
+                    <RadzenButton Icon="@(row.IsActive ? "person_off" : "person")" Size="ButtonSize.Small"
+                                  ButtonStyle="@(row.IsActive ? ButtonStyle.Danger : ButtonStyle.Success)"
+                                  Click="@(() => ToggleActiveAsync(row))" title="@(row.IsActive ? "Deactivate" : "Activate")" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private List<UserListItemDto2> users = new();
+    private List<RoleDto2> roles = new();
+    private List<RoleDto2> activeRoles = new();
+    private readonly string[] statusOptions = { "All", "Active", "Inactive" };
+
+    private string? search;
+    private int? roleFilter;
+    private string statusFilter = "All";
+
+    private UserSaveDto2? editing;
+    private bool editingIsRoot;
+    private UserListItemDto2? resetTarget;
+    private string? newPassword;
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var roleResult = await Users.GetRolesAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, roleResult, false))
+        {
+            roles = roleResult.Data;
+            activeRoles = roles.Where(r => r.IsActive).ToList();
+        }
+
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        var filter = new UserFilterDto2
+        {
+            Search = search,
+            RoleId = roleFilter,
+            IsActive = statusFilter == "Active" ? true : statusFilter == "Inactive" ? false : null
+        };
+
+        var result = await Users.GetUsersAsync(filter);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            users = result.Data;
+    }
+
+    private void NewUser()
+    {
+        editingIsRoot = false;
+        resetTarget = null;
+        editing = new UserSaveDto2 { IsActive = true };
+    }
+
+    private void Edit(UserListItemDto2 row)
+    {
+        resetTarget = null;
+        editingIsRoot = row.IsRoot;
+        editing = new UserSaveDto2
+        {
+            Id = row.Id,
+            UserName = row.UserName,
+            Email = row.Email,
+            MobileNo = row.MobileNo,
+            RoleId = row.RoleId,
+            IsActive = row.IsActive
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editing == null) return;
+        saving = true;
+        var result = await Users.SaveUserAsync(editing);
+        saving = false;
+
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            editing = null;
+            await LoadUsersAsync();
+        }
+    }
+
+    private void StartReset(UserListItemDto2 row)
+    {
+        editing = null;
+        newPassword = null;
+        resetTarget = row;
+    }
+
+    private void CancelReset()
+    {
+        resetTarget = null;
+        newPassword = null;
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (resetTarget == null) return;
+        saving = true;
+        var result = await Users.ResetPasswordAsync(resetTarget.Id, newPassword ?? string.Empty);
+        saving = false;
+
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+            CancelReset();
+    }
+
+    private async Task ToggleActiveAsync(UserListItemDto2 row)
+    {
+        bool makeActive = !row.IsActive;
+        if (!makeActive)
+        {
+            var confirmed = await DialogService.Confirm(
+                $"Deactivate {row.UserName}? They will no longer be able to log in. Their history is kept.",
+                "Deactivate user",
+                new ConfirmOptions { OkButtonText = "Deactivate", CancelButtonText = "Cancel" });
+            if (confirmed != true) return;
+        }
+
+        var result = await Users.SetUserActiveAsync(row.Id, makeActive);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            await LoadUsersAsync();
+    }
+}

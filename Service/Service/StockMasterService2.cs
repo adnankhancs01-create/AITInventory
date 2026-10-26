@@ -2,6 +2,7 @@ using Common;
 using Common.Stock2;
 using Domain.Entities;
 using Domain.IRepositories;
+using Domain.Users2;
 using Service.IService;
 
 namespace Service.Service
@@ -10,11 +11,13 @@ namespace Service.Service
     {
         private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
+        private readonly ICurrentUser2 _currentUser;
 
-        public StockMasterService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
+        public StockMasterService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo, ICurrentUser2 currentUser)
         {
             _uowFactory = uowFactory;
             _logRepo = logRepo;
+            _currentUser = currentUser;
         }
 
         // ------------------------------------------------------------------ locations
@@ -34,6 +37,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<int>(_currentUser, ScreenCatalog2.StockLocations);
+                if (denied != null) return denied;
+
                 var errors = new List<string>();
                 string code = (dto.Code ?? string.Empty).Trim().ToUpperInvariant();
                 string name = (dto.Name ?? string.Empty).Trim();
@@ -54,7 +60,7 @@ namespace Service.Service
                 StockLocation2? entity;
                 if (isNew)
                 {
-                    entity = new StockLocation2 { CreatedBy = StockConstants2.SystemUserId, CreatedOn = DateTime.Now };
+                    entity = new StockLocation2 { CreatedBy = StockAccess2.ActingUserId(_currentUser, null), CreatedOn = DateTime.Now };
                 }
                 else
                 {
@@ -119,6 +125,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<int>(_currentUser, ScreenCatalog2.StockSuppliers);
+                if (denied != null) return denied;
+
                 string name = (dto.Name ?? string.Empty).Trim();
                 if (name.Length == 0) return StockResult2.Fail<int>("Supplier name is required.");
                 if (name.Length > 100) return StockResult2.Fail<int>("Supplier name can be at most 100 characters.");
@@ -197,6 +206,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<bool>(_currentUser, ScreenCatalog2.StockReorder);
+                if (denied != null) return denied;
+
                 var errors = new List<string>();
                 if (dto.ReorderLevel < 0) errors.Add("Reorder level cannot be negative.");
                 if (dto.ReorderQuantity < 0) errors.Add("Reorder quantity cannot be negative.");
@@ -225,7 +237,7 @@ namespace Service.Service
                 entity.MaxLevel = dto.MaxLevel;
                 entity.PreferredVendorId = dto.PreferredVendorId;
                 entity.ModifiedOn = DateTime.Now;
-                entity.ModifiedBy = userId ?? StockConstants2.SystemUserId;
+                entity.ModifiedBy = StockAccess2.ActingUserId(_currentUser, userId);
 
                 await uow.SaveChangesAsync();
                 return StockResult2.Ok(true, "Reorder settings saved.");

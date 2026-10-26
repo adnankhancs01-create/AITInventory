@@ -1,96 +1,207 @@
+@using Domain.Users2
+@implements IDisposable
+@inject ICurrentUser2 CurrentUser
+
 @* <div class="sidebar-header">
     AIT Inventory
 </div> *@
 
 <nav class="menu">
-    <NavLink href="home" class="menu-item">
-        <i class="bi bi-house-door-fill"></i>
-        <span class="menu-text">Home</span>
-    </NavLink>
+    @if (Can(ScreenCatalog2.Home))
+    {
+        <NavLink href="home" class="menu-item">
+            <i class="bi bi-house-door-fill"></i>
+            <span class="menu-text">Home</span>
+        </NavLink>
+    }
 
-    <NavLink href="retail" class="menu-item">
-        <i class="bi bi-cash-stack"></i>
-        <span class="menu-text">Order</span>
-    </NavLink>
+    @if (Can(ScreenCatalog2.SalesOrder))
+    {
+        <NavLink href="retail" class="menu-item">
+            <i class="bi bi-cash-stack"></i>
+            <span class="menu-text">Order</span>
+        </NavLink>
+    }
 @* 
     <NavLink href="Transaction" class="menu-item">
         <i class="bi bi-receipt"></i>
         <span class="menu-text">Transaction</span>
     </NavLink>
  *@
-    <NavLink href="Product" class="menu-item">
-        <i class="bi bi-box"></i> <span class="menu-text">Product</span>
-    </NavLink>
-
-    <NavLink href="Client" class="menu-item">
-        <i class="bi bi-people"></i> <span class="menu-text">Client</span>
-    </NavLink>
-
-    <NavLink href="Stock" class="menu-item">
-        <i class="bi bi-stack"></i> <span class="menu-text">Stock</span>
-    </NavLink>
-
-    <div class="menu-item" style="cursor:pointer;" @onclick="ToggleStock2">
-        <i class="bi bi-diagram-3"></i> <span class="menu-text">Stock Management @(stock2Open ? "▾" : "▸")</span>
-    </div>
-    @if (stock2Open)
+    @if (Can(ScreenCatalog2.CatalogProduct))
     {
-        <NavLink href="stock2" Match="NavLinkMatch.All" class="menu-item">
-            <i class="bi bi-speedometer2"></i> <span class="menu-text">Stock Dashboard</span>
-        </NavLink>
-        <NavLink href="stock2/overview" class="menu-item">
-            <i class="bi bi-boxes"></i> <span class="menu-text">Stock Overview</span>
-        </NavLink>
-        <NavLink href="stock2/purchase-orders" class="menu-item">
-            <i class="bi bi-clipboard-check"></i> <span class="menu-text">Purchase Orders</span>
-        </NavLink>
-        <NavLink href="stock2/receiving" class="menu-item">
-            <i class="bi bi-box-arrow-in-down"></i> <span class="menu-text">Receiving</span>
-        </NavLink>
-        <NavLink href="stock2/issues" class="menu-item">
-            <i class="bi bi-box-arrow-up"></i> <span class="menu-text">Issues</span>
-        </NavLink>
-        <NavLink href="stock2/transfers" class="menu-item">
-            <i class="bi bi-arrow-left-right"></i> <span class="menu-text">Transfers</span>
-        </NavLink>
-        <NavLink href="stock2/adjustments" class="menu-item">
-            <i class="bi bi-sliders"></i> <span class="menu-text">Adjustments / Count</span>
-        </NavLink>
-        <NavLink href="stock2/reorder" class="menu-item">
-            <i class="bi bi-exclamation-triangle"></i> <span class="menu-text">Low Stock / Reorder</span>
-        </NavLink>
-        <NavLink href="stock2/locations" class="menu-item">
-            <i class="bi bi-building"></i> <span class="menu-text">Locations</span>
-        </NavLink>
-        <NavLink href="stock2/suppliers" class="menu-item">
-            <i class="bi bi-truck"></i> <span class="menu-text">Suppliers</span>
-        </NavLink>
-        <NavLink href="stock2/reports/movements" class="menu-item">
-            <i class="bi bi-clock-history"></i> <span class="menu-text">Movement Report</span>
-        </NavLink>
-        <NavLink href="stock2/reports/valuation" class="menu-item">
-            <i class="bi bi-currency-dollar"></i> <span class="menu-text">Valuation Report</span>
-        </NavLink>
-        <NavLink href="stock2/reports/aging" class="menu-item">
-            <i class="bi bi-hourglass-split"></i> <span class="menu-text">Aging Report</span>
-        </NavLink>
-        <NavLink href="stock2/reports/expiry" class="menu-item">
-            <i class="bi bi-calendar-x"></i> <span class="menu-text">Expiry Report</span>
-        </NavLink>
-        <NavLink href="stock2/reports/reconciliation" class="menu-item">
-            <i class="bi bi-check2-square"></i> <span class="menu-text">Reconciliation</span>
+        <NavLink href="Product" class="menu-item">
+            <i class="bi bi-box"></i> <span class="menu-text">Product</span>
         </NavLink>
     }
 
-    <NavLink href="Category" class="menu-item">
-        <i class="bi bi-tags"></i> <span class="menu-text">Category</span>
-    </NavLink>
+    @if (Can(ScreenCatalog2.CatalogClient))
+    {
+        <NavLink href="Client" class="menu-item">
+            <i class="bi bi-people"></i> <span class="menu-text">Client</span>
+        </NavLink>
+    }
+
+    @if (Can(ScreenCatalog2.StockClassic))
+    {
+        <NavLink href="Stock" class="menu-item">
+            <i class="bi bi-stack"></i> <span class="menu-text">Stock</span>
+        </NavLink>
+    }
+
+    @if (AnyStock2())
+    {
+    <div class="menu-item" style="cursor:pointer;" @onclick="ToggleStock2">
+        <i class="bi bi-diagram-3"></i> <span class="menu-text">Stock Management @(stock2Open ? "▾" : "▸")</span>
+    </div>
+    }
+    @if (stock2Open && AnyStock2())
+    {
+        @if (Can(ScreenCatalog2.StockDashboard))
+        {
+            <NavLink href="stock2" Match="NavLinkMatch.All" class="menu-item">
+                <i class="bi bi-speedometer2"></i> <span class="menu-text">Stock Dashboard</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockOverview))
+        {
+            <NavLink href="stock2/overview" class="menu-item">
+                <i class="bi bi-boxes"></i> <span class="menu-text">Stock Overview</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockPurchaseOrders))
+        {
+            <NavLink href="stock2/purchase-orders" class="menu-item">
+                <i class="bi bi-clipboard-check"></i> <span class="menu-text">Purchase Orders</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReceiving))
+        {
+            <NavLink href="stock2/receiving" class="menu-item">
+                <i class="bi bi-box-arrow-in-down"></i> <span class="menu-text">Receiving</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockIssues))
+        {
+            <NavLink href="stock2/issues" class="menu-item">
+                <i class="bi bi-box-arrow-up"></i> <span class="menu-text">Issues</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockTransfers))
+        {
+            <NavLink href="stock2/transfers" class="menu-item">
+                <i class="bi bi-arrow-left-right"></i> <span class="menu-text">Transfers</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockAdjustments))
+        {
+            <NavLink href="stock2/adjustments" class="menu-item">
+                <i class="bi bi-sliders"></i> <span class="menu-text">Adjustments / Count</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReorder))
+        {
+            <NavLink href="stock2/reorder" class="menu-item">
+                <i class="bi bi-exclamation-triangle"></i> <span class="menu-text">Low Stock / Reorder</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockLocations))
+        {
+            <NavLink href="stock2/locations" class="menu-item">
+                <i class="bi bi-building"></i> <span class="menu-text">Locations</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockSuppliers))
+        {
+            <NavLink href="stock2/suppliers" class="menu-item">
+                <i class="bi bi-truck"></i> <span class="menu-text">Suppliers</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReportMovements))
+        {
+            <NavLink href="stock2/reports/movements" class="menu-item">
+                <i class="bi bi-clock-history"></i> <span class="menu-text">Movement Report</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReportValuation))
+        {
+            <NavLink href="stock2/reports/valuation" class="menu-item">
+                <i class="bi bi-currency-dollar"></i> <span class="menu-text">Valuation Report</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReportAging))
+        {
+            <NavLink href="stock2/reports/aging" class="menu-item">
+                <i class="bi bi-hourglass-split"></i> <span class="menu-text">Aging Report</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReportExpiry))
+        {
+            <NavLink href="stock2/reports/expiry" class="menu-item">
+                <i class="bi bi-calendar-x"></i> <span class="menu-text">Expiry Report</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.StockReportReconciliation))
+        {
+            <NavLink href="stock2/reports/reconciliation" class="menu-item">
+                <i class="bi bi-check2-square"></i> <span class="menu-text">Reconciliation</span>
+            </NavLink>
+        }
+    }
+
+    @if (Can(ScreenCatalog2.CatalogCategory))
+    {
+        <NavLink href="Category" class="menu-item">
+            <i class="bi bi-tags"></i> <span class="menu-text">Category</span>
+        </NavLink>
+    }
+
+    @if (CurrentUser.IsRoot)
+    {
+        <NavLink href="users" class="menu-item">
+            <i class="bi bi-person-gear"></i> <span class="menu-text">Users</span>
+        </NavLink>
+        <NavLink href="roles" class="menu-item">
+            <i class="bi bi-shield-check"></i> <span class="menu-text">Roles &amp; Permissions</span>
+        </NavLink>
+        <NavLink href="business" class="menu-item">
+            <i class="bi bi-building-gear"></i> <span class="menu-text">Business Profile</span>
+        </NavLink>
+    }
 </nav>
 @code {
     private bool stock2Open = true;
 
+    private static readonly string[] Stock2Keys =
+    {
+        ScreenCatalog2.StockDashboard, ScreenCatalog2.StockOverview, ScreenCatalog2.StockPurchaseOrders,
+        ScreenCatalog2.StockReceiving, ScreenCatalog2.StockIssues, ScreenCatalog2.StockTransfers,
+        ScreenCatalog2.StockAdjustments, ScreenCatalog2.StockReorder, ScreenCatalog2.StockLocations,
+        ScreenCatalog2.StockSuppliers, ScreenCatalog2.StockReportMovements, ScreenCatalog2.StockReportValuation,
+        ScreenCatalog2.StockReportAging, ScreenCatalog2.StockReportExpiry, ScreenCatalog2.StockReportReconciliation
+    };
+
+    protected override void OnInitialized()
+    {
+        CurrentUser.Changed += HandleUserChanged;
+    }
+
+    private bool Can(string screenKey) => CurrentUser.CanView(screenKey);
+
+    private bool AnyStock2() => Stock2Keys.Any(CurrentUser.CanView);
+
     private void ToggleStock2()
     {
         stock2Open = !stock2Open;
+    }
+
+    private void HandleUserChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CurrentUser.Changed -= HandleUserChanged;
     }
 }

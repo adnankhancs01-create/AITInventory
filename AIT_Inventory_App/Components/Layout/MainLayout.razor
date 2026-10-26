@@ -1,6 +1,8 @@
-﻿@using Service.IService
+@using Domain.Users2
+@using Service.IService
 @inject NavigationManager Navigation
-@inject IUserService _userService
+@inject IAuthService2 Auth
+@inject ICurrentUser2 CurrentUser
 @inherits LayoutComponentBase
 <RadzenDialog />
 <div class="layout">
@@ -11,23 +13,30 @@
 
     <!-- Main -->
     <div class="main-area">
-        
+
         <!-- Topbar -->
         <header class="topbar">
             <div class="topbar-left">
-                
-                <!-- 🔥 Toggle Button -->
+
+                <!-- Toggle Button -->
                 <button class="toggle-btn" @onclick="ToggleSidebar">
                     <i class="bi bi-list"></i>
                 </button>
 
-                <span class="app-title">Inventory System</span>
+                <span class="app-title">@(string.IsNullOrWhiteSpace(CurrentUser.BusinessName) ? "Inventory System" : CurrentUser.BusinessName)</span>
             </div>
 
             <div class="topbar-right">
+                @if (CurrentUser.IsAuthenticated)
+                {
+                    <span class="about-link" style="margin-right:12px;">
+                        @CurrentUser.UserName (@CurrentUser.RoleName)
+                    </span>
+                }
+
                 <a href="https://www.facebook.com/AdvancedInstituteOfTechnology26/"
-                       target="_blank"
-                       class="about-link">
+                   target="_blank"
+                   class="about-link">
                     About
                 </a>
 
@@ -51,17 +60,11 @@
     {
         isSidebarCollapsed = !isSidebarCollapsed;
     }
+
     private async Task HandleLogout()
     {
-        try
-        {
-            // await _userService.LogoutAsync();
-            
-            Navigation.NavigateTo("/", true);
-        }
-        catch
-        {
-            Navigation.NavigateTo("/", true);
-        }
+        // Clear the session first; the forced reload then lands on the login page.
+        await Auth.LogoutAsync();
+        Navigation.NavigateTo("/", true);
     }
 }

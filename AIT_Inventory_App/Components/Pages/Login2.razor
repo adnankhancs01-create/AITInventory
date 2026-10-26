@@ -1,0 +1,108 @@
+@page "/"
+@using System.ComponentModel.DataAnnotations
+@using Common.Users2
+@using Domain.Users2
+@using Service.IService
+@layout LoginLayout
+@inject NavigationManager Navigation
+@inject IAuthService2 Auth
+@inject ICurrentUser2 CurrentUser
+
+<h1>Login</h1>
+
+@if (checking)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="@model" OnValidSubmit="HandleLoginAsync">
+        <DataAnnotationsValidator />
+
+        <div style="margin-bottom:10px;">
+            <InputText @bind-Value="model.Identifier" placeholder="Email or user name" autocomplete="username"
+                       style="display:block; width:100%; padding:8px;" />
+            <ValidationMessage For="@(() => model.Identifier)" />
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <InputText @bind-Value="model.Password" type="password" placeholder="Password" autocomplete="current-password"
+                       style="display:block; width:100%; padding:8px;" />
+            <ValidationMessage For="@(() => model.Password)" />
+        </div>
+
+        <button type="submit" disabled="@busy" style="padding:8px 20px;">Login</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red; margin-top:10px;">@errorMessage</p>
+}
+
+@code {
+    private readonly LoginForm2 model = new();
+    private string? errorMessage;
+    private bool checking = true;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentUser.IsAuthenticated)
+        {
+            Navigation.NavigateTo(LandingRoute(CurrentUser));
+            return;
+        }
+
+        var state = await Auth.GetStartupStateAsync();
+        if (!state.Success)
+        {
+            errorMessage = state.Errors != null && state.Errors.Count > 0
+                ? string.Join(" ", state.Errors)
+                : "The database could not be reached.";
+            checking = false;
+            return;
+        }
+
+        if (state.Data.SetupRequired)
+        {
+            Navigation.NavigateTo("/setup");
+            return;
+        }
+
+        checking = false;
+    }
+
+    private async Task HandleLoginAsync()
+    {
+        errorMessage = null;
+        busy = true;
+
+        var result = await Auth.LoginAsync(new LoginRequestDto2 { Identifier = model.Identifier, Password = model.Password });
+        busy = false;
+
+        if (result.Success)
+        {
+            model.Password = string.Empty;
+            Navigation.NavigateTo(ScreenCatalog2.FirstAllowedRoute(result.Data.AllowedScreens, result.Data.IsRoot));
+        }
+        else
+        {
+            errorMessage = result.Errors != null && result.Errors.Count > 0 ? string.Join(" ", result.Errors) : "Login failed.";
+        }
+    }
+
+    private static string LandingRoute(ICurrentUser2 user)
+    {
+        return user.CanView(ScreenCatalog2.Home) ? "/home" : "/access-denied";
+    }
+
+    public class LoginForm2
+    {
+        [Required(ErrorMessage = "Email or user name is required")]
+        public string Identifier { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

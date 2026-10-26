@@ -42,6 +42,9 @@ namespace AIT_Inventory_App
             builder.Services.AddRepositoryResolution(cs);
             // Service layer
             builder.Services.AddServiceResolution();
+            // User management (login, roles, screen permissions). Must be registered before the Stock2 services.
+            builder.Services.AddUserRepositories2();
+            builder.Services.AddUserServices2();
             // Stock Management module (Stock2)
             builder.Services.AddStockRepositories2();
             builder.Services.AddStockServices2();

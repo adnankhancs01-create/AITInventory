@@ -3,6 +3,7 @@ using Common.Stock2;
 using Domain.Entities;
 using Domain.IRepositories;
 using Domain.Stock2;
+using Domain.Users2;
 using Service.IService;
 
 namespace Service.Service
@@ -12,11 +13,13 @@ namespace Service.Service
     {
         private readonly IStockUnitOfWorkFactory2 _uowFactory;
         private readonly ILogRepository _logRepo;
+        private readonly ICurrentUser2 _currentUser;
 
-        public StockReceivingService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo)
+        public StockReceivingService2(IStockUnitOfWorkFactory2 uowFactory, ILogRepository logRepo, ICurrentUser2 currentUser)
         {
             _uowFactory = uowFactory;
             _logRepo = logRepo;
+            _currentUser = currentUser;
         }
 
         private static string? Clean(string? value, int maxLength)
@@ -30,10 +33,13 @@ namespace Service.Service
 
         public Task<BaseResponse<int>> CreatePurchaseOrderAsync(PurchaseOrderRequestDto2 request)
         {
-            int userId = request.UserId ?? StockConstants2.SystemUserId;
+            int userId = StockAccess2.ActingUserId(_currentUser, request.UserId);
 
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<int>(_currentUser, ScreenCatalog2.StockPurchaseOrders);
+                if (denied != null) return denied;
+
                 DateTime date = request.DocumentDate ?? DateTime.Now;
                 var errors = new List<string>();
 
@@ -117,6 +123,9 @@ namespace Service.Service
         {
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<bool>(_currentUser, ScreenCatalog2.StockPurchaseOrders);
+                if (denied != null) return denied;
+
                 await using var uow = _uowFactory.Create();
 
                 var po = await uow.Receiving.GetPurchaseOrderWithLinesAsync(purchaseOrderId);
@@ -166,10 +175,13 @@ namespace Service.Service
 
         public Task<BaseResponse<int>> PostReceiptAsync(ReceiptRequestDto2 request)
         {
-            int userId = request.UserId ?? StockConstants2.SystemUserId;
+            int userId = StockAccess2.ActingUserId(_currentUser, request.UserId);
 
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<int>(_currentUser, ScreenCatalog2.StockReceiving);
+                if (denied != null) return denied;
+
                 DateTime date = request.DocumentDate ?? DateTime.Now;
                 var errors = new List<string>();
 
@@ -355,10 +367,13 @@ namespace Service.Service
 
         public Task<BaseResponse<bool>> CancelReceiptAsync(int receiptId, int? userId)
         {
-            int actor = userId ?? StockConstants2.SystemUserId;
+            int actor = StockAccess2.ActingUserId(_currentUser, userId);
 
             return StockResult2.RunAsync(async () =>
             {
+                var denied = StockAccess2.Check<bool>(_currentUser, ScreenCatalog2.StockReceiving);
+                if (denied != null) return denied;
+
                 await using var uow = _uowFactory.Create();
                 await uow.Ledger.EnsureDefaultLocationAsync();
                 await uow.BeginTransactionAsync();

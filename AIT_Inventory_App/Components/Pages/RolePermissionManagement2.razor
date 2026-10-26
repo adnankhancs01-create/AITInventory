@@ -1,0 +1,173 @@
+@page "/roles"
+@using Common.Users2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IUserManagementService2 Users
+@inject DialogService DialogService
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h3 style="margin:0;">Roles and Permissions</h3>
+    <RadzenButton Text="New role" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="NewRole" />
+</div>
+
+@if (editing != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Role name</label>
+                <RadzenTextBox @bind-Value="editing.Name" MaxLength="50" Style="width:200px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Description</label>
+                <RadzenTextBox @bind-Value="editing.Description" MaxLength="200" Style="width:320px" />
+            </div>
+            <RadzenCheckBox TValue="bool" @bind-Value="editing.IsActive" Name="roleActive" />
+            <RadzenLabel Text="Active" Component="roleActive" />
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveRoleAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => editing = null)" />
+        </RadzenStack>
+    </RadzenCard>
+}
+
+<RadzenRow Gap="16px">
+    <RadzenColumn Size="12" SizeMD="5">
+        <RadzenDataGrid TItem="RoleDto2" Data="@roles" AllowSorting="true" Style="margin-bottom:16px;">
+            <Columns>
+                <RadzenDataGridColumn TItem="RoleDto2" Property="Name" Title="Role" />
+                <RadzenDataGridColumn TItem="RoleDto2" Property="UserCount" Title="Users" />
+                <RadzenDataGridColumn TItem="RoleDto2" Property="IsActive" Title="Active" />
+                <RadzenDataGridColumn TItem="RoleDto2" Title="Actions" Sortable="false">
+                    <Template Context="row">
+                        <RadzenButton Text="Screens" Icon="checklist" Size="ButtonSize.Small"
+                                      ButtonStyle="@(selectedRole?.Id == row.Id ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                      Click="@(() => SelectRoleAsync(row))" />
+                        <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditRole(row))" title="Rename / edit" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+        <p style="font-size:12px; color:#6c757d;">The owner always sees every screen. Administration screens (Users, Roles, Business Profile) are for the owner only.</p>
+    </RadzenColumn>
+
+    <RadzenColumn Size="12" SizeMD="7">
+        @if (selectedRole == null)
+        {
+            <RadzenCard>
+                <p style="margin:0;">Select a role (Screens button) to choose which screens it can open.</p>
+            </RadzenCard>
+        }
+        else
+        {
+            <RadzenCard>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h5 style="margin:0;">Screens for: @selectedRole.Name</h5>
+                    <RadzenButton Text="Save permissions" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SavePermissionsAsync" Disabled="@saving" />
+                </div>
+
+                @foreach (var group in screens.GroupBy(s => s.GroupName))
+                {
+                    var keys = group.Select(s => s.ScreenKey).ToList();
+                    <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e9ecef;">
+                        <RadzenCheckBox TValue="bool" Value="@keys.All(k => selected.Contains(k))"
+                                        Change="@(v => ToggleGroup(keys, v))" Name="@("grp" + group.Key)" />
+                        <RadzenLabel Text="@group.Key" Component="@("grp" + group.Key)" Style="font-weight:600; margin-left:6px;" />
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px 24px; margin:6px 0 0 24px;">
+                        @foreach (var screen in group)
+                        {
+                            <div style="min-width:200px;">
+                                <RadzenCheckBox TValue="bool" Value="@selected.Contains(screen.ScreenKey)"
+                                                Change="@(v => Toggle(screen.ScreenKey, v))" Name="@screen.ScreenKey" />
+                                <RadzenLabel Text="@screen.DisplayName" Component="@screen.ScreenKey" Style="margin-left:6px;" />
+                            </div>
+                        }
+                    </div>
+                }
+            </RadzenCard>
+        }
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+    private List<RoleDto2> roles = new();
+    private List<ScreenDto2> screens = new();
+    private HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
+    private RoleDto2? selectedRole;
+    private RoleDto2? editing;
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var screenResult = await Users.GetScreensAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, screenResult, false))
+            screens = screenResult.Data;
+
+        await LoadRolesAsync();
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        var result = await Users.GetRolesAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            roles = result.Data;
+            if (selectedRole != null)
+                selectedRole = roles.FirstOrDefault(r => r.Id == selectedRole.Id);
+        }
+    }
+
+    private void NewRole()
+    {
+        editing = new RoleDto2 { IsActive = true };
+    }
+
+    private void EditRole(RoleDto2 row)
+    {
+        editing = new RoleDto2 { Id = row.Id, Name = row.Name, Description = row.Description, IsActive = row.IsActive };
+    }
+
+    private async Task SaveRoleAsync()
+    {
+        if (editing == null) return;
+        saving = true;
+        var result = await Users.SaveRoleAsync(editing);
+        saving = false;
+
+        if (await StockUi2.ShowResultAsync(DialogService, result))
+        {
+            editing = null;
+            await LoadRolesAsync();
+        }
+    }
+
+    private async Task SelectRoleAsync(RoleDto2 role)
+    {
+        var result = await Users.GetRolePermissionsAsync(role.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+        {
+            selectedRole = role;
+            selected = new HashSet<string>(result.Data, StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private void Toggle(string key, bool value)
+    {
+        if (value) selected.Add(key);
+        else selected.Remove(key);
+    }
+
+    private void ToggleGroup(List<string> keys, bool value)
+    {
+        foreach (var key in keys) Toggle(key, value);
+    }
+
+    private async Task SavePermissionsAsync()
+    {
+        if (selectedRole == null) return;
+        saving = true;
+        var result = await Users.SaveRolePermissionsAsync(selectedRole.Id, selected.ToList());
+        saving = false;
+        await StockUi2.ShowResultAsync(DialogService, result);
+    }
+}

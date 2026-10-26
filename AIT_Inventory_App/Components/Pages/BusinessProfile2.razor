@@ -1,0 +1,68 @@
+@page "/business"
+@using Common.Users2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IUserManagementService2 Users
+@inject DialogService DialogService
+
+<h3>Business Profile</h3>
+
+@if (dto == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <RadzenCard Style="max-width:640px;">
+        <RadzenStack Gap="10px">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Business name</label>
+                <RadzenTextBox @bind-Value="dto.Name" MaxLength="200" Style="width:100%" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Address</label>
+                <RadzenTextBox @bind-Value="dto.Address" MaxLength="300" Style="width:100%" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">City</label>
+                <RadzenTextBox @bind-Value="dto.City" MaxLength="100" Style="width:100%" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Phone</label>
+                <RadzenTextBox @bind-Value="dto.Phone" MaxLength="50" Style="width:100%" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Business email</label>
+                <RadzenTextBox @bind-Value="dto.Email" MaxLength="150" Style="width:100%" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Tax / NTN number</label>
+                <RadzenTextBox @bind-Value="dto.TaxNumber" MaxLength="50" Style="width:100%" />
+            </div>
+            <div>
+                <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveAsync" Disabled="@saving" />
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+}
+
+@code {
+    private BusinessDto2? dto;
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Users.GetBusinessAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            dto = result.Data;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (dto == null) return;
+        saving = true;
+        var result = await Users.SaveBusinessAsync(dto);
+        saving = false;
+        await StockUi2.ShowResultAsync(DialogService, result);
+    }
+}

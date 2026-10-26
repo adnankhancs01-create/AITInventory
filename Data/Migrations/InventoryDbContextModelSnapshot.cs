@@ -22,6 +22,90 @@ namespace Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.AppScreen2", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsRootOnly")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ScreenKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScreenKey")
+                        .IsUnique();
+
+                    b.ToTable("AppScreen2");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Business2", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TaxNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Business2");
+                });
+
             modelBuilder.Entity("Domain.Entities.ClientDetail", b =>
                 {
                     b.Property<int>("Id")
@@ -328,6 +412,33 @@ namespace Data.Migrations
                     b.HasIndex("TransactionDetailId");
 
                     b.ToTable("ReturnTransaction");
+                });
+
+            modelBuilder.Entity("Domain.Entities.RoleScreenPermission2", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanView")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ScreenKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId", "ScreenKey")
+                        .IsUnique();
+
+                    b.ToTable("RoleScreenPermission2");
                 });
 
             modelBuilder.Entity("Domain.Entities.Stock", b =>
@@ -1123,28 +1234,100 @@ namespace Data.Migrations
                     b.Property<string>("BusinessAddress")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("BusinessId")
+                        .HasColumnType("int");
+
                     b.Property<string>("BusinessName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("CreatedOn")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsRoot")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastLoginOn")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("RoleId")
+                        .HasColumnType("int");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("mobileNo")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId");
 
+                    b.HasIndex("BusinessId");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
+
+                    b.HasIndex("IsRoot")
+                        .IsUnique()
+                        .HasFilter("[IsRoot] = 1");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserName")
+                        .IsUnique()
+                        .HasFilter("[UserName] IS NOT NULL");
+
                     b.ToTable("UserMst");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserRole2", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("UserRole2");
                 });
 
             modelBuilder.Entity("Domain.Entities.Vendor", b =>
@@ -1342,6 +1525,17 @@ namespace Data.Migrations
                         .HasForeignKey("TransactionDetailId");
 
                     b.Navigation("TransactionDetail");
+                });
+
+            modelBuilder.Entity("Domain.Entities.RoleScreenPermission2", b =>
+                {
+                    b.HasOne("Domain.Entities.UserRole2", "Role")
+                        .WithMany("Permissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("Domain.Entities.Stock", b =>
@@ -1641,6 +1835,23 @@ namespace Data.Migrations
                     b.Navigation("Transaction");
                 });
 
+            modelBuilder.Entity("Domain.Entities.UserMst", b =>
+                {
+                    b.HasOne("Domain.Entities.Business2", "Business")
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.UserRole2", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Business");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("Product", b =>
                 {
                     b.HasOne("ProductCategory", "Category")
@@ -1680,6 +1891,11 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Entities.TransactionMst", b =>
                 {
                     b.Navigation("TransactionDetails");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserRole2", b =>
+                {
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Vendor", b =>

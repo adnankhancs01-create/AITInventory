@@ -1,0 +1,64 @@
+@using Domain.Users2
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject ICurrentUser2 CurrentUser
+
+@if (decision == GuardDecision2.Allow)
+{
+    <RouteView RouteData="RouteData" DefaultLayout="typeof(MainLayout)" />
+}
+else if (decision == GuardDecision2.Denied)
+{
+    <LayoutView Layout="typeof(MainLayout)">
+        <AIT_Inventory_App.Components.Pages.AccessDenied2 />
+    </LayoutView>
+}
+
+@code {
+    /// <summary>Blocks direct navigation to a screen the user's role may not open (hiding the menu item alone is not enough).</summary>
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = default!;
+
+    private enum GuardDecision2 { Allow, Denied, Redirect }
+
+    private GuardDecision2 decision = GuardDecision2.Redirect;
+
+    protected override void OnInitialized()
+    {
+        CurrentUser.Changed += HandleUserChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        string path = new Uri(Navigation.Uri).AbsolutePath;
+
+        if (ScreenCatalog2.IsPublicPath(path))
+        {
+            decision = GuardDecision2.Allow;
+        }
+        else if (!CurrentUser.IsAuthenticated)
+        {
+            decision = GuardDecision2.Redirect;
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            decision = CurrentUser.CanAccessPath(path) ? GuardDecision2.Allow : GuardDecision2.Denied;
+        }
+    }
+
+    private void HandleUserChanged()
+    {
+        // After a login or logout re-check the current page.
+        _ = InvokeAsync(() =>
+        {
+            OnParametersSet();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        CurrentUser.Changed -= HandleUserChanged;
+    }
+}
