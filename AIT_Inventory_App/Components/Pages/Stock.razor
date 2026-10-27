@@ -58,7 +58,7 @@
                   Click="@AddStock" />
 </div>
 
-<RadzenDataGrid @ref="grid"
+<RadzenDataGrid AllowColumnResize="true" @ref="grid"
                 TItem="StockFifoDto"
                 Data="@Stocks"
                 Count="@count"

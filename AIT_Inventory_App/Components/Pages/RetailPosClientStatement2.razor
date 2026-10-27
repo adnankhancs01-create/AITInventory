@@ -42,7 +42,7 @@
         &nbsp; Closing balance: <b>@statement.ClosingBalance.ToString("N2")</b>
     </div>
 
-    <RadzenDataGrid TItem="RetailPosStatementRowDto2" Data="@statement.Rows" AllowPaging="true" PageSize="25">
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosStatementRowDto2" Data="@statement.Rows" AllowPaging="true" PageSize="25">
         <Columns>
             <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Date" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
             <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="EntryType" Title="Type" />

@@ -5,6 +5,8 @@ namespace Common.RetailPos2
         /// <summary>Null = walk-in sale (allowed only when the sale is paid in full).</summary>
         public int? ClientId { get; set; }
         public DateTime? SaleDate { get; set; }
+        /// <summary>Stock location the goods are taken from. Null or 0 = the default location.</summary>
+        public int? LocationId { get; set; }
         /// <summary>Paid, PartiallyPaid or Credit.</summary>
         public string PaymentType { get; set; } = RetailPosConstants2.Paid;
         /// <summary>Amount received at checkout. Ignored for Paid (= total) and Credit (= 0).</summary>

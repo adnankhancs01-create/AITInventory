@@ -67,7 +67,7 @@
 
 <div style="margin-bottom:8px; font-weight:600;">Total owed by listed clients: @clients.Sum(c => c.Balance).ToString("N2")</div>
 
-<RadzenDataGrid TItem="RetailPosClientRowDto2" Data="@clients" AllowSorting="true" AllowPaging="true" PageSize="20">
+<RadzenDataGrid AllowColumnResize="true" TItem="RetailPosClientRowDto2" Data="@clients" AllowSorting="true" AllowPaging="true" PageSize="20">
     <Columns>
         <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Name" Title="Name" />
         <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Phone" Title="Phone" />

@@ -23,7 +23,7 @@
                   ButtonStyle="ButtonStyle.Primary" Click="CreateOrdersAsync" Disabled="@(picked.Count == 0 || creating)" />
 </div>
 
-<RadzenDataGrid TItem="StockReorderSuggestionDto2" Data="@suggestions" AllowSorting="true" AllowPaging="true" PageSize="15"
+<RadzenDataGrid AllowColumnResize="true" TItem="StockReorderSuggestionDto2" Data="@suggestions" AllowSorting="true" AllowPaging="true" PageSize="15"
                 AllowFiltering="true" FilterMode="FilterMode.Simple">
     <Columns>
         <RadzenDataGridColumn TItem="StockReorderSuggestionDto2" Title="Order" Sortable="false" Filterable="false" Width="90px">
@@ -82,7 +82,7 @@
     <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => settingsGrid.Reload())" />
 </RadzenStack>
 
-<RadzenDataGrid @ref="settingsGrid" TItem="StockSettingDto2" Data="@settings" Count="@settingsCount" LoadData="@LoadSettings"
+<RadzenDataGrid AllowColumnResize="true" @ref="settingsGrid" TItem="StockSettingDto2" Data="@settings" Count="@settingsCount" LoadData="@LoadSettings"
                 AllowPaging="true" AllowSorting="true" PageSize="15" ShowPagingSummary="true">
     <Columns>
         <RadzenDataGridColumn TItem="StockSettingDto2" Property="ProductCode" Title="Code" />

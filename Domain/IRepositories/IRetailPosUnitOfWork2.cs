@@ -10,6 +10,10 @@ namespace Domain.IRepositories
         IRetailPosSaleRepo2 Sales { get; }
         IRetailPosPaymentRepo2 Payments { get; }
 
+        /// <summary>Stock ledger and locations. Shares the same database context and transaction, so a sale and its stock-out are saved together.</summary>
+        IStockLedgerRepo2 Stock { get; }
+        IStockMasterRepo2 StockMaster { get; }
+
         Task BeginTransactionAsync();
 
         /// <summary>Saves pending changes. Throws RetailPosConcurrencyException2 when a client or invoice was changed by someone else.</summary>

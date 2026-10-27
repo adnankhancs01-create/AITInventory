@@ -48,7 +48,7 @@ else
 {
     <div style="margin-bottom:8px;">Total receivable: <b>@receivables.TotalReceivable.ToString("N2")</b> &nbsp; Overdue: <b>@receivables.TotalOverdue.ToString("N2")</b></div>
     <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_receivables", receivables.Rows))" Style="margin-bottom:8px;" />
-    <RadzenDataGrid TItem="RetailPosReceivableRowDto2" Data="@receivables.Rows" AllowSorting="true" AllowPaging="true" PageSize="20">
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosReceivableRowDto2" Data="@receivables.Rows" AllowSorting="true" AllowPaging="true" PageSize="20">
         <Columns>
             <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="ClientName" Title="Client" />
             <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="Phone" Title="Phone" />
@@ -66,7 +66,7 @@ else
 @if ((tab == TabOutstanding || tab == TabSales) && sales != null)
 {
     <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_invoices", sales))" Style="margin-bottom:8px;" />
-    <RadzenDataGrid TItem="RetailPosSaleRowDto2" Data="@sales" AllowSorting="true" AllowPaging="true" PageSize="20">
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosSaleRowDto2" Data="@sales" AllowSorting="true" AllowPaging="true" PageSize="20">
         <Columns>
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="InvoiceNumber" Title="Invoice" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="SaleDate" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
@@ -103,7 +103,7 @@ else
         </RadzenCard>
     }
 
-    <RadzenDataGrid TItem="RetailPosPaymentRowDto2" Data="@payments" AllowSorting="true" AllowPaging="true" PageSize="20">
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosPaymentRowDto2" Data="@payments" AllowSorting="true" AllowPaging="true" PageSize="20">
         <Columns>
             <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="PaymentNumber" Title="Receipt" />
             <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="PaymentDate" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />

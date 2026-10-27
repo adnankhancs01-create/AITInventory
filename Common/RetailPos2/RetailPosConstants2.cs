@@ -32,6 +32,9 @@ namespace Common.RetailPos2
 
         public const string InvoicePrefix = "INV";
         public const string ReceiptPrefix = "RCP";
+        /// <summary>Stored on StockMovement2.DocumentType for the stock-out of a POS sale.</summary>
+        public const string StockDocumentType = "RetailPosSale";
+
         public const string WalkInName = "Walk-in customer";
 
         public const decimal MaxAmount = 999_999_999_999.99m;

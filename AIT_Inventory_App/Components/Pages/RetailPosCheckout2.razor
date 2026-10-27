@@ -1,5 +1,6 @@
 @page "/retailpos/checkout"
 @using Common.RetailPos2
+@using Common.Stock2
 @using Service.IService
 @using AIT_Inventory_App.Components.StockParts2
 @inject IRetailPosSaleService2 SaleService
@@ -11,6 +12,10 @@
 <RadzenCard Style="margin-bottom:16px;">
     <h5 style="margin-top:0;">Add product</h5>
     <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Stock location</label>
+            <RadzenDropDown TValue="int?" Data="@locations" TextProperty="Name" ValueProperty="Id" @bind-Value="locationId" Style="width:180px" />
+        </div>
         <div>
             <label style="font-size:12px; color:#6c757d;">Product</label>
             <RadzenDropDown TValue="int?" Data="@products" TextProperty="Display" ValueProperty="ProductId" @bind-Value="productId"
@@ -28,7 +33,7 @@
     </RadzenStack>
 </RadzenCard>
 
-<RadzenDataGrid TItem="RetailPosCheckoutLineDto2" Data="@lines" Style="margin-bottom:16px;">
+<RadzenDataGrid AllowColumnResize="true" TItem="RetailPosCheckoutLineDto2" Data="@lines" Style="margin-bottom:16px;">
     <Columns>
         <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="ProductCode" Title="Code" />
         <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="ProductName" Title="Product" />
@@ -126,7 +131,9 @@
 
     private List<RetailPosProductLookupDto2> products = new();
     private List<RetailPosClientRowDto2> clients = new();
-    private readonly List<RetailPosCheckoutLineDto2> lines = new();
+    private List<RetailPosCheckoutLineDto2> lines = new();
+    private List<StockLocationDto2> locations = new();
+    private int? locationId;
 
     private readonly List<Option> paymentTypes = new()
     {
@@ -161,6 +168,13 @@
     {
         var p = await SaleService.GetProductLookupAsync();
         if (await StockUi2.ShowResultAsync(DialogService, p, false)) products = p.Data;
+        var l = await SaleService.GetLocationsAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, l, false))
+        {
+            locations = l.Data;
+            locationId = locations.FirstOrDefault(x => x.IsDefault)?.Id ?? locations.FirstOrDefault()?.Id;
+        }
+
         await LoadClientsAsync();
     }
 
@@ -193,16 +207,19 @@
         var p = products.FirstOrDefault(x => x.ProductId == productId);
         if (p == null || quantity <= 0) return;
 
-        var existing = lines.FirstOrDefault(l => l.ProductId == p.ProductId && l.UnitPrice == unitPrice);
+        // A new list is assigned every time: the grid only redraws when its Data reference changes.
+        var updated = lines.ToList();
+        var existing = updated.FirstOrDefault(l => l.ProductId == p.ProductId && l.UnitPrice == unitPrice);
         if (existing != null) existing.Quantity += quantity;
-        else lines.Add(new RetailPosCheckoutLineDto2 { ProductId = p.ProductId, ProductCode = p.ProductCode, ProductName = p.ProductName, Quantity = quantity, UnitPrice = unitPrice });
+        else updated.Add(new RetailPosCheckoutLineDto2 { ProductId = p.ProductId, ProductCode = p.ProductCode, ProductName = p.ProductName, Quantity = quantity, UnitPrice = unitPrice });
+        lines = updated;
 
         productId = null;
         quantity = 1;
         unitPrice = 0m;
     }
 
-    private void RemoveLine(RetailPosCheckoutLineDto2 line) => lines.Remove(line);
+    private void RemoveLine(RetailPosCheckoutLineDto2 line) => lines = lines.Where(l => !ReferenceEquals(l, line)).ToList();
 
     private async Task CheckoutAsync()
     {
@@ -212,6 +229,7 @@
             var request = new RetailPosCheckoutRequestDto2
             {
                 ClientId = clientId,
+                LocationId = locationId,
                 PaymentType = paymentType,
                 PaidNow = paymentType == RetailPosConstants2.Paid ? Total : paidNow,
                 PaymentMethod = method,
@@ -239,7 +257,7 @@
 
     private void ResetForm()
     {
-        lines.Clear();
+        lines = new();
         discount = 0m;
         paidNow = 0m;
         reference = null;

@@ -34,7 +34,7 @@ else
     <RadzenRow Gap="16px">
         <RadzenColumn Size="12" SizeMD="6">
             <h5>Low stock</h5>
-            <RadzenDataGrid TItem="StockOverviewRowDto2" Data="@dashboard.LowStock" AllowPaging="true" PageSize="8">
+            <RadzenDataGrid AllowColumnResize="true" TItem="StockOverviewRowDto2" Data="@dashboard.LowStock" AllowPaging="true" PageSize="8">
                 <Columns>
                     <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductCode" Title="Code" />
                     <RadzenDataGridColumn TItem="StockOverviewRowDto2" Property="ProductName" Title="Product" />
@@ -46,7 +46,7 @@ else
         </RadzenColumn>
         <RadzenColumn Size="12" SizeMD="6">
             <h5>Expiring batches</h5>
-            <RadzenDataGrid TItem="StockExpiryRowDto2" Data="@dashboard.ExpiringBatches" AllowPaging="true" PageSize="8">
+            <RadzenDataGrid AllowColumnResize="true" TItem="StockExpiryRowDto2" Data="@dashboard.ExpiringBatches" AllowPaging="true" PageSize="8">
                 <Columns>
                     <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="ProductName" Title="Product" />
                     <RadzenDataGridColumn TItem="StockExpiryRowDto2" Property="BatchNumber" Title="Batch" />
@@ -58,7 +58,7 @@ else
         </RadzenColumn>
         <RadzenColumn Size="12" SizeMD="6">
             <h5>Recent movements</h5>
-            <RadzenDataGrid TItem="StockMovementRowDto2" Data="@dashboard.RecentMovements" AllowPaging="true" PageSize="8">
+            <RadzenDataGrid AllowColumnResize="true" TItem="StockMovementRowDto2" Data="@dashboard.RecentMovements" AllowPaging="true" PageSize="8">
                 <Columns>
                     <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="MovementDate" Title="Date" FormatString="{0:MM/dd/yyyy HH:mm}" />
                     <RadzenDataGridColumn TItem="StockMovementRowDto2" Property="ProductName" Title="Product" />
@@ -69,7 +69,7 @@ else
         </RadzenColumn>
         <RadzenColumn Size="12" SizeMD="6">
             <h5>Stock value by category</h5>
-            <RadzenDataGrid TItem="KeyValuePair<string, decimal>" Data="@dashboard.ValueByCategory" AllowPaging="true" PageSize="8">
+            <RadzenDataGrid AllowColumnResize="true" TItem="KeyValuePair<string, decimal>" Data="@dashboard.ValueByCategory" AllowPaging="true" PageSize="8">
                 <Columns>
                     <RadzenDataGridColumn TItem="KeyValuePair<string, decimal>" Property="Key" Title="Category" />
                     <RadzenDataGridColumn TItem="KeyValuePair<string, decimal>" Property="Value" Title="Value" FormatString="{0:N2}" />

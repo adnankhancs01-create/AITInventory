@@ -27,7 +27,7 @@
 @if (selectedClient != null)
 {
     <h5>Outstanding invoices</h5>
-    <RadzenDataGrid TItem="RetailPosSaleRowDto2" Data="@invoices" Style="margin-bottom:16px;">
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosSaleRowDto2" Data="@invoices" Style="margin-bottom:16px;">
         <Columns>
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="InvoiceNumber" Title="Invoice" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="SaleDate" Title="Date" FormatString="{0:dd MMM yyyy}" />

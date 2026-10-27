@@ -75,7 +75,7 @@
     <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
 </RadzenStack>
 
-<RadzenDataGrid @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+<RadzenDataGrid AllowColumnResize="true" @ref="grid" TItem="DocumentRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
                 AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50 })"
                 ShowPagingSummary="true">
     <Columns>
@@ -99,7 +99,7 @@
 @if (selected != null)
 {
     <h5 style="margin-top:16px;">Lines of @selected.Number</h5>
-    <RadzenDataGrid TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
+    <RadzenDataGrid AllowColumnResize="true" TItem="DocumentLineDto2" Data="@lines" AllowSorting="true">
         <Columns>
             <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductCode" Title="Code" />
             <RadzenDataGridColumn TItem="DocumentLineDto2" Property="ProductName" Title="Product" />

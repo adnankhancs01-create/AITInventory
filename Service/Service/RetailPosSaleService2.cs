@@ -1,8 +1,10 @@
 using Common;
 using Common.RetailPos2;
+using Common.Stock2;
 using Domain.Entities;
 using Domain.IRepositories;
 using Domain.RetailPos2;
+using Domain.Stock2;
 using Domain.Users2;
 using Service.IService;
 
@@ -39,6 +41,19 @@ namespace Service.Service
                 await using var uow = _uowFactory.Create();
                 return RetailPosResult2.Ok(await uow.Sales.GetProductLookupAsync());
             }, _logRepo, nameof(GetProductLookupAsync), _currentUser.UserId);
+        }
+
+        public Task<BaseResponse<List<StockLocationDto2>>> GetLocationsAsync()
+        {
+            return RetailPosResult2.RunAsync(async () =>
+            {
+                var denied = RetailPosAccess2.RequireLogin<List<StockLocationDto2>>(_currentUser);
+                if (denied != null) return denied;
+
+                await using var uow = _uowFactory.Create();
+                await uow.Stock.EnsureDefaultLocationAsync();
+                return RetailPosResult2.Ok(await uow.StockMaster.GetLocationDtosAsync(false));
+            }, _logRepo, nameof(GetLocationsAsync), _currentUser.UserId);
         }
 
         // ================================================================== checkout
@@ -134,6 +149,21 @@ namespace Service.Service
                 }
                 if (errors.Count > 0) return RetailPosResult2.Fail<RetailPosCheckoutResultDto2>(errors);
 
+                // ---- stock: the goods leave the chosen location in the same transaction as the sale
+                StockLocation2? location = request.LocationId is > 0
+                    ? await uow.Stock.GetLocationAsync(request.LocationId.Value, true)
+                    : await uow.Stock.EnsureDefaultLocationAsync();
+                if (location == null) return RetailPosResult2.Fail<RetailPosCheckoutResultDto2>("Stock location not found or inactive.");
+
+                var wanted = request.Lines.GroupBy(l => l.ProductId).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
+                foreach (var pair in wanted)
+                {
+                    int available = await uow.Stock.GetQuantityAtLocationAsync(pair.Key, location);
+                    if (pair.Value > available)
+                        errors.Add($"'{products[pair.Key].Name}': only {Math.Max(available, 0)} in stock at {location.Name}, but {pair.Value} requested.");
+                }
+                if (errors.Count > 0) return RetailPosResult2.Fail<RetailPosCheckoutResultDto2>(errors);
+
                 // ---- credit limit (read inside the transaction)
                 bool overridden = false;
                 if (client != null && outstanding > 0m)
@@ -209,7 +239,31 @@ namespace Service.Service
                     });
                 }
 
+                // ---- stock-out rows (same shape the stock module uses) and location balances
+                var states = await uow.Stock.GetStatesAsync(wanted.Keys.ToList());
+                var stockOut = new List<(int ProductId, int Quantity, decimal UnitCost, Stock Row)>();
+                foreach (var pair in wanted)
+                {
+                    states.TryGetValue(pair.Key, out var state);
+                    decimal unitCost = StockLayerCalculator2.EstimateIssueCost(state, pair.Value);
+
+                    var row = StockLedgerRules2.NewStockOutRow(pair.Key, pair.Value, userId);
+                    uow.Stock.AddLedgerRow(row);
+                    await uow.Stock.ChangeBalanceAsync(pair.Key, location, -pair.Value);
+                    stockOut.Add((pair.Key, pair.Value, unitCost, row));
+                }
+
                 uow.Sales.AddSale(sale);
+                await uow.SaveChangesAsync(); // the sale now has its Id
+
+                foreach (var s in stockOut)
+                {
+                    uow.Stock.AddMovement(StockLedgerRules2.NewMovement(
+                        s.ProductId, location.Id, StockConstants2.MoveSale, -s.Quantity, s.UnitCost,
+                        RetailPosConstants2.StockDocumentType, sale.Id, sale.InvoiceNumber, s.Row,
+                        null, "Retail POS sale", userId));
+                }
+
                 await uow.SaveChangesAsync();
                 await uow.CommitAsync();
 

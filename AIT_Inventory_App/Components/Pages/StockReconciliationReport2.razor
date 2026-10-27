@@ -20,7 +20,7 @@
     <RadzenButton Text="Search" Icon="search" ButtonStyle="ButtonStyle.Primary" Click="@(() => grid.Reload())" />
 </RadzenStack>
 
-<RadzenDataGrid @ref="grid" TItem="StockReconciliationRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
+<RadzenDataGrid AllowColumnResize="true" @ref="grid" TItem="StockReconciliationRowDto2" Data="@rows" Count="@count" LoadData="@LoadData"
                 AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new[] { 10, 20, 50, 100 })"
                 ShowPagingSummary="true">
     <Columns>

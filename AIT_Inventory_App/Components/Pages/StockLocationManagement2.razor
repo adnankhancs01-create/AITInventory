@@ -34,7 +34,7 @@
     </RadzenCard>
 }
 
-<RadzenDataGrid TItem="StockLocationDto2" Data="@locations" AllowSorting="true" AllowPaging="true" PageSize="20">
+<RadzenDataGrid AllowColumnResize="true" TItem="StockLocationDto2" Data="@locations" AllowSorting="true" AllowPaging="true" PageSize="20">
     <Columns>
         <RadzenDataGridColumn TItem="StockLocationDto2" Property="Code" Title="Code" />
         <RadzenDataGridColumn TItem="StockLocationDto2" Property="Name" Title="Name" />

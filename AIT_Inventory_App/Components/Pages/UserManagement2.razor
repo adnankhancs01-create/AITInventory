@@ -89,7 +89,7 @@
     </RadzenCard>
 }
 
-<RadzenDataGrid TItem="UserListItemDto2" Data="@users" AllowSorting="true" AllowPaging="true" PageSize="20">
+<RadzenDataGrid AllowColumnResize="true" TItem="UserListItemDto2" Data="@users" AllowSorting="true" AllowPaging="true" PageSize="20">
     <Columns>
         <RadzenDataGridColumn TItem="UserListItemDto2" Property="UserName" Title="User name" />
         <RadzenDataGridColumn TItem="UserListItemDto2" Property="Email" Title="Email" />

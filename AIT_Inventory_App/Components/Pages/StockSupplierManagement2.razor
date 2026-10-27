@@ -34,7 +34,7 @@
     </RadzenCard>
 }
 
-<RadzenDataGrid TItem="StockSupplierDto2" Data="@suppliers" AllowSorting="true" AllowPaging="true" PageSize="20"
+<RadzenDataGrid AllowColumnResize="true" TItem="StockSupplierDto2" Data="@suppliers" AllowSorting="true" AllowPaging="true" PageSize="20"
                 AllowFiltering="true" FilterMode="FilterMode.Simple">
     <Columns>
         <RadzenDataGridColumn TItem="StockSupplierDto2" Property="Name" Title="Name" />
