@@ -48,6 +48,9 @@ namespace AIT_Inventory_App
             // Stock Management module (Stock2)
             builder.Services.AddStockRepositories2();
             builder.Services.AddStockServices2();
+
+            builder.Services.AddRetailPosRepositories2();
+            builder.Services.AddRetailPosServices2();
             builder.Services.AddRadzenComponents();
             builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
             builder.Services.AddScoped<ISlipPrinter, SlipPrinter>();

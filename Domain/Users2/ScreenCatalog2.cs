@@ -30,6 +30,12 @@ namespace Domain.Users2
         public const string StockReportExpiry = "Stock.Reports.Expiry";
         public const string StockReportReconciliation = "Stock.Reports.Reconciliation";
 
+        public const string RetailPosCheckout = "RetailPos.Checkout";
+        public const string RetailPosClients = "RetailPos.Clients";
+        public const string RetailPosReceivePayment = "RetailPos.ReceivePayment";
+        public const string RetailPosStatement = "RetailPos.Statement";
+        public const string RetailPosReports = "RetailPos.Reports";
+
         public const string UsersManage = "Users.Manage";
         public const string RolesManage = "Roles.Manage";
         public const string BusinessProfile = "Business.Profile";
@@ -64,6 +70,12 @@ namespace Domain.Users2
             new(StockReportExpiry, "Expiry Report", "Stock Reports", "/stock2/reports/expiry", 53),
             new(StockReportReconciliation, "Reconciliation", "Stock Reports", "/stock2/reports/reconciliation", 54),
 
+            new(RetailPosCheckout, "POS Checkout", "Retail POS", "/retailpos/checkout", 60),
+            new(RetailPosClients, "POS Clients", "Retail POS", "/retailpos/clients", 61),
+            new(RetailPosReceivePayment, "Receive Payment", "Retail POS", "/retailpos/receive-payment", 62),
+            new(RetailPosStatement, "Client Statement", "Retail POS", "/retailpos/statement", 63),
+            new(RetailPosReports, "POS Reports", "Retail POS", "/retailpos/reports", 64),
+
             new(UsersManage, "Users", "Administration", "/users", 90, true),
             new(RolesManage, "Roles & Permissions", "Administration", "/roles", 91, true),
             new(BusinessProfile, "Business Profile", "Administration", "/business", 92, true),
@@ -76,7 +88,7 @@ namespace Domain.Users2
                 All.Where(s => !s.IsRootOnly).Select(s => s.ScreenKey).ToList()),
 
             new("Cashier", "Sales counter.",
-                new[] { Home, SalesOrder, SalesReturn, CatalogClient }),
+                new[] { Home, SalesOrder, SalesReturn, CatalogClient, RetailPosCheckout, RetailPosClients, RetailPosReceivePayment }),
 
             new("StoreKeeper", "Receives, issues and counts stock.",
                 new[]
@@ -90,6 +102,7 @@ namespace Domain.Users2
                 new[]
                 {
                     Home, StockDashboard, StockOverview, StockPurchaseOrders,
+                    RetailPosClients, RetailPosStatement, RetailPosReports,
                     StockReportMovements, StockReportValuation, StockReportAging, StockReportExpiry, StockReportReconciliation
                 }),
         };

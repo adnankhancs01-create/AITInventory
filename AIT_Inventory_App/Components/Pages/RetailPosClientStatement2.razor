@@ -1,0 +1,161 @@
+@page "/retailpos/statement"
+@page "/retailpos/statement/{ClientId:int}"
+@using Common.RetailPos2
+@using Domain.Users2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IRetailPosClientService2 ClientService
+@inject IRetailPosReportService2 ReportService
+@inject IRetailPosPaymentService2 PaymentService
+@inject ICurrentUser2 CurrentUser
+@inject DialogService DialogService
+
+<h3 style="margin-bottom:12px;">Client Statement</h3>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Client</label>
+        <RadzenDropDown TValue="int?" Data="@clients" TextProperty="Name" ValueProperty="Id" @bind-Value="selectedId"
+                        AllowFiltering="true" Placeholder="Select client" Style="width:280px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">From</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="fromDate" DateFormat="dd MMM yyyy" Style="width:150px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">To</label>
+        <RadzenDatePicker TValue="DateTime?" @bind-Value="toDate" DateFormat="dd MMM yyyy" Style="width:150px" />
+    </div>
+    <RadzenButton Text="Show" Icon="search" Click="LoadAsync" />
+    @if (statement != null)
+    {
+        <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="ExportAsync" />
+    }
+</RadzenStack>
+
+@if (statement != null)
+{
+    <div style="margin-bottom:8px;">
+        <b>@statement.ClientName</b> @statement.Phone
+        &nbsp; Debits: <b>@statement.TotalDebit.ToString("N2")</b>
+        &nbsp; Credits: <b>@statement.TotalCredit.ToString("N2")</b>
+        &nbsp; Closing balance: <b>@statement.ClosingBalance.ToString("N2")</b>
+    </div>
+
+    <RadzenDataGrid TItem="RetailPosStatementRowDto2" Data="@statement.Rows" AllowPaging="true" PageSize="25">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Date" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="EntryType" Title="Type" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Reference" Title="Reference" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Description" Title="Description" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Debit" Title="Debit" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Credit" Title="Credit" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="Balance" Title="Balance" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosStatementRowDto2" Property="User" Title="By" />
+        </Columns>
+    </RadzenDataGrid>
+
+    @if (CurrentUser.IsRoot)
+    {
+        <RadzenCard Style="margin-top:16px;">
+            <h5 style="margin-top:0;">Adjust balance (owner only, recorded in the ledger)</h5>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Type</label>
+                    <RadzenDropDown TValue="string" Data="@adjustmentTypes" @bind-Value="adjType" Style="width:150px" />
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Amount</label>
+                    <RadzenNumeric TValue="decimal" @bind-Value="adjAmount" Min="0" Style="width:140px" />
+                </div>
+                @if (adjType == RetailPosConstants2.AdjustmentManual)
+                {
+                    <RadzenCheckBox TValue="bool" @bind-Value="adjIncreases" Name="adjInc" />
+                    <RadzenLabel Text="Increases what the client owes" Component="adjInc" />
+                }
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Reason</label>
+                    <RadzenTextBox @bind-Value="adjReason" MaxLength="250" Style="width:280px" />
+                </div>
+                <RadzenButton Text="Save adjustment" Icon="save" ButtonStyle="ButtonStyle.Warning" Click="AdjustAsync" Disabled="@saving" />
+            </RadzenStack>
+            <p style="font-size:12px; color:#6c757d; margin:8px 0 0 0;">A credit note always reduces the balance. Payments are reversed from the POS Reports page.</p>
+        </RadzenCard>
+    }
+}
+
+@code {
+    [Parameter] public int? ClientId { get; set; }
+
+    private List<RetailPosClientRowDto2> clients = new();
+    private readonly string[] adjustmentTypes = RetailPosConstants2.AdjustmentTypes;
+    private int? selectedId;
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private RetailPosStatementDto2? statement;
+    private bool saving;
+    private string adjType = RetailPosConstants2.AdjustmentCreditNote;
+    private decimal adjAmount;
+    private bool adjIncreases;
+    private string? adjReason;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var c = await ClientService.GetClientsAsync(new RetailPosClientFilterDto2());
+        if (await StockUi2.ShowResultAsync(DialogService, c, false)) clients = c.Data;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ClientId.HasValue && ClientId != selectedId)
+        {
+            selectedId = ClientId;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        if (!selectedId.HasValue)
+        {
+            await StockUi2.AlertAsync(DialogService, "Statement", "Select a client first.");
+            return;
+        }
+
+        var result = await ReportService.GetStatementAsync(selectedId.Value, fromDate, toDate);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false)) statement = result.Data;
+    }
+
+    private async Task ExportAsync()
+    {
+        if (statement != null) await StockUi2.ExportAsync(DialogService, "retailpos2_statement", statement.Rows);
+    }
+
+    private async Task AdjustAsync()
+    {
+        if (!selectedId.HasValue) return;
+        saving = true;
+        try
+        {
+            var result = await PaymentService.AdjustBalanceAsync(new RetailPosAdjustmentRequestDto2
+            {
+                ClientId = selectedId.Value,
+                AdjustmentType = adjType,
+                Amount = adjAmount,
+                IncreasesBalance = adjType == RetailPosConstants2.AdjustmentManual && adjIncreases,
+                Reason = adjReason ?? string.Empty
+            });
+
+            if (await StockUi2.ShowResultAsync(DialogService, result))
+            {
+                adjAmount = 0m;
+                adjReason = null;
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

@@ -1,0 +1,252 @@
+@page "/retailpos/checkout"
+@using Common.RetailPos2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IRetailPosSaleService2 SaleService
+@inject IRetailPosClientService2 ClientService
+@inject DialogService DialogService
+
+<h3 style="margin-bottom:12px;">POS Checkout</h3>
+
+<RadzenCard Style="margin-bottom:16px;">
+    <h5 style="margin-top:0;">Add product</h5>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Product</label>
+            <RadzenDropDown TValue="int?" Data="@products" TextProperty="Display" ValueProperty="ProductId" @bind-Value="productId"
+                            Change="OnProductChanged" AllowFiltering="true" Placeholder="Select product" Style="width:320px" />
+        </div>
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Quantity</label>
+            <RadzenNumeric TValue="int" @bind-Value="quantity" Min="1" Style="width:100px" />
+        </div>
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Unit price</label>
+            <RadzenNumeric TValue="decimal" @bind-Value="unitPrice" Min="0" Style="width:140px" />
+        </div>
+        <RadzenButton Text="Add" Icon="add" Click="AddLine" />
+    </RadzenStack>
+</RadzenCard>
+
+<RadzenDataGrid TItem="RetailPosCheckoutLineDto2" Data="@lines" Style="margin-bottom:16px;">
+    <Columns>
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="ProductCode" Title="Code" />
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="ProductName" Title="Product" />
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="Quantity" Title="Qty" />
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="UnitPrice" Title="Price" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Property="LineTotal" Title="Total" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosCheckoutLineDto2" Title="" Sortable="false">
+            <Template Context="line">
+                <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(() => RemoveLine(line))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenCard>
+    <h5 style="margin-top:0;">Customer and payment</h5>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Client (blank = walk-in)</label>
+            <RadzenDropDown TValue="int?" Data="@clients" TextProperty="Name" ValueProperty="Id" @bind-Value="clientId"
+                            Change="OnClientChanged" AllowClear="true" AllowFiltering="true" Placeholder="Walk-in customer" Style="width:260px" />
+        </div>
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Payment type</label>
+            <RadzenDropDown TValue="string" Data="@paymentTypes" TextProperty="Text" ValueProperty="Value" @bind-Value="paymentType"
+                            Change="OnPaymentTypeChanged" Style="width:180px" />
+        </div>
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Discount</label>
+            <RadzenNumeric TValue="decimal" @bind-Value="discount" Min="0" Style="width:120px" />
+        </div>
+        @if (paymentType == RetailPosConstants2.PartiallyPaid)
+        {
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Paid now</label>
+                <RadzenNumeric TValue="decimal" @bind-Value="paidNow" Min="0" Style="width:140px" />
+            </div>
+        }
+        @if (paymentType != RetailPosConstants2.Credit)
+        {
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Payment method</label>
+                <RadzenDropDown TValue="string" Data="@methods" @bind-Value="method" Style="width:160px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reference</label>
+                <RadzenTextBox @bind-Value="reference" MaxLength="100" Style="width:160px" />
+            </div>
+        }
+        @if (paymentType != RetailPosConstants2.Paid)
+        {
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Due date (optional)</label>
+                <RadzenDatePicker TValue="DateTime?" @bind-Value="dueDate" DateFormat="dd MMM yyyy" Style="width:160px" />
+            </div>
+        }
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Remarks</label>
+            <RadzenTextBox @bind-Value="remarks" MaxLength="500" Style="width:240px" />
+        </div>
+    </RadzenStack>
+
+    <div style="margin-top:16px; font-size:16px;">
+        <div>Subtotal: <b>@SubTotal.ToString("N2")</b> &nbsp; Discount: <b>@discount.ToString("N2")</b> &nbsp; Total: <b>@Total.ToString("N2")</b></div>
+        <div>Paid now: <b>@PaidAtCheckout.ToString("N2")</b> &nbsp; Outstanding: <b>@Outstanding.ToString("N2")</b></div>
+        @if (selectedClient != null)
+        {
+            <div style="font-size:13px; color:#6c757d;">
+                @selectedClient.Name currently owes @selectedClient.Balance.ToString("N2")
+                @(selectedClient.CreditLimit.HasValue ? $"(credit limit {selectedClient.CreditLimit.Value:N2})" : "(no credit limit)")
+            </div>
+        }
+        @if (clientId == null && paymentType != RetailPosConstants2.Paid)
+        {
+            <div style="color:#c0392b;">Credit and partial sales need a client. A walk-in customer must pay in full.</div>
+        }
+    </div>
+
+    <div style="margin-top:16px;">
+        <RadzenButton Text="Complete sale" Icon="check" ButtonStyle="ButtonStyle.Success" Click="CheckoutAsync" Disabled="@saving" />
+        <RadzenButton Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetForm" Disabled="@saving" />
+    </div>
+</RadzenCard>
+
+@if (lastResult != null)
+{
+    <RadzenCard Style="margin-top:16px;">
+        <b>Last sale:</b> @lastResult.InvoiceNumber &nbsp; Total @lastResult.TotalAmount.ToString("N2")
+        &nbsp; Paid @lastResult.PaidAmount.ToString("N2") &nbsp; Outstanding @lastResult.OutstandingAmount.ToString("N2")
+    </RadzenCard>
+}
+
+@code {
+    private sealed record Option(string Text, string Value);
+
+    private List<RetailPosProductLookupDto2> products = new();
+    private List<RetailPosClientRowDto2> clients = new();
+    private readonly List<RetailPosCheckoutLineDto2> lines = new();
+
+    private readonly List<Option> paymentTypes = new()
+    {
+        new("Paid in full", RetailPosConstants2.Paid),
+        new("Partially paid", RetailPosConstants2.PartiallyPaid),
+        new("Credit / loan", RetailPosConstants2.Credit)
+    };
+    private readonly string[] methods = RetailPosConstants2.PaymentMethods;
+
+    private int? productId;
+    private int quantity = 1;
+    private decimal unitPrice;
+    private int? clientId;
+    private RetailPosClientRowDto2? selectedClient;
+    private string paymentType = RetailPosConstants2.Paid;
+    private string method = RetailPosConstants2.MethodCash;
+    private string? reference;
+    private decimal paidNow;
+    private decimal discount;
+    private DateTime? dueDate;
+    private string? remarks;
+    private bool saving;
+    private Guid idempotencyKey = Guid.NewGuid();
+    private RetailPosCheckoutResultDto2? lastResult;
+
+    private decimal SubTotal => lines.Sum(l => l.LineTotal);
+    private decimal Total => Math.Max(0m, SubTotal - discount);
+    private decimal PaidAtCheckout => paymentType == RetailPosConstants2.Paid ? Total : paymentType == RetailPosConstants2.Credit ? 0m : Math.Min(paidNow, Total);
+    private decimal Outstanding => Math.Max(0m, Total - PaidAtCheckout);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var p = await SaleService.GetProductLookupAsync();
+        if (await StockUi2.ShowResultAsync(DialogService, p, false)) products = p.Data;
+        await LoadClientsAsync();
+    }
+
+    private async Task LoadClientsAsync()
+    {
+        var c = await ClientService.GetClientsAsync(new RetailPosClientFilterDto2 { IsActive = true });
+        if (await StockUi2.ShowResultAsync(DialogService, c, false)) clients = c.Data;
+        selectedClient = clientId.HasValue ? clients.FirstOrDefault(x => x.Id == clientId.Value) : null;
+    }
+
+    private void OnProductChanged()
+    {
+        var p = products.FirstOrDefault(x => x.ProductId == productId);
+        if (p != null) unitPrice = p.UnitPrice;
+    }
+
+    private void OnClientChanged()
+    {
+        selectedClient = clientId.HasValue ? clients.FirstOrDefault(x => x.Id == clientId.Value) : null;
+        if (clientId == null && paymentType != RetailPosConstants2.Paid) paymentType = RetailPosConstants2.Paid;
+    }
+
+    private void OnPaymentTypeChanged()
+    {
+        if (paymentType == RetailPosConstants2.Paid) paidNow = 0m;
+    }
+
+    private void AddLine()
+    {
+        var p = products.FirstOrDefault(x => x.ProductId == productId);
+        if (p == null || quantity <= 0) return;
+
+        var existing = lines.FirstOrDefault(l => l.ProductId == p.ProductId && l.UnitPrice == unitPrice);
+        if (existing != null) existing.Quantity += quantity;
+        else lines.Add(new RetailPosCheckoutLineDto2 { ProductId = p.ProductId, ProductCode = p.ProductCode, ProductName = p.ProductName, Quantity = quantity, UnitPrice = unitPrice });
+
+        productId = null;
+        quantity = 1;
+        unitPrice = 0m;
+    }
+
+    private void RemoveLine(RetailPosCheckoutLineDto2 line) => lines.Remove(line);
+
+    private async Task CheckoutAsync()
+    {
+        saving = true;
+        try
+        {
+            var request = new RetailPosCheckoutRequestDto2
+            {
+                ClientId = clientId,
+                PaymentType = paymentType,
+                PaidNow = paymentType == RetailPosConstants2.Paid ? Total : paidNow,
+                PaymentMethod = method,
+                PaymentReference = reference,
+                DueDate = dueDate,
+                DiscountAmount = discount,
+                Remarks = remarks,
+                Lines = lines.ToList(),
+                IdempotencyKey = idempotencyKey
+            };
+
+            var result = await SaleService.CheckoutAsync(request);
+            if (await StockUi2.ShowResultAsync(DialogService, result))
+            {
+                lastResult = result.Data;
+                ResetForm();
+                await LoadClientsAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        lines.Clear();
+        discount = 0m;
+        paidNow = 0m;
+        reference = null;
+        remarks = null;
+        dueDate = null;
+        paymentType = RetailPosConstants2.Paid;
+        method = RetailPosConstants2.MethodCash;
+        idempotencyKey = Guid.NewGuid();
+    }
+}

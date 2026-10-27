@@ -1,0 +1,148 @@
+@page "/retailpos/clients"
+@using Common.RetailPos2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IRetailPosClientService2 ClientService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h3 style="margin:0;">POS Clients</h3>
+    <RadzenButton Text="New client" Icon="person_add" ButtonStyle="ButtonStyle.Primary" Click="NewClient" />
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Search</label>
+        <RadzenTextBox @bind-Value="search" Placeholder="Name, phone or address" Style="width:240px" />
+    </div>
+    <div>
+        <label style="font-size:12px; color:#6c757d;">Status</label>
+        <RadzenDropDown TValue="string" Data="@statusOptions" @bind-Value="statusFilter" Style="width:140px" />
+    </div>
+    <RadzenCheckBox TValue="bool" @bind-Value="onlyWithBalance" Name="onlyBal" />
+    <RadzenLabel Text="Only clients who owe" Component="onlyBal" />
+    <RadzenButton Text="Search" Icon="search" Click="LoadAsync" />
+</RadzenStack>
+
+@if (editing != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5 style="margin-top:0;">@(editing.Id > 0 ? "Edit client" : "New client")</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Name</label>
+                <RadzenTextBox @bind-Value="editing.Name" MaxLength="150" Style="width:220px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Phone</label>
+                <RadzenTextBox @bind-Value="editing.Phone" MaxLength="30" Style="width:160px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Address</label>
+                <RadzenTextBox @bind-Value="editing.Address" MaxLength="300" Style="width:260px" />
+            </div>
+            @if (editing.Id <= 0)
+            {
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Opening balance (owner only)</label>
+                    <RadzenNumeric TValue="decimal" @bind-Value="editing.OpeningBalance" Min="0" Style="width:160px" />
+                </div>
+            }
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Credit limit (owner only, blank = none)</label>
+                <RadzenNumeric TValue="decimal?" @bind-Value="editing.CreditLimit" Min="0" Style="width:180px" />
+            </div>
+            <RadzenCheckBox TValue="bool" @bind-Value="editing.IsActive" Name="clientActive" />
+            <RadzenLabel Text="Active" Component="clientActive" />
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="SaveAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => editing = null)" />
+        </RadzenStack>
+        @if (editing.Id > 0)
+        {
+            <p style="font-size:12px; color:#6c757d; margin:8px 0 0 0;">The opening balance is fixed after the client is created. Use an adjustment on the statement page to correct it.</p>
+        }
+    </RadzenCard>
+}
+
+<div style="margin-bottom:8px; font-weight:600;">Total owed by listed clients: @clients.Sum(c => c.Balance).ToString("N2")</div>
+
+<RadzenDataGrid TItem="RetailPosClientRowDto2" Data="@clients" AllowSorting="true" AllowPaging="true" PageSize="20">
+    <Columns>
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Name" Title="Name" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Phone" Title="Phone" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Address" Title="Address" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="CreditLimit" Title="Credit limit" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="TotalSales" Title="Sales" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="TotalPaid" Title="Paid" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="Balance" Title="Owes" FormatString="{0:N2}" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Property="IsActive" Title="Active" />
+        <RadzenDataGridColumn TItem="RetailPosClientRowDto2" Title="Actions" Sortable="false">
+            <Template Context="row">
+                <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditAsync(row))" title="Edit" />
+                <RadzenButton Icon="receipt_long" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Info" Click="@(() => OpenStatement(row))" title="Statement" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private List<RetailPosClientRowDto2> clients = new();
+    private readonly string[] statusOptions = { "All", "Active", "Inactive" };
+    private string? search;
+    private string statusFilter = "All";
+    private bool onlyWithBalance;
+    private RetailPosClientDto2? editing;
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var result = await ClientService.GetClientsAsync(new RetailPosClientFilterDto2
+        {
+            Search = search,
+            IsActive = statusFilter == "Active" ? true : statusFilter == "Inactive" ? false : null,
+            OnlyWithBalance = onlyWithBalance
+        });
+        if (await StockUi2.ShowResultAsync(DialogService, result, false)) clients = result.Data;
+    }
+
+    private void NewClient()
+    {
+        editing = new RetailPosClientDto2 { IsActive = true };
+    }
+
+    private async Task EditAsync(RetailPosClientRowDto2 row)
+    {
+        var result = await ClientService.GetClientAsync(row.Id);
+        if (await StockUi2.ShowResultAsync(DialogService, result, false)) editing = result.Data;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editing == null) return;
+        saving = true;
+        try
+        {
+            var result = await ClientService.SaveClientAsync(editing);
+            if (await StockUi2.ShowResultAsync(DialogService, result))
+            {
+                editing = null;
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void OpenStatement(RetailPosClientRowDto2 row)
+    {
+        Navigation.NavigateTo($"retailpos/statement/{row.Id}");
+    }
+}

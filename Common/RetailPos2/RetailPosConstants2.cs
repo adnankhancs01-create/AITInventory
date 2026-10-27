@@ -1,0 +1,39 @@
+namespace Common.RetailPos2
+{
+    /// <summary>
+    /// Shared terms of the Retail POS module. Payment TYPE (how the sale is settled) and payment METHOD
+    /// (cash, card...) are different concepts and are never mixed.
+    /// </summary>
+    public static class RetailPosConstants2
+    {
+        // ---- payment type (status of settlement)
+        public const string Paid = "Paid";
+        public const string PartiallyPaid = "PartiallyPaid";
+        public const string Credit = "Credit";
+        public static readonly string[] PaymentTypes = { Paid, PartiallyPaid, Credit };
+
+        // ---- payment method
+        public const string MethodCash = "Cash";
+        public static readonly string[] PaymentMethods = { "Cash", "Card", "BankTransfer", "Cheque", "MobileWallet", "Other" };
+
+        // ---- adjustment types
+        public const string AdjustmentCreditNote = "CreditNote";
+        public const string AdjustmentManual = "Adjustment";
+        public static readonly string[] AdjustmentTypes = { AdjustmentCreditNote, AdjustmentManual };
+
+        // ---- statement entry types
+        public const string EntryOpening = "Opening balance";
+        public const string EntrySale = "Sale";
+        public const string EntryPayment = "Payment";
+        public const string EntryPaymentReversal = "Payment reversal";
+        public const string EntryCreditNote = "Credit note";
+        public const string EntryAdjustment = "Adjustment";
+        public const string EntryBroughtForward = "Balance brought forward";
+
+        public const string InvoicePrefix = "INV";
+        public const string ReceiptPrefix = "RCP";
+        public const string WalkInName = "Walk-in customer";
+
+        public const decimal MaxAmount = 999_999_999_999.99m;
+    }
+}

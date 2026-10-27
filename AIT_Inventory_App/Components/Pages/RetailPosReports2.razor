@@ -1,0 +1,218 @@
+@page "/retailpos/reports"
+@using Common.RetailPos2
+@using Domain.Users2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IRetailPosReportService2 ReportService
+@inject IRetailPosSaleService2 SaleService
+@inject IRetailPosPaymentService2 PaymentService
+@inject ICurrentUser2 CurrentUser
+@inject DialogService DialogService
+
+<h3 style="margin-bottom:12px;">POS Reports</h3>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="8px" Style="margin-bottom:12px; flex-wrap:wrap;">
+    @foreach (var t in tabs)
+    {
+        <RadzenButton Text="@t" ButtonStyle="@(tab == t ? ButtonStyle.Primary : ButtonStyle.Light)" Click="@(() => SelectTabAsync(t))" />
+    }
+</RadzenStack>
+
+@if (tab != TabReceivables)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
+        <div>
+            <label style="font-size:12px; color:#6c757d;">From</label>
+            <RadzenDatePicker TValue="DateTime?" @bind-Value="fromDate" DateFormat="dd MMM yyyy" Style="width:150px" />
+        </div>
+        <div>
+            <label style="font-size:12px; color:#6c757d;">To</label>
+            <RadzenDatePicker TValue="DateTime?" @bind-Value="toDate" DateFormat="dd MMM yyyy" Style="width:150px" />
+        </div>
+        @if (tab == TabOutstanding)
+        {
+            <RadzenCheckBox TValue="bool" @bind-Value="onlyOverdue" Name="onlyOverdue" />
+            <RadzenLabel Text="Overdue only" Component="onlyOverdue" />
+        }
+        <RadzenButton Text="Show" Icon="search" Click="LoadAsync" />
+    </RadzenStack>
+}
+else
+{
+    <div style="margin-bottom:12px;">
+        <RadzenButton Text="Refresh" Icon="refresh" Click="LoadAsync" />
+    </div>
+}
+
+@if (tab == TabReceivables && receivables != null)
+{
+    <div style="margin-bottom:8px;">Total receivable: <b>@receivables.TotalReceivable.ToString("N2")</b> &nbsp; Overdue: <b>@receivables.TotalOverdue.ToString("N2")</b></div>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_receivables", receivables.Rows))" Style="margin-bottom:8px;" />
+    <RadzenDataGrid TItem="RetailPosReceivableRowDto2" Data="@receivables.Rows" AllowSorting="true" AllowPaging="true" PageSize="20">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="ClientName" Title="Client" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="Phone" Title="Phone" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="OpeningBalance" Title="Opening" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="TotalSales" Title="Sales" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="TotalPaid" Title="Paid" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="TotalAdjustments" Title="Adjustments" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="Balance" Title="Owes" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="OverdueAmount" Title="Overdue" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReceivableRowDto2" Property="OldestDueDate" Title="Oldest due" FormatString="{0:dd MMM yyyy}" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@if ((tab == TabOutstanding || tab == TabSales) && sales != null)
+{
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_invoices", sales))" Style="margin-bottom:8px;" />
+    <RadzenDataGrid TItem="RetailPosSaleRowDto2" Data="@sales" AllowSorting="true" AllowPaging="true" PageSize="20">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="InvoiceNumber" Title="Invoice" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="SaleDate" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="ClientName" Title="Client" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="PaymentType" Title="Type" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="TotalAmount" Title="Total" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="PaidAmount" Title="Paid" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="OutstandingAmount" Title="Outstanding" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="DueDate" Title="Due" FormatString="{0:dd MMM yyyy}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Title="Status" Sortable="false">
+                <Template Context="row">@(row.IsOverdue ? "Overdue" : row.PaymentStatus)</Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@if (tab == TabCollections && payments != null)
+{
+    <div style="margin-bottom:8px;">Collected (not reversed): <b>@payments.Where(p => !p.IsReversed).Sum(p => p.Amount).ToString("N2")</b></div>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_collections", payments))" Style="margin-bottom:8px;" />
+
+    @if (reversing != null)
+    {
+        <RadzenCard Style="margin-bottom:12px;">
+            <h5 style="margin-top:0;">Reverse payment @reversing.PaymentNumber (@reversing.Amount.ToString("N2"))</h5>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="align-items:flex-end;">
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Reason</label>
+                    <RadzenTextBox @bind-Value="reverseReason" MaxLength="250" Style="width:320px" />
+                </div>
+                <RadzenButton Text="Reverse" Icon="undo" ButtonStyle="ButtonStyle.Danger" Click="ReverseAsync" Disabled="@saving" />
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => reversing = null)" />
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    <RadzenDataGrid TItem="RetailPosPaymentRowDto2" Data="@payments" AllowSorting="true" AllowPaging="true" PageSize="20">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="PaymentNumber" Title="Receipt" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="PaymentDate" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="ClientName" Title="Client" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="InvoiceNumber" Title="Invoice" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="Amount" Title="Amount" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="Method" Title="Method" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="Reference" Title="Reference" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Property="ReceivedBy" Title="Received by" />
+            <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Title="Status" Sortable="false">
+                <Template Context="row">@(row.IsReversed ? "Reversed: " + row.ReversalReason : "OK")</Template>
+            </RadzenDataGridColumn>
+            @if (CurrentUser.IsRoot)
+            {
+                <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Title="" Sortable="false">
+                    <Template Context="row">
+                        @if (!row.IsReversed)
+                        {
+                            <RadzenButton Icon="undo" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(() => StartReverse(row))" title="Reverse" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private const string TabReceivables = "Receivables";
+    private const string TabOutstanding = "Outstanding invoices";
+    private const string TabCollections = "Collections";
+    private const string TabSales = "Sales history";
+
+    private readonly string[] tabs = { TabReceivables, TabOutstanding, TabCollections, TabSales };
+    private string tab = TabReceivables;
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private bool onlyOverdue;
+    private bool saving;
+
+    private RetailPosReceivablesDto2? receivables;
+    private List<RetailPosSaleRowDto2>? sales;
+    private List<RetailPosPaymentRowDto2>? payments;
+    private RetailPosPaymentRowDto2? reversing;
+    private string? reverseReason;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task SelectTabAsync(string t)
+    {
+        tab = t;
+        reversing = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (tab == TabReceivables)
+        {
+            var r = await ReportService.GetReceivablesAsync(null);
+            if (await StockUi2.ShowResultAsync(DialogService, r, false)) receivables = r.Data;
+        }
+        else if (tab == TabCollections)
+        {
+            var p = await PaymentService.GetPaymentsAsync(new RetailPosPaymentFilterDto2 { FromDate = fromDate, ToDate = toDate, IncludeReversed = true });
+            if (await StockUi2.ShowResultAsync(DialogService, p, false)) payments = p.Data;
+        }
+        else
+        {
+            var s = await SaleService.GetSalesAsync(new RetailPosSaleFilterDto2
+            {
+                FromDate = fromDate,
+                ToDate = toDate,
+                OnlyOutstanding = tab == TabOutstanding,
+                OnlyOverdue = tab == TabOutstanding && onlyOverdue
+            });
+            if (await StockUi2.ShowResultAsync(DialogService, s, false)) sales = s.Data;
+        }
+    }
+
+    private void StartReverse(RetailPosPaymentRowDto2 row)
+    {
+        reversing = row;
+        reverseReason = null;
+    }
+
+    private async Task ReverseAsync()
+    {
+        if (reversing == null) return;
+        saving = true;
+        try
+        {
+            var result = await PaymentService.ReversePaymentAsync(new RetailPosReversePaymentRequestDto2
+            {
+                PaymentId = reversing.Id,
+                Reason = reverseReason ?? string.Empty
+            });
+            if (await StockUi2.ShowResultAsync(DialogService, result))
+            {
+                reversing = null;
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

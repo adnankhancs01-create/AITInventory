@@ -76,6 +76,7 @@ namespace Data
             // Stock management module (new tables only; existing tables are not altered)
             StockModelConfiguration2.Configure(modelBuilder);
             UserModelConfiguration2.Configure(modelBuilder);
+            RetailPosModelConfiguration2.Configure(modelBuilder);
         }
     }
 }

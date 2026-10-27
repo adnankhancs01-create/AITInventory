@@ -149,6 +149,46 @@
         }
     }
 
+    @if (AnyPos2())
+    {
+    <div class="menu-item" style="cursor:pointer;" @onclick="TogglePos2">
+        <i class="bi bi-shop"></i> <span class="menu-text">Retail POS @(pos2Open ? "▾" : "▸")</span>
+    </div>
+    }
+    @if (pos2Open && AnyPos2())
+    {
+        @if (Can(ScreenCatalog2.RetailPosCheckout))
+        {
+            <NavLink href="retailpos/checkout" class="menu-item">
+                <i class="bi bi-cart-check"></i> <span class="menu-text">POS Checkout</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.RetailPosClients))
+        {
+            <NavLink href="retailpos/clients" class="menu-item">
+                <i class="bi bi-person-lines-fill"></i> <span class="menu-text">POS Clients</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.RetailPosReceivePayment))
+        {
+            <NavLink href="retailpos/receive-payment" class="menu-item">
+                <i class="bi bi-wallet2"></i> <span class="menu-text">Receive Payment</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.RetailPosStatement))
+        {
+            <NavLink href="retailpos/statement" class="menu-item">
+                <i class="bi bi-journal-text"></i> <span class="menu-text">Client Statement</span>
+            </NavLink>
+        }
+        @if (Can(ScreenCatalog2.RetailPosReports))
+        {
+            <NavLink href="retailpos/reports" class="menu-item">
+                <i class="bi bi-graph-up"></i> <span class="menu-text">POS Reports</span>
+            </NavLink>
+        }
+    }
+
     @if (Can(ScreenCatalog2.CatalogCategory))
     {
         <NavLink href="Category" class="menu-item">
@@ -171,6 +211,13 @@
 </nav>
 @code {
     private bool stock2Open = true;
+    private bool pos2Open = true;
+
+    private static readonly string[] Pos2Keys =
+    {
+        ScreenCatalog2.RetailPosCheckout, ScreenCatalog2.RetailPosClients, ScreenCatalog2.RetailPosReceivePayment,
+        ScreenCatalog2.RetailPosStatement, ScreenCatalog2.RetailPosReports
+    };
 
     private static readonly string[] Stock2Keys =
     {
@@ -189,6 +236,13 @@
     private bool Can(string screenKey) => CurrentUser.CanView(screenKey);
 
     private bool AnyStock2() => Stock2Keys.Any(CurrentUser.CanView);
+
+    private bool AnyPos2() => Pos2Keys.Any(CurrentUser.CanView);
+
+    private void TogglePos2()
+    {
+        pos2Open = !pos2Open;
+    }
 
     private void ToggleStock2()
     {

@@ -1,0 +1,191 @@
+@page "/retailpos/receive-payment"
+@using Common.RetailPos2
+@using Service.IService
+@using AIT_Inventory_App.Components.StockParts2
+@inject IRetailPosSaleService2 SaleService
+@inject IRetailPosClientService2 ClientService
+@inject IRetailPosPaymentService2 PaymentService
+@inject DialogService DialogService
+@inject IJSRuntime JS
+
+<h3 style="margin-bottom:12px;">Receive Client Payment</h3>
+
+<RadzenCard Style="margin-bottom:16px;">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:12px; color:#6c757d;">Search client (only clients who owe)</label>
+            <RadzenDropDown TValue="int?" Data="@clients" TextProperty="Name" ValueProperty="Id" @bind-Value="clientId"
+                            Change="OnClientChangedAsync" AllowFiltering="true" AllowClear="true" Placeholder="Select client" Style="width:320px" />
+        </div>
+        @if (selectedClient != null)
+        {
+            <div style="font-size:16px;">Total owed: <b>@selectedClient.Balance.ToString("N2")</b></div>
+        }
+    </RadzenStack>
+</RadzenCard>
+
+@if (selectedClient != null)
+{
+    <h5>Outstanding invoices</h5>
+    <RadzenDataGrid TItem="RetailPosSaleRowDto2" Data="@invoices" Style="margin-bottom:16px;">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="InvoiceNumber" Title="Invoice" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="SaleDate" Title="Date" FormatString="{0:dd MMM yyyy}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="DueDate" Title="Due" FormatString="{0:dd MMM yyyy}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="TotalAmount" Title="Total" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="PaidAmount" Title="Paid" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="OutstandingAmount" Title="Outstanding" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Title="Status" Sortable="false">
+                <Template Context="row">@(row.IsOverdue ? "Overdue" : row.PaymentStatus)</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Title="" Sortable="false">
+                <Template Context="row">
+                    <RadzenButton Text="Pay" Size="ButtonSize.Small" Click="@(() => PickInvoice(row))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+
+    <RadzenCard>
+        <h5 style="margin-top:0;">Payment</h5>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Apply to</label>
+                <RadzenDropDown TValue="int?" Data="@targets" TextProperty="Text" ValueProperty="Id" @bind-Value="saleId" Style="width:260px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Amount</label>
+                <RadzenNumeric TValue="decimal" @bind-Value="amount" Min="0" Style="width:150px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Method</label>
+                <RadzenDropDown TValue="string" Data="@methods" @bind-Value="method" Style="width:160px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reference</label>
+                <RadzenTextBox @bind-Value="reference" MaxLength="100" Style="width:180px" />
+            </div>
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Remarks</label>
+                <RadzenTextBox @bind-Value="remarks" MaxLength="250" Style="width:200px" />
+            </div>
+            <RadzenButton Text="Save payment" Icon="payments" ButtonStyle="ButtonStyle.Success" Click="SaveAsync" Disabled="@saving" />
+        </RadzenStack>
+        <p style="font-size:12px; color:#6c757d; margin:8px 0 0 0;">A payment cannot be more than what is owed. Advance payments are not accepted.</p>
+    </RadzenCard>
+}
+
+@if (receipt != null)
+{
+    <RadzenCard Style="margin-top:16px;" id="pos2-receipt">
+        <h5 style="margin-top:0;">Payment receipt @receipt.PaymentNumber</h5>
+        <div>@receipt.BusinessName</div>
+        <div>Date: @receipt.PaymentDate.ToString("dd MMM yyyy HH:mm")</div>
+        <div>Client: @receipt.ClientName</div>
+        @if (!string.IsNullOrEmpty(receipt.InvoiceNumber)) { <div>Invoice: @receipt.InvoiceNumber</div> }
+        <div>Amount received: <b>@receipt.Amount.ToString("N2")</b> (@receipt.Method@(string.IsNullOrEmpty(receipt.Reference) ? "" : " / " + receipt.Reference))</div>
+        @if (!string.IsNullOrEmpty(receipt.InvoiceNumber)) { <div>Invoice balance after: <b>@receipt.InvoiceBalanceAfter.ToString("N2")</b></div> }
+        <div>Client balance after: <b>@receipt.ClientBalanceAfter.ToString("N2")</b></div>
+        <div>Received by: @receipt.ReceivedBy</div>
+        <div style="margin-top:8px;"><RadzenButton Text="Print" Icon="print" Click="PrintAsync" /></div>
+    </RadzenCard>
+}
+
+@code {
+    private sealed record Target(int? Id, string Text);
+
+    private List<RetailPosClientRowDto2> clients = new();
+    private List<RetailPosSaleRowDto2> invoices = new();
+    private List<Target> targets = new();
+    private readonly string[] methods = RetailPosConstants2.PaymentMethods;
+
+    private int? clientId;
+    private RetailPosClientRowDto2? selectedClient;
+    private int? saleId;
+    private decimal amount;
+    private string method = RetailPosConstants2.MethodCash;
+    private string? reference;
+    private string? remarks;
+    private bool saving;
+    private Guid idempotencyKey = Guid.NewGuid();
+    private RetailPosReceiptDto2? receipt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadClientsAsync();
+    }
+
+    private async Task LoadClientsAsync()
+    {
+        var c = await ClientService.GetClientsAsync(new RetailPosClientFilterDto2 { OnlyWithBalance = true });
+        if (await StockUi2.ShowResultAsync(DialogService, c, false)) clients = c.Data;
+    }
+
+    private async Task OnClientChangedAsync()
+    {
+        receipt = null;
+        await LoadClientDataAsync();
+    }
+
+    private async Task LoadClientDataAsync()
+    {
+        selectedClient = clientId.HasValue ? clients.FirstOrDefault(x => x.Id == clientId.Value) : null;
+        invoices = new();
+        targets = new();
+        saleId = null;
+        amount = 0m;
+
+        if (selectedClient == null) return;
+
+        var s = await SaleService.GetSalesAsync(new RetailPosSaleFilterDto2 { ClientId = selectedClient.Id, OnlyOutstanding = true });
+        if (await StockUi2.ShowResultAsync(DialogService, s, false)) invoices = s.Data.OrderBy(x => x.SaleDate).ToList();
+
+        targets.Add(new Target(null, "Account balance"));
+        targets.AddRange(invoices.Select(i => new Target(i.Id, $"{i.InvoiceNumber} (owes {i.OutstandingAmount:N2})")));
+    }
+
+    private void PickInvoice(RetailPosSaleRowDto2 row)
+    {
+        saleId = row.Id;
+        amount = row.OutstandingAmount;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (selectedClient == null) return;
+        saving = true;
+        try
+        {
+            var result = await PaymentService.ReceivePaymentAsync(new RetailPosReceivePaymentRequestDto2
+            {
+                ClientId = selectedClient.Id,
+                SaleId = saleId,
+                Amount = amount,
+                Method = method,
+                Reference = reference,
+                Remarks = remarks,
+                IdempotencyKey = idempotencyKey
+            });
+
+            if (await StockUi2.ShowResultAsync(DialogService, result, false))
+            {
+                receipt = result.Data;
+                idempotencyKey = Guid.NewGuid();
+                reference = null;
+                remarks = null;
+                await LoadClientsAsync();
+                await LoadClientDataAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        try { await JS.InvokeVoidAsync("print"); }
+        catch (Exception ex) { await StockUi2.AlertAsync(DialogService, "Print", ex.Message); }
+    }
+}
