@@ -172,7 +172,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VendorClientDetail");
+                    b.ToTable("ClientDetail");
                 });
 
             modelBuilder.Entity("Domain.Entities.ExceptionLog", b =>

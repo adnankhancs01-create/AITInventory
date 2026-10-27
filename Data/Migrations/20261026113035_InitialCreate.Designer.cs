@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20261026072752_AddUserManagement2")]
-    partial class AddUserManagement2
+    [Migration("20261026113035_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,7 +175,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VendorClientDetail");
+                    b.ToTable("ClientDetail");
                 });
 
             modelBuilder.Entity("Domain.Entities.ExceptionLog", b =>

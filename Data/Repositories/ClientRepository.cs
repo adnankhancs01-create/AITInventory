@@ -25,7 +25,7 @@ namespace Data.Repositories
             if (model.Id > 0)
             {
                 // 🔹 UPDATE
-                entity = await _dbContext.VendorClientDetail.FirstOrDefaultAsync(x => x.Id == model.Id);
+                entity = await _dbContext.ClientDetail.FirstOrDefaultAsync(x => x.Id == model.Id);
 
                 if (entity == null)
                     return BaseResponse<int>.FailureResponse(new List<string>() { "client not found" });
@@ -61,7 +61,7 @@ namespace Data.Repositories
                     ClientCode= await GetClientCodeAsync()
                 };
 
-                await _dbContext.VendorClientDetail.AddAsync(entity);
+                await _dbContext.ClientDetail.AddAsync(entity);
             }
 
             await _dbContext.SaveChangesAsync();
@@ -71,7 +71,7 @@ namespace Data.Repositories
 
         private async Task<string> GetClientCodeAsync()
         {
-            var getClient=await _dbContext.VendorClientDetail.AsNoTracking().OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+            var getClient=await _dbContext.ClientDetail.AsNoTracking().OrderByDescending(x => x.Id).FirstOrDefaultAsync();
             if(getClient == null || string.IsNullOrEmpty(getClient.ClientCode))
                 return "CLT-0001";
 
@@ -81,7 +81,7 @@ namespace Data.Repositories
 
         public async Task<(List<ClientDetail>,int count)> GetAllClientsAsync(int id, int pageIndex, int pageSize,string? Filter)
         {
-            var query = _dbContext.VendorClientDetail.AsNoTracking()
+            var query = _dbContext.ClientDetail.AsNoTracking()
                 .Where(x => x.Id == id || id == 0);
 
             if (!string.IsNullOrEmpty(Filter))

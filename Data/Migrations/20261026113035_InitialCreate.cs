@@ -12,6 +12,70 @@ namespace Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AppScreen2",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ScreenKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    DisplayName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    GroupName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Route = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IsRootOnly = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AppScreen2", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Business2",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    TaxNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Business2", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ClientDetail",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    City = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Country = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ClientCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClientDetail", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ExceptionLogs",
                 columns: table => new
                 {
@@ -91,22 +155,19 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserMst",
+                name: "UserRole2",
                 columns: table => new
                 {
-                    UserId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    mobileNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    BusinessName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    BusinessAddress = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserMst", x => x.UserId);
+                    table.PrimaryKey("PK_UserRole2", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -135,30 +196,35 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "VendorClientDetail",
+                name: "TransactionMst",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    City = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    Country = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    ClientCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    ClientName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClientAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionNumber = table.Column<long>(type: "bigint", nullable: true),
+                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClientId = table.Column<int>(type: "int", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ModifiedBy = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: true)
+                    IsActive = table.Column<bool>(type: "bit", nullable: true),
+                    RevertedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RevertedBy = table.Column<int>(type: "int", nullable: true),
+                    ReferenceNumber = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_VendorClientDetail", x => x.Id);
+                    table.PrimaryKey("PK_TransactionMst", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionMst_ClientDetail_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "ClientDetail",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -278,6 +344,64 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RoleScreenPermission2",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleId = table.Column<int>(type: "int", nullable: false),
+                    ScreenKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CanView = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoleScreenPermission2", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoleScreenPermission2_UserRole2_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "UserRole2",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserMst",
+                columns: table => new
+                {
+                    UserId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    mobileNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    BusinessName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BusinessAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BusinessId = table.Column<int>(type: "int", nullable: true),
+                    RoleId = table.Column<int>(type: "int", nullable: true),
+                    IsRoot = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastLoginOn = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserMst", x => x.UserId);
+                    table.ForeignKey(
+                        name: "FK_UserMst_Business2_BusinessId",
+                        column: x => x.BusinessId,
+                        principalTable: "Business2",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_UserMst_UserRole2_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "UserRole2",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PurchaseOrders2",
                 columns: table => new
                 {
@@ -306,34 +430,23 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TransactionMst",
+                name: "TransactionSlip",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ClientName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClientAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    TransactionNumber = table.Column<long>(type: "bigint", nullable: true),
-                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClientId = table.Column<int>(type: "int", nullable: true),
-                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: true),
-                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: true),
-                    RevertedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RevertedBy = table.Column<int>(type: "int", nullable: true),
-                    ReferenceNumber = table.Column<long>(type: "bigint", nullable: true)
+                    TransactionId = table.Column<int>(type: "int", nullable: true),
+                    SlipContent = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TransactionMst", x => x.Id);
+                    table.PrimaryKey("PK_TransactionSlip", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TransactionMst_VendorClientDetail_ClientId",
-                        column: x => x.ClientId,
-                        principalTable: "VendorClientDetail",
+                        name: "FK_TransactionSlip_TransactionMst_TransactionId",
+                        column: x => x.TransactionId,
+                        principalTable: "TransactionMst",
                         principalColumn: "Id");
                 });
 
@@ -395,6 +508,39 @@ namespace Data.Migrations
                         principalTable: "StockLocations2",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TransactionDetails",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    ReturnedQuantity = table.Column<int>(type: "int", nullable: true),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    TransMstId = table.Column<int>(type: "int", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
+                    Discount = table.Column<decimal>(type: "decimal(5,2)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TransactionDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TransactionDetails_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TransactionDetails_TransactionMst_TransMstId",
+                        column: x => x.TransMstId,
+                        principalTable: "TransactionMst",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -495,60 +641,6 @@ namespace Data.Migrations
                         principalTable: "Vendor",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TransactionDetails",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductId = table.Column<int>(type: "int", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
-                    ReturnedQuantity = table.Column<int>(type: "int", nullable: true),
-                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    TransMstId = table.Column<int>(type: "int", nullable: true),
-                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: true),
-                    ModifiedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<int>(type: "int", nullable: true),
-                    Discount = table.Column<decimal>(type: "decimal(5,2)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TransactionDetails", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TransactionDetails_Products_ProductId",
-                        column: x => x.ProductId,
-                        principalTable: "Products",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TransactionDetails_TransactionMst_TransMstId",
-                        column: x => x.TransMstId,
-                        principalTable: "TransactionMst",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TransactionSlip",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    TransactionId = table.Column<int>(type: "int", nullable: true),
-                    SlipContent = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatedBy = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TransactionSlip", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TransactionSlip_TransactionMst_TransactionId",
-                        column: x => x.TransactionId,
-                        principalTable: "TransactionMst",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -814,6 +906,12 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AppScreen2_ScreenKey",
+                table: "AppScreen2",
+                column: "ScreenKey",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
                 table: "Products",
                 column: "CategoryId");
@@ -859,6 +957,12 @@ namespace Data.Migrations
                 name: "IX_ReturnTransaction_TransactionDetailId",
                 table: "ReturnTransaction",
                 column: "TransactionDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoleScreenPermission2_RoleId_ScreenKey",
+                table: "RoleScreenPermission2",
+                columns: new[] { "RoleId", "ScreenKey" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Stock_ProductId",
@@ -1093,11 +1197,51 @@ namespace Data.Migrations
                 name: "IX_TransactionSlip_TransactionId",
                 table: "TransactionSlip",
                 column: "TransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserMst_BusinessId",
+                table: "UserMst",
+                column: "BusinessId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserMst_Email",
+                table: "UserMst",
+                column: "Email",
+                unique: true,
+                filter: "[Email] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserMst_IsRoot",
+                table: "UserMst",
+                column: "IsRoot",
+                unique: true,
+                filter: "[IsRoot] = 1");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserMst_RoleId",
+                table: "UserMst",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserMst_UserName",
+                table: "UserMst",
+                column: "UserName",
+                unique: true,
+                filter: "[UserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRole2_Name",
+                table: "UserRole2",
+                column: "Name",
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AppScreen2");
+
             migrationBuilder.DropTable(
                 name: "ExceptionLogs");
 
@@ -1109,6 +1253,9 @@ namespace Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "ReturnTransaction");
+
+            migrationBuilder.DropTable(
+                name: "RoleScreenPermission2");
 
             migrationBuilder.DropTable(
                 name: "StockAdjustmentLines2");
@@ -1156,6 +1303,12 @@ namespace Data.Migrations
                 name: "StockTransfers2");
 
             migrationBuilder.DropTable(
+                name: "Business2");
+
+            migrationBuilder.DropTable(
+                name: "UserRole2");
+
+            migrationBuilder.DropTable(
                 name: "PurchaseOrders2");
 
             migrationBuilder.DropTable(
@@ -1177,7 +1330,7 @@ namespace Data.Migrations
                 name: "ProductCategories");
 
             migrationBuilder.DropTable(
-                name: "VendorClientDetail");
+                name: "ClientDetail");
         }
     }
 }
