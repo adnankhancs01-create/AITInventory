@@ -9,6 +9,7 @@ namespace Domain.IRepositories
         IRetailPosClientRepo2 Clients { get; }
         IRetailPosSaleRepo2 Sales { get; }
         IRetailPosPaymentRepo2 Payments { get; }
+        IRetailPosReturnRepo2 Returns { get; }
 
         /// <summary>Stock ledger and locations. Shares the same database context and transaction, so a sale and its stock-out are saved together.</summary>
         IStockLedgerRepo2 Stock { get; }

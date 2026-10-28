@@ -21,6 +21,14 @@ namespace Common.RetailPos2
         public const string AdjustmentManual = "Adjustment";
         public static readonly string[] AdjustmentTypes = { AdjustmentCreditNote, AdjustmentManual };
 
+        /// <summary>Ledger adjustment types written by the sale-return workflow (not offered in the manual adjustment screen).</summary>
+        public const string AdjustmentSaleReturn = "SaleReturn";
+        public const string AdjustmentRefund = "Refund";
+
+        public const string StockReturnToStock = "ReturnToStock";
+        public const string StatusReturned = "Returned";
+        public const string StockReturnDocumentType = "RetailPosReturn";
+
         // ---- statement entry types
         public const string EntryOpening = "Opening balance";
         public const string EntrySale = "Sale";
@@ -28,10 +36,13 @@ namespace Common.RetailPos2
         public const string EntryPaymentReversal = "Payment reversal";
         public const string EntryCreditNote = "Credit note";
         public const string EntryAdjustment = "Adjustment";
+        public const string EntrySaleReturn = "Sale return";
+        public const string EntryRefund = "Refund paid";
         public const string EntryBroughtForward = "Balance brought forward";
 
         public const string InvoicePrefix = "INV";
         public const string ReceiptPrefix = "RCP";
+        public const string ReturnPrefix = "RET";
         /// <summary>Stored on StockMovement2.DocumentType for the stock-out of a POS sale.</summary>
         public const string StockDocumentType = "RetailPosSale";
 

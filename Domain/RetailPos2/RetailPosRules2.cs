@@ -78,9 +78,24 @@ namespace Domain.RetailPos2
         public static RetailPosSaleRowDto2 FinishSaleRow(RetailPosSaleRowDto2 row, DateTime today)
         {
             row.OutstandingAmount = Outstanding(row.TotalAmount, row.AdjustmentAmount, row.PaidAmount);
-            row.PaymentStatus = StatusFor(row.OutstandingAmount, row.PaidAmount);
+            row.PaymentStatus = row.ReturnedAmount > 0m && row.ReturnedAmount >= row.TotalAmount
+                ? RetailPosConstants2.StatusReturned
+                : StatusFor(row.OutstandingAmount, row.PaidAmount);
             row.IsOverdue = IsOverdue(row.DueDate, row.OutstandingAmount, today);
             return row;
+        }
+
+        /// <summary>Credit for returning <paramref name="quantity"/> pieces: the price after the invoice discount is shared out.</summary>
+        public static decimal ReturnCredit(decimal unitPrice, int quantity, decimal subTotal, decimal totalAmount)
+        {
+            decimal factor = subTotal > 0m ? totalAmount / subTotal : 1m;
+            return Round(unitPrice * quantity * factor);
+        }
+
+        /// <summary>Money to hand back: what the client has paid beyond the invoice's new value (outstanding cannot go below zero).</summary>
+        public static decimal RefundDue(decimal outstandingBefore, decimal credit)
+        {
+            return Math.Max(0m, Round(credit - outstandingBefore));
         }
 
         public static string DocumentPrefix(string prefix, DateTime date)

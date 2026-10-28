@@ -102,7 +102,13 @@ namespace Service.Service
                     entries.Add(new Entry
                     {
                         Date = a.CreatedOn, Order = 4,
-                        Type = a.AdjustmentType == RetailPosConstants2.AdjustmentCreditNote ? RetailPosConstants2.EntryCreditNote : RetailPosConstants2.EntryAdjustment,
+                        Type = a.AdjustmentType switch
+                        {
+                            RetailPosConstants2.AdjustmentCreditNote => RetailPosConstants2.EntryCreditNote,
+                            RetailPosConstants2.AdjustmentSaleReturn => RetailPosConstants2.EntrySaleReturn,
+                            RetailPosConstants2.AdjustmentRefund => RetailPosConstants2.EntryRefund,
+                            _ => RetailPosConstants2.EntryAdjustment
+                        },
                         Reference = $"ADJ-{a.Id}", Description = a.Reason + invoice,
                         Debit = a.Amount > 0m ? a.Amount : 0m,
                         Credit = a.Amount < 0m ? -a.Amount : 0m,

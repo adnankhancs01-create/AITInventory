@@ -148,7 +148,8 @@ namespace Data.Repositories
                 DueDate = s.DueDate,
                 Remarks = s.Remarks ?? string.Empty,
                 PaidAmount = _db.Set<RetailPosPayment2>().Where(p => p.SaleId == s.Id && !p.IsReversed).Sum(p => (decimal?)p.Amount) ?? 0m,
-                AdjustmentAmount = _db.Set<RetailPosAdjustment2>().Where(a => a.SaleId == s.Id).Sum(a => (decimal?)a.Amount) ?? 0m
+                AdjustmentAmount = _db.Set<RetailPosAdjustment2>().Where(a => a.SaleId == s.Id).Sum(a => (decimal?)a.Amount) ?? 0m,
+                ReturnedAmount = _db.Set<RetailPosReturnLine2>().Where(l => l.Return!.SaleId == s.Id).Sum(l => (decimal?)l.LineAmount) ?? 0m
             });
         }
     }

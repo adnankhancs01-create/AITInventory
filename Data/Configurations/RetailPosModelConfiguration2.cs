@@ -92,6 +92,44 @@ namespace Data.Configurations
                 e.HasOne(x => x.Client).WithMany().HasForeignKey(x => x.ClientId).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<RetailPosReturn2>(e =>
+            {
+                e.ToTable("RetailPos2_Returns", t =>
+                {
+                    t.HasCheckConstraint("CK_RetailPos2_Returns_Amounts", "[CreditAmount] >= 0 AND [RefundAmount] >= 0");
+                });
+                e.Property(x => x.ReturnNumber).HasMaxLength(30).IsRequired();
+                e.Property(x => x.RefundMethod).HasMaxLength(20);
+                e.Property(x => x.Reason).HasMaxLength(250).IsRequired();
+                e.Property(x => x.CreditAmount).HasColumnType("decimal(18,2)");
+                e.Property(x => x.RefundAmount).HasColumnType("decimal(18,2)");
+                e.HasIndex(x => x.ReturnNumber).IsUnique();
+                e.HasIndex(x => x.IdempotencyKey).IsUnique();
+                e.HasIndex(x => x.SaleId);
+                e.HasIndex(x => new { x.ClientId, x.ReturnDate });
+                e.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Client).WithMany().HasForeignKey(x => x.ClientId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<RetailPosReturnLine2>(e =>
+            {
+                e.ToTable("RetailPos2_ReturnLines", t =>
+                {
+                    t.HasCheckConstraint("CK_RetailPos2_ReturnLines_Quantity", "[Quantity] > 0");
+                });
+                e.Property(x => x.ProductCode).HasMaxLength(50).IsRequired();
+                e.Property(x => x.ProductName).HasMaxLength(150).IsRequired();
+                e.Property(x => x.StockAction).HasMaxLength(30).IsRequired();
+                e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+                e.Property(x => x.LineAmount).HasColumnType("decimal(18,2)");
+                e.HasIndex(x => x.ReturnId);
+                e.HasIndex(x => x.SaleLineId);
+                e.HasOne(x => x.Return).WithMany(r => r.Lines).HasForeignKey(x => x.ReturnId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.SaleLine).WithMany().HasForeignKey(x => x.SaleLineId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<StockLocation2>().WithMany().HasForeignKey(x => x.LocationId).OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

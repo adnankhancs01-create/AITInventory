@@ -12,6 +12,7 @@ namespace Data
             services.AddScoped<IRetailPosClientRepo2, RetailPosClientRepo2>();
             services.AddScoped<IRetailPosSaleRepo2, RetailPosSaleRepo2>();
             services.AddScoped<IRetailPosPaymentRepo2, RetailPosPaymentRepo2>();
+            services.AddScoped<IRetailPosReturnRepo2, RetailPosReturnRepo2>();
             services.AddScoped<IRetailPosUnitOfWorkFactory2, RetailPosUnitOfWorkFactory2>();
             return services;
         }

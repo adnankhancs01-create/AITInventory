@@ -13,6 +13,8 @@ namespace Common.RetailPos2
         public decimal PaidAmount { get; set; }
         /// <summary>Credit notes / adjustments linked to this invoice (negative reduces the amount owed).</summary>
         public decimal AdjustmentAmount { get; set; }
+        /// <summary>Value of goods the client has returned from this invoice.</summary>
+        public decimal ReturnedAmount { get; set; }
         /// <summary>TotalAmount + AdjustmentAmount - PaidAmount. Never negative.</summary>
         public decimal OutstandingAmount { get; set; }
         /// <summary>How the sale was settled at checkout.</summary>

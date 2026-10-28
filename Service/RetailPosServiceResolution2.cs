@@ -13,6 +13,7 @@ namespace Service
             services.AddScoped<IRetailPosSaleService2, RetailPosSaleService2>();
             services.AddScoped<IRetailPosPaymentService2, RetailPosPaymentService2>();
             services.AddScoped<IRetailPosReportService2, RetailPosReportService2>();
+            services.AddScoped<IRetailPosReturnService2, RetailPosReturnService2>();
             return services;
         }
     }

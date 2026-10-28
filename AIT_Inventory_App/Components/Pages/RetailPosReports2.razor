@@ -6,6 +6,7 @@
 @inject IRetailPosReportService2 ReportService
 @inject IRetailPosSaleService2 SaleService
 @inject IRetailPosPaymentService2 PaymentService
+@inject IRetailPosReturnService2 ReturnService
 @inject ICurrentUser2 CurrentUser
 @inject DialogService DialogService
 
@@ -63,6 +64,75 @@ else
     </RadzenDataGrid>
 }
 
+@if (tab == TabSales && prep != null)
+{
+    <RadzenCard Style="margin-bottom:16px;">
+        <h5 style="margin-top:0;">Return products from invoice @prep.Sale.InvoiceNumber (@prep.Sale.ClientName)</h5>
+        <div style="margin-bottom:8px;">
+            Invoice total: <b>@prep.Sale.TotalAmount.ToString("N2")</b> &nbsp;
+            Paid: <b>@prep.Sale.PaidAmount.ToString("N2")</b> &nbsp;
+            Already returned: <b>@prep.Sale.ReturnedAmount.ToString("N2")</b> &nbsp;
+            Still owed: <b>@prep.Sale.OutstandingAmount.ToString("N2")</b>
+        </div>
+        @if (!prep.StockTracked)
+        {
+            <div style="font-size:12px; color:#c0392b; margin-bottom:8px;">This invoice has no stock record (it was made before the POS was linked to stock), so returning its goods will not change stock.</div>
+        }
+
+        <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosReturnableLineDto2" Data="@prep.Lines" Style="margin-bottom:12px;">
+            <Columns>
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Property="ProductCode" Title="Code" />
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Property="ProductName" Title="Product" />
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Property="SoldQuantity" Title="Sold" />
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Property="ReturnedQuantity" Title="Returned" />
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Property="CreditUnitPrice" Title="Credit / piece" FormatString="{0:N2}" />
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Title="Return qty" Sortable="false" Resizable="false" Width="120px">
+                    <Template Context="line">
+                        @if (line.RemainingQuantity > 0)
+                        {
+                            <RadzenNumeric TValue="int" @bind-Value="line.ReturnQuantity" Min="0" Max="@line.RemainingQuantity" Style="width:90px" />
+                        }
+                        else
+                        {
+                            <span style="color:#6c757d;">all returned</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetailPosReturnableLineDto2" Title="What happens to the stock" Sortable="false" Width="220px">
+                    <Template Context="line">
+                        @if (line.RemainingQuantity > 0)
+                        {
+                            <RadzenDropDown TValue="string" Data="@stockActions" TextProperty="Text" ValueProperty="Value" @bind-Value="line.StockAction" Style="width:200px" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" Style="flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="font-size:12px; color:#6c757d;">Reason for the return</label>
+                <RadzenTextBox @bind-Value="returnReason" MaxLength="250" Style="width:320px" />
+            </div>
+            @if (RefundPreview > 0m)
+            {
+                <div>
+                    <label style="font-size:12px; color:#6c757d;">Refund paid back by</label>
+                    <RadzenDropDown TValue="string" Data="@refundMethods" @bind-Value="refundMethod" Style="width:160px" />
+                </div>
+            }
+            <RadzenButton Text="Save return" Icon="assignment_return" ButtonStyle="ButtonStyle.Success" Click="SaveReturnAsync" Disabled="@saving" />
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => prep = null)" />
+        </RadzenStack>
+        <div style="margin-top:10px;">
+            Credit for the selected products: <b>@CreditPreview.ToString("N2")</b> &nbsp;
+            Reduces what the client owes by: <b>@Math.Min(CreditPreview, prep.Sale.OutstandingAmount).ToString("N2")</b> &nbsp;
+            Money to pay back: <b>@RefundPreview.ToString("N2")</b>
+        </div>
+        <p style="font-size:12px; color:#6c757d; margin:6px 0 0 0;">The credit is worked out on the price the client really paid (after the invoice discount). The final figure is rounded by the system.</p>
+    </RadzenCard>
+}
+
 @if ((tab == TabOutstanding || tab == TabSales) && sales != null)
 {
     <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_invoices", sales))" Style="margin-bottom:8px;" />
@@ -74,17 +144,51 @@ else
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="PaymentType" Title="Type" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="TotalAmount" Title="Total" FormatString="{0:N2}" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="PaidAmount" Title="Paid" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="ReturnedAmount" Title="Returned" FormatString="{0:N2}" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="OutstandingAmount" Title="Outstanding" FormatString="{0:N2}" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Property="DueDate" Title="Due" FormatString="{0:dd MMM yyyy}" />
             <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Title="Status" Sortable="false">
                 <Template Context="row">@(row.IsOverdue ? "Overdue" : row.PaymentStatus)</Template>
             </RadzenDataGridColumn>
+            @if (tab == TabSales)
+            {
+                <RadzenDataGridColumn TItem="RetailPosSaleRowDto2" Title="Action" Sortable="false" Resizable="false" Width="110px">
+                    <Template Context="row">
+                        @if (row.PaymentStatus != RetailPosConstants2.StatusReturned)
+                        {
+                            <RadzenButton Text="Return" Icon="assignment_return" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Warning"
+                                          Click="@(() => StartReturnAsync(row))" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@if (tab == TabReturns && returns != null)
+{
+    <div style="margin-bottom:8px;">Total credit: <b>@returns.Sum(r => r.CreditAmount).ToString("N2")</b> &nbsp; Refunded: <b>@returns.Sum(r => r.RefundAmount).ToString("N2")</b></div>
+    <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_returns", returns))" Style="margin-bottom:8px;" />
+    <RadzenDataGrid AllowColumnResize="true" TItem="RetailPosReturnRowDto2" Data="@returns" AllowSorting="true" AllowPaging="true" PageSize="20">
+        <Columns>
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="ReturnNumber" Title="Return" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="ReturnDate" Title="Date" FormatString="{0:dd MMM yyyy HH:mm}" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="InvoiceNumber" Title="Invoice" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="ClientName" Title="Client" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="Items" Title="Products" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="CreditAmount" Title="Credit" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="RefundAmount" Title="Refund" FormatString="{0:N2}" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="RefundMethod" Title="Refund method" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="Reason" Title="Reason" />
+            <RadzenDataGridColumn TItem="RetailPosReturnRowDto2" Property="CreatedBy" Title="By" />
         </Columns>
     </RadzenDataGrid>
 }
 
 @if (tab == TabCollections && payments != null)
 {
+    <div style="font-size:12px; color:#6c757d; margin-bottom:6px;">Reverse payment only cancels a wrongly recorded or bounced payment. It does not touch stock. To take goods back, use <b>Sales history</b> and press <b>Return</b>.</div>
     <div style="margin-bottom:8px;">Collected (not reversed): <b>@payments.Where(p => !p.IsReversed).Sum(p => p.Amount).ToString("N2")</b></div>
     <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Light" Click="@(() => StockUi2.ExportAsync(DialogService, "retailpos2_collections", payments))" Style="margin-bottom:8px;" />
 
@@ -118,7 +222,7 @@ else
             </RadzenDataGridColumn>
             @if (CurrentUser.IsRoot)
             {
-                <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Title="" Sortable="false">
+                <RadzenDataGridColumn TItem="RetailPosPaymentRowDto2" Title="Reverse payment" Sortable="false">
                     <Template Context="row">
                         @if (!row.IsReversed)
                         {
@@ -136,8 +240,9 @@ else
     private const string TabOutstanding = "Outstanding invoices";
     private const string TabCollections = "Collections";
     private const string TabSales = "Sales history";
+    private const string TabReturns = "Returns";
 
-    private readonly string[] tabs = { TabReceivables, TabOutstanding, TabCollections, TabSales };
+    private readonly string[] tabs = { TabReceivables, TabOutstanding, TabCollections, TabSales, TabReturns };
     private string tab = TabReceivables;
     private DateTime? fromDate;
     private DateTime? toDate;
@@ -147,7 +252,31 @@ else
     private RetailPosReceivablesDto2? receivables;
     private List<RetailPosSaleRowDto2>? sales;
     private List<RetailPosPaymentRowDto2>? payments;
+    private List<RetailPosReturnRowDto2>? returns;
     private RetailPosPaymentRowDto2? reversing;
+
+    // ---- sale return
+    private sealed record StockOption(string Text, string Value);
+    private RetailPosReturnPrepDto2? prep;
+    private string? returnReason;
+    private string refundMethod = RetailPosConstants2.MethodCash;
+    private Guid returnKey = Guid.NewGuid();
+    private readonly string[] refundMethods = RetailPosConstants2.PaymentMethods;
+    private readonly List<StockOption> stockActions = BuildStockActions();
+
+    private static List<StockOption> BuildStockActions()
+    {
+        var list = new List<StockOption> { new("Return to stock", RetailPosConstants2.StockReturnToStock) };
+        list.AddRange(global::Common.Stock2.StockConstants2.IssueReasons
+            .Where(r => r != "Returned to supplier")
+            .Select(r => new StockOption(r == "Damaged" ? "Damaged (not restocked)" : r + " (not restocked)", r)));
+        return list;
+    }
+
+    private decimal CreditPreview => prep == null ? 0m
+        : prep.Lines.Where(l => l.ReturnQuantity > 0).Sum(l => l.ReturnQuantity * l.CreditUnitPrice);
+
+    private decimal RefundPreview => prep == null ? 0m : Math.Max(0m, CreditPreview - prep.Sale.OutstandingAmount);
     private string? reverseReason;
 
     protected override async Task OnInitializedAsync()
@@ -169,6 +298,11 @@ else
             var r = await ReportService.GetReceivablesAsync(null);
             if (await StockUi2.ShowResultAsync(DialogService, r, false)) receivables = r.Data;
         }
+        else if (tab == TabReturns)
+        {
+            var r = await ReturnService.GetReturnsAsync(new RetailPosReturnFilterDto2 { FromDate = fromDate, ToDate = toDate });
+            if (await StockUi2.ShowResultAsync(DialogService, r, false)) returns = r.Data;
+        }
         else if (tab == TabCollections)
         {
             var p = await PaymentService.GetPaymentsAsync(new RetailPosPaymentFilterDto2 { FromDate = fromDate, ToDate = toDate, IncludeReversed = true });
@@ -184,6 +318,52 @@ else
                 OnlyOverdue = tab == TabOutstanding && onlyOverdue
             });
             if (await StockUi2.ShowResultAsync(DialogService, s, false)) sales = s.Data;
+        }
+    }
+
+    private async Task StartReturnAsync(RetailPosSaleRowDto2 row)
+    {
+        var result = await ReturnService.GetReturnPrepAsync(row.Id);
+        if (!await StockUi2.ShowResultAsync(DialogService, result, false)) return;
+
+        if (result.Data.Lines.All(l => l.RemainingQuantity <= 0))
+        {
+            await StockUi2.AlertAsync(DialogService, "Return", "Everything on this invoice has already been returned.");
+            return;
+        }
+
+        prep = result.Data;
+        returnReason = null;
+        refundMethod = RetailPosConstants2.MethodCash;
+        returnKey = Guid.NewGuid();
+    }
+
+    private async Task SaveReturnAsync()
+    {
+        if (prep == null) return;
+        saving = true;
+        try
+        {
+            var result = await ReturnService.ReturnItemsAsync(new RetailPosReturnRequestDto2
+            {
+                SaleId = prep.Sale.Id,
+                Reason = returnReason ?? string.Empty,
+                RefundMethod = refundMethod,
+                IdempotencyKey = returnKey,
+                Lines = prep.Lines.Where(l => l.ReturnQuantity > 0)
+                    .Select(l => new RetailPosReturnLineRequestDto2 { SaleLineId = l.SaleLineId, Quantity = l.ReturnQuantity, StockAction = l.StockAction })
+                    .ToList()
+            });
+
+            if (await StockUi2.ShowResultAsync(DialogService, result))
+            {
+                prep = null;
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
         }
     }
 

@@ -21,6 +21,7 @@ namespace Data.Repositories
             Clients = sp.GetRequiredService<IRetailPosClientRepo2>();
             Sales = sp.GetRequiredService<IRetailPosSaleRepo2>();
             Payments = sp.GetRequiredService<IRetailPosPaymentRepo2>();
+            Returns = sp.GetRequiredService<IRetailPosReturnRepo2>();
             Stock = sp.GetRequiredService<IStockLedgerRepo2>();
             StockMaster = sp.GetRequiredService<IStockMasterRepo2>();
         }
@@ -28,6 +29,7 @@ namespace Data.Repositories
         public IRetailPosClientRepo2 Clients { get; }
         public IRetailPosSaleRepo2 Sales { get; }
         public IRetailPosPaymentRepo2 Payments { get; }
+        public IRetailPosReturnRepo2 Returns { get; }
         public IStockLedgerRepo2 Stock { get; }
         public IStockMasterRepo2 StockMaster { get; }
 
