@@ -56,6 +56,42 @@ namespace Service.Service
             }, _logRepo, nameof(GetLocationsAsync), _currentUser.UserId);
         }
 
+        /// <summary>Quantity available to sell per product at one location (null = default location). Same rules the checkout uses.</summary>
+        public Task<BaseResponse<Dictionary<int, int>>> GetAvailableStockAsync(int? locationId)
+        {
+            return RetailPosResult2.RunAsync(async () =>
+            {
+                var denied = RetailPosAccess2.RequireLogin<Dictionary<int, int>>(_currentUser);
+                if (denied != null) return denied;
+
+                await using var uow = _uowFactory.Create();
+                StockLocation2? location = locationId is > 0
+                    ? await uow.Stock.GetLocationAsync(locationId.Value, true)
+                    : await uow.Stock.EnsureDefaultLocationAsync();
+                if (location == null) return RetailPosResult2.Fail<Dictionary<int, int>>("Stock location not found or inactive.");
+
+                var states = await uow.Stock.GetStatesAsync();
+                var balanceTotals = await uow.Stock.GetBalanceTotalsAsync();
+                var inTransit = await uow.Stock.GetInTransitAsync();
+                var atLocation = location.IsDefault ? new Dictionary<int, int>() : await uow.Stock.GetLocationBalancesAsync(location.Id);
+
+                var result = new Dictionary<int, int>();
+                var productIds = states.Keys.Concat(atLocation.Keys).Distinct();
+                foreach (int productId in productIds)
+                {
+                    int onHand = states.TryGetValue(productId, out var state) ? state.OnHand : 0;
+                    result[productId] = StockLedgerRules2.QuantityAtLocation(
+                        onHand,
+                        StockLedgerRules2.Get(balanceTotals, productId),
+                        StockLedgerRules2.Get(inTransit, productId),
+                        location.IsDefault,
+                        StockLedgerRules2.Get(atLocation, productId));
+                }
+
+                return RetailPosResult2.Ok(result);
+            }, _logRepo, nameof(GetAvailableStockAsync), _currentUser.UserId, new { locationId });
+        }
+
         // ================================================================== checkout
 
         public Task<BaseResponse<RetailPosCheckoutResultDto2>> CheckoutAsync(RetailPosCheckoutRequestDto2 request)
@@ -88,6 +124,7 @@ namespace Service.Service
                         if (line.Quantity > 1_000_000) errors.Add(n + "quantity is too large.");
                         if (line.UnitPrice < 0m) errors.Add(n + "price cannot be negative.");
                         if (line.UnitPrice > RetailPosConstants2.MaxAmount) errors.Add(n + "price is too large.");
+                        if (line.DiscountPercent < 0m || line.DiscountPercent > 100m) errors.Add(n + "discount must be between 0% and 100%.");
                     }
                 }
 
@@ -101,6 +138,11 @@ namespace Service.Service
                 if (errors.Count > 0) return RetailPosResult2.Fail<RetailPosCheckoutResultDto2>(errors);
 
                 decimal subTotal = RetailPosRules2.Round(request.Lines.Sum(l => RetailPosRules2.Round(l.Quantity * l.UnitPrice)));
+
+                // The invoice discount is the discount typed for the whole invoice plus the percent discounts of the lines.
+                decimal lineDiscounts = request.Lines.Sum(l => RetailPosRules2.LineDiscount(RetailPosRules2.Round(l.Quantity * l.UnitPrice), l.DiscountPercent));
+                discount = RetailPosRules2.Round(discount + lineDiscounts);
+
                 if (discount > subTotal)
                     return RetailPosResult2.Fail<RetailPosCheckoutResultDto2>("The discount cannot be more than the subtotal.");
                 decimal total = RetailPosRules2.Round(subTotal - discount);

@@ -85,6 +85,13 @@ namespace Domain.RetailPos2
             return row;
         }
 
+        /// <summary>Discount in money for a line: <paramref name="lineTotal"/> x percent. The percent is limited to 0-100.</summary>
+        public static decimal LineDiscount(decimal lineTotal, decimal percent)
+        {
+            if (percent <= 0m || lineTotal <= 0m) return 0m;
+            return Round(lineTotal * Math.Min(percent, 100m) / 100m);
+        }
+
         /// <summary>Credit for returning <paramref name="quantity"/> pieces: the price after the invoice discount is shared out.</summary>
         public static decimal ReturnCredit(decimal unitPrice, int quantity, decimal subTotal, decimal totalAmount)
         {
